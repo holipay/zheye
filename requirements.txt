@@ -1,0 +1,30 @@
+# Web
+fastapi
+uvicorn[standard]
+jinja2
+python-multipart
+
+# Database
+sqlalchemy[asyncio]
+asyncpg
+alembic
+
+# Scraping
+feedparser
+httpx
+beautifulsoup4
+lxml
+trafilatura
+
+# AI
+openai
+
+# Tools
+cachetools
+python-dotenv
+pyyaml
+apscheduler
+
+# Testing
+pytest
+pytest-asyncio
