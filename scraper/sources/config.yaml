@@ -1,0 +1,77 @@
+sources:
+  - name: Reuters
+    type: rss
+    url: https://www.reutersagency.com/feed/?taxonomy=best-sectors&post_type=best
+    lang: en
+    category: 国际财经
+    weight: 2.0
+
+  - name: Bloomberg
+    type: rss
+    url: https://feeds.bloomberg.com/markets/news.rss
+    lang: en
+    category: 股市与市场
+    weight: 2.0
+
+  - name: BBC News
+    type: rss
+    url: http://feeds.bbci.co.uk/news/rss.xml
+    lang: en
+    category: 国际时事
+    weight: 1.5
+
+  - name: CNN
+    type: rss
+    url: http://rss.cnn.com/rss/edition.rss
+    lang: en
+    category: 国际时事
+    weight: 1.5
+
+  - name: TechCrunch
+    type: rss
+    url: https://techcrunch.com/feed/
+    lang: en
+    category: 科技
+    weight: 1.8
+
+  - name: The Verge
+    type: rss
+    url: https://www.theverge.com/rss/index.xml
+    lang: en
+    category: 科技
+    weight: 1.5
+
+  - name: Hacker News
+    type: rss
+    url: https://hnrss.org/frontpage
+    lang: en
+    category: 科技
+    weight: 1.2
+
+  - name: Al Jazeera
+    type: rss
+    url: https://www.aljazeera.com/xml/rss/all.xml
+    lang: en
+    category: 国际时事
+    weight: 1.3
+
+  - name: CNBC
+    type: rss
+    url: https://www.cnbc.com/id/100003114/device/rss/rss.html
+    lang: en
+    category: 国际财经
+    weight: 1.5
+
+  - name: Financial Times
+    type: rss
+    url: https://www.ft.com/?format=rss
+    lang: en
+    category: 国际财经
+    weight: 1.8
+
+settings:
+  fetch_timeout: 20
+  max_retries: 2
+  dedup_threshold: 0.75
+  retention_days: 30
+  max_items_per_category: 40
