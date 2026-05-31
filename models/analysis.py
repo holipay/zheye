@@ -1,5 +1,5 @@
 from datetime import date as date_type
-from sqlalchemy import Column, BigInteger, Date, Text, Integer, DateTime, Index, func
+from sqlalchemy import Column, BigInteger, String, Date, Text, Integer, DateTime, Index, func
 from sqlalchemy.dialects.postgresql import JSONB
 from models.base import Base
 
