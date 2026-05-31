@@ -34,8 +34,7 @@ async def get_news(request: Request, category: str = "all", page: int = 1):
         
         total_pages = (total + page_size - 1) // page_size
     
-    return templates.TemplateResponse("partials/news_list.html", {
-        "request": request,
+    return templates.TemplateResponse(request=request, name="partials/news_list.html", context={
         "news_items": news_items,
         "category": category,
         "page": page,
@@ -51,8 +50,7 @@ async def get_categories(request: Request):
         result = await session.execute(query)
         categories = result.all()
     
-    return templates.TemplateResponse("partials/categories.html", {
-        "request": request,
+    return templates.TemplateResponse(request=request, name="partials/categories.html", context={
         "categories": categories,
     })
 
@@ -64,8 +62,7 @@ async def get_latest(request: Request, limit: int = 10):
         result = await session.execute(query)
         news_items = result.scalars().all()
     
-    return templates.TemplateResponse("partials/news_list.html", {
-        "request": request,
+    return templates.TemplateResponse(request=request, name="partials/news_list.html", context={
         "news_items": news_items,
         "category": "all",
         "page": 1,
