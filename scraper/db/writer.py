@@ -49,17 +49,17 @@ async def update_source_health(source_name: str, success: bool, items_count: int
         if not health:
             health = SourceHealth(source_name=source_name)
             session.add(health)
-        health.total_checks += 1
+        health.total_checks = (health.total_checks or 0) + 1
         health.last_check = datetime.utcnow()
         if success:
-            health.total_success += 1
+            health.total_success = (health.total_success or 0) + 1
             health.consecutive_failures = 0
             health.last_success = datetime.utcnow()
             health.last_items = items_count
         else:
-            health.total_failure += 1
-            health.consecutive_failures += 1
+            health.total_failure = (health.total_failure or 0) + 1
+            health.consecutive_failures = (health.consecutive_failures or 0) + 1
             health.last_error = error
         if health.total_checks > 0:
-            health.success_rate = round(health.total_success / health.total_checks * 100, 2)
+            health.success_rate = round((health.total_success or 0) / health.total_checks * 100, 2)
         await session.commit()
