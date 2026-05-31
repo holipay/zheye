@@ -1,0 +1,11 @@
+<div class="category-list">
+    <a href="/news?category=all" class="category-item {% if not category or category == 'all' %}active{% endif %}">
+        <span class="category-name">全部</span>
+    </a>
+    {% for cat_name, count in categories %}
+    <a href="/news?category={{ cat_name }}" class="category-item {% if category == cat_name %}active{% endif %}">
+        <span class="category-name">{{ cat_name }}</span>
+        <span class="category-count">{{ count }}</span>
+    </a>
+    {% endfor %}
+</div>

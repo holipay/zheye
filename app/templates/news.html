@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>📰 新闻列表</h2>
+    <div class="filter-bar">
+        <div class="category-tabs" 
+             hx-get="/api/categories" 
+             hx-trigger="load"
+             hx-target="#category-tabs"
+             hx-swap="innerHTML">
+            <div id="category-tabs">
+                <a href="/news?category=all" class="tab {% if category == 'all' %}active{% endif %}">全部</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="news-container">
+    <div id="news-list" 
+         hx-get="/api/news?category={{ category }}&page={{ page }}" 
+         hx-trigger="load"
+         hx-target="#news-list"
+         hx-swap="innerHTML">
+        <div class="loading">加载中...</div>
+    </div>
+</div>
+{% endblock %}

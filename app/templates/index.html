@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <h2>🤖 AI 每日分析</h2>
+    <p>基于全球新闻的智能分析与洞察</p>
+</div>
+
+<div class="analysis-container">
+    <div class="analysis-card">
+        <div class="analysis-date">今日分析</div>
+        <div class="analysis-content" 
+             hx-get="/api/latest?limit=20" 
+             hx-trigger="load"
+             hx-target="#news-feed"
+             hx-swap="innerHTML">
+            <div class="loading">加载中...</div>
+        </div>
+    </div>
+    
+    <div class="sidebar">
+        <div class="sidebar-section">
+            <h3>📊 分类统计</h3>
+            <div id="categories" 
+                 hx-get="/api/categories" 
+                 hx-trigger="load"
+                 hx-target="#categories"
+                 hx-swap="innerHTML">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="news-section">
+    <h3>📰 最新新闻</h3>
+    <div id="news-feed"></div>
+</div>
+{% endblock %}

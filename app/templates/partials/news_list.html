@@ -1,0 +1,50 @@
+<div class="news-list">
+    {% if news_items %}
+        {% for item in news_items %}
+        <article class="news-item">
+            <div class="news-meta">
+                <span class="news-source">{{ item.source }}</span>
+                <span class="news-category">{{ item.category }}</span>
+                <span class="news-date">{{ item.date.strftime('%Y-%m-%d') if item.date else '' }}</span>
+            </div>
+            <h3 class="news-title">
+                <a href="{{ item.link }}" target="_blank" rel="noopener">
+                    {{ item.translated_title or item.title }}
+                </a>
+            </h3>
+            {% if item.translated_title %}
+            <p class="news-original">{{ item.title }}</p>
+            {% endif %}
+            {% if item.summary %}
+            <p class="news-summary">{{ item.summary[:200] }}{% if item.summary|length > 200 %}...{% endif %}</p>
+            {% endif %}
+        </article>
+        {% endfor %}
+        
+        {% if total_pages > 1 %}
+        <div class="pagination">
+            {% if page > 1 %}
+            <a href="/news?category={{ category }}&page={{ page - 1 }}" 
+               class="page-btn"
+               hx-get="/api/news?category={{ category }}&page={{ page - 1 }}"
+               hx-target="#news-list"
+               hx-swap="innerHTML">上一页</a>
+            {% endif %}
+            
+            <span class="page-info">第 {{ page }} / {{ total_pages }} 页 (共 {{ total }} 条)</span>
+            
+            {% if page < total_pages %}
+            <a href="/news?category={{ category }}&page={{ page + 1 }}" 
+               class="page-btn"
+               hx-get="/api/news?category={{ category }}&page={{ page + 1 }}"
+               hx-target="#news-list"
+               hx-swap="innerHTML">下一页</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    {% else %}
+        <div class="empty-state">
+            <p>暂无新闻数据</p>
+        </div>
+    {% endif %}
+</div>

@@ -1,0 +1,25 @@
+<div class="analysis-detail">
+    {% if analysis %}
+    <div class="analysis-header">
+        <h3>{{ analysis.date }}</h3>
+        <span class="analysis-perspective">{{ analysis.perspective }}</span>
+    </div>
+    <div class="analysis-body">
+        {{ analysis.analysis | safe }}
+    </div>
+    {% if analysis.hot_keywords %}
+    <div class="analysis-keywords">
+        <h4>🔥 热点关键词</h4>
+        <div class="keyword-tags">
+            {% for keyword in analysis.hot_keywords %}
+            <span class="keyword-tag">{{ keyword }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="no-analysis">
+        <p>暂无分析数据</p>
+    </div>
+    {% endif %}
+</div>
