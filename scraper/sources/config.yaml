@@ -1,77 +1,491 @@
 sources:
+  # 英文源
   - name: Reuters
     type: rss
     url: https://www.reutersagency.com/feed/?taxonomy=best-sectors&post_type=best
     lang: en
-    category: 国际财经
     weight: 2.0
 
   - name: Bloomberg
     type: rss
     url: https://feeds.bloomberg.com/markets/news.rss
     lang: en
-    category: 股市与市场
     weight: 2.0
+
+  - name: Financial Times
+    type: rss
+    url: https://www.ft.com/rss/home
+    lang: en
+    weight: 2.0
+
+  - name: WSJ
+    type: rss
+    url: https://feeds.a.dj.com/rss/RSSMarketsMain.xml
+    lang: en
+    weight: 2.0
+
+  - name: CNBC
+    type: rss
+    url: https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114
+    lang: en
+    weight: 1.8
 
   - name: BBC News
     type: rss
     url: http://feeds.bbci.co.uk/news/rss.xml
     lang: en
-    category: 国际时事
     weight: 1.5
 
   - name: CNN
     type: rss
     url: http://rss.cnn.com/rss/edition.rss
     lang: en
-    category: 国际时事
     weight: 1.5
 
   - name: TechCrunch
     type: rss
     url: https://techcrunch.com/feed/
     lang: en
-    category: 科技
-    weight: 1.8
+    weight: 1.5
 
   - name: The Verge
     type: rss
     url: https://www.theverge.com/rss/index.xml
     lang: en
-    category: 科技
     weight: 1.5
 
   - name: Hacker News
     type: rss
     url: https://hnrss.org/frontpage
     lang: en
-    category: 科技
     weight: 1.2
 
   - name: Al Jazeera
     type: rss
     url: https://www.aljazeera.com/xml/rss/all.xml
     lang: en
-    category: 国际时事
     weight: 1.3
 
-  - name: CNBC
+  - name: NBER
     type: rss
-    url: https://www.cnbc.com/id/100003114/device/rss/rss.html
+    url: https://www.nber.org/rss/new.xml
     lang: en
-    category: 国际财经
+    weight: 1.5
+    timeout: 30
+
+  - name: The Conversation
+    type: rss
+    url: https://theconversation.com/articles.atom
+    lang: en
+    weight: 1.2
+
+  - name: Pew Research
+    type: rss
+    url: https://www.pewresearch.org/feed/
+    lang: en
+    weight: 1.3
+
+  - name: Brookings
+    type: rss
+    url: https://www.brookings.edu/feed/
+    lang: en
+    weight: 1.5
+    timeout: 25
+
+  - name: Foreign Affairs
+    type: rss
+    url: https://www.foreignaffairs.com/rss.xml
+    lang: en
+    weight: 1.5
+    timeout: 25
+
+  - name: VoxEU
+    type: rss
+    url: https://cepr.org/rss/voxeu.xml
+    lang: en
     weight: 1.5
 
-  - name: Financial Times
+  - name: Nature Human Behaviour
     type: rss
-    url: https://www.ft.com/?format=rss
+    url: https://www.nature.com/nathumbehav.rss
     lang: en
-    category: 国际财经
-    weight: 1.8
+    weight: 1.3
+    timeout: 25
+
+  - name: Dealbreaker
+    type: rss
+    url: https://dealbreaker.com/.rss/teaser/
+    lang: en
+    weight: 1.4
+
+  - name: ZeroHedge
+    type: rss
+    url: https://feeds.feedburner.com/zerohedge/feed
+    lang: en
+    weight: 1.3
+
+  - name: Wolf Street
+    type: rss
+    url: https://wolfstreet.com/feed/
+    lang: en
+    weight: 1.3
+
+  # 中文源
+  - name: 36氪
+    type: rss
+    url: https://36kr.com/feed
+    lang: zh
+    weight: 1.5
+
+  - name: 财新网
+    type: rss
+    url: https://rsshub.rssforever.com/caixin/latest
+    lang: zh
+    weight: 1.5
+
+  - name: 华尔街见闻
+    type: rss
+    url: https://rsshub.rssforever.com/wallstreetcn/news/global
+    lang: zh
+    weight: 1.5
 
 settings:
   fetch_timeout: 20
   max_retries: 2
   dedup_threshold: 0.75
   retention_days: 30
-  max_items_per_category: 40
+  max_items_per_category: 200
+
+categories:
+  股市与市场:
+    keywords:
+      - stock
+      - equity
+      - nasdaq
+      - S&P
+      - dow jones
+      - wall street
+      - 华尔街
+      - 纳斯达克
+      - 标普
+      - 道琼斯
+      - rally
+      - selloff
+      - bear market
+      - bull market
+      - 牛市
+      - 熊市
+      - IPO
+      - 上市
+      - earnings
+      - revenue
+      - profit
+      - 财报
+      - 营收
+      - 利润
+      - market cap
+      - 市值
+      - 估值
+      - valuation
+      - dividend
+      - 股息
+      - ETF
+      - trading
+
+  央行与利率:
+    keywords:
+      - Fed
+      - Federal Reserve
+      - 美联储
+      - ECB
+      - 欧央行
+      - BOJ
+      - 日本央行
+      - PBOC
+      - 人民银行
+      - interest rate
+      - 利率
+      - 加息
+      - 降息
+      - rate hike
+      - rate cut
+      - monetary policy
+      - 货币政策
+      - 国债
+      - treasury
+      - bond
+      - 债券
+      - 收益率
+      - yield
+
+  宏观经济:
+    keywords:
+      - GDP
+      - CPI
+      - inflation
+      - 通胀
+      - 通缩
+      - deflation
+      - PPI
+      - PMI
+      - unemployment
+      - 失业率
+      - 就业
+      - employment
+      - 非农
+      - nonfarm
+      - retail sales
+      - 零售
+      - housing
+      - 房价
+      - 房地产
+      - recession
+      - 衰退
+      - trade
+      - 贸易
+      - supply chain
+      - 供应链
+
+  大宗商品与能源:
+    keywords:
+      - oil
+      - crude
+      - 原油
+      - OPEC
+      - 天然气
+      - natural gas
+      - gold
+      - 黄金
+      - silver
+      - 白银
+      - copper
+      - 铜
+      - iron ore
+      - 铁矿石
+      - commodity
+      - 大宗商品
+      - lithium
+      - 锂
+      - 期货
+      - futures
+
+  科技与企业:
+    keywords:
+      - Apple
+      - 苹果
+      - Google
+      - 谷歌
+      - Microsoft
+      - 微软
+      - Amazon
+      - 亚马逊
+      - Meta
+      - Tesla
+      - 特斯拉
+      - Nvidia
+      - 英伟达
+      - AI
+      - artificial intelligence
+      - 人工智能
+      - 芯片
+      - chip
+      - semiconductor
+      - 半导体
+      - 台积电
+      - TSMC
+      - EV
+      - electric vehicle
+      - 电动车
+      - 新能源
+      - tech
+      - 科技
+      - merger
+      - acquisition
+      - 并购
+      - 收购
+      - CEO
+      - 裁员
+      - layoff
+
+  国际财经:
+    keywords:
+      - tariff
+      - 关税
+      - trade war
+      - 贸易战
+      - 制裁
+      - sanctions
+      - 汇率
+      - forex
+      - 美元
+      - dollar
+      - 欧元
+      - euro
+      - 日元
+      - yen
+      - 人民币
+      - yuan
+      - WTO
+      - IMF
+      - 世界银行
+      - World Bank
+      - 地缘政治
+      - geopolitics
+      - 新兴市场
+      - emerging market
+      - 全球化
+      - globalization
+      - 脱钩
+      - decoupling
+
+  社会与人口:
+    keywords:
+      - sociology
+      - social
+      - migration
+      - immigration
+      - refugee
+      - demographic
+      - population
+      - aging
+      - gender
+      - race
+      - inequality
+      - religion
+      - women
+      - children
+      - community
+
+  政治与治理:
+    keywords:
+      - politics
+      - political
+      - governance
+      - government
+      - election
+      - vote
+      - democracy
+      - president
+      - congress
+      - senate
+      - reform
+      - policy
+      - legislation
+      - foreign policy
+      - diplomacy
+      - war
+      - peace
+      - military
+      - NATO
+
+  心理学与认知:
+    keywords:
+      - psychology
+      - mental health
+      - depression
+      - anxiety
+      - stress
+      - therapy
+      - cognitive
+      - neuroscience
+      - brain
+      - consciousness
+      - bias
+      - decision making
+
+  科技与研究:
+    keywords:
+      - artificial intelligence
+      - AI
+      - chatbot
+      - ChatGPT
+      - GPT
+      - LLM
+      - algorithm
+      - social media
+      - digital
+      - automation
+      - robot
+      - robotics
+      - privacy
+      - deepfake
+      - misinformation
+      - academic
+      - research
+      - peer review
+      - journal
+
+  健康与公共卫生:
+    keywords:
+      - health
+      - healthcare
+      - medical
+      - medicine
+      - public health
+      - disease
+      - COVID
+      - pandemic
+      - vaccine
+      - cancer
+      - diabetes
+      - heart disease
+      - obesity
+      - drug
+      - pharmaceutical
+      - health insurance
+      - mental health
+
+  环境与能源:
+    keywords:
+      - climate
+      - climate change
+      - global warming
+      - environment
+      - sustainability
+      - carbon
+      - emission
+      - greenhouse
+      - net zero
+      - energy
+      - renewable
+      - solar
+      - wind
+      - fossil fuel
+      - biodiversity
+      - pollution
+
+  教育与媒体:
+    keywords:
+      - education
+      - school
+      - university
+      - college
+      - student
+      - teacher
+      - learning
+      - curriculum
+      - media
+      - journalism
+      - journalist
+      - news
+      - press freedom
+      - censorship
+
+  法律与伦理:
+    keywords:
+      - law
+      - legal
+      - legislation
+      - ethics
+      - rights
+      - civil rights
+      - human rights
+      - constitution
+      - court
+      - supreme court
+      - judge
+      - regulation
+      - antitrust
+      - privacy
+      - data protection
+      - GDPR
