@@ -4,6 +4,9 @@ from models.analysis import Analysis
 from models.translation_cache import TranslationCache
 from models.source_health import SourceHealth
 from models.run_metrics import RunMetrics
+from models.keyword import Keyword
+from models.article_keyword import ArticleKeyword
+from models.article_relation import ArticleRelation
 
 __all__ = [
     "Base",
@@ -15,4 +18,7 @@ __all__ = [
     "TranslationCache",
     "SourceHealth",
     "RunMetrics",
+    "Keyword",
+    "ArticleKeyword",
+    "ArticleRelation",
 ]

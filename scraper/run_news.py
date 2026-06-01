@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import random
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -15,7 +16,6 @@ from scraper.sources.fetcher import Fetcher
 from scraper.sources.rss_parser import parse_feed
 from scraper.pipeline.dedup import get_link_hash, is_duplicate
 from scraper.pipeline.classify import classify_by_keywords
-from scraper.pipeline.translate import translate_text
 from scraper.db.writer import save_news, get_existing_hashes, get_existing_titles, update_source_health
 
 logging.basicConfig(
@@ -23,6 +23,10 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+BATCH_SIZE = 5
+BATCH_DELAY_MIN = 10.0
+BATCH_DELAY_MAX = 30.0
 
 
 def load_config() -> dict:
@@ -56,13 +60,9 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
         if is_duplicate(item.title, existing_titles):
             continue
 
-        translated_title = None
-        if lang != "zh":
-            translated_title = await translate_text(item.title, source_lang=lang, target_lang="zh")
-
         news_item = {
             "title": item.title,
-            "translated_title": translated_title,
+            "translated_title": None,
             "link": item.link,
             "link_hash": link_hash,
             "source": name,
@@ -84,7 +84,9 @@ async def main():
     sources = config["sources"]
     settings = config["settings"]
 
-    logger.info(f"Starting news scrape with {len(sources)} sources")
+    random.shuffle(sources)
+
+    logger.info(f"Starting news scrape with {len(sources)} sources (batch size: {BATCH_SIZE})")
     start_time = datetime.utcnow()
 
     existing_hashes = await get_existing_hashes()
@@ -92,14 +94,28 @@ async def main():
     logger.info(f"Found {len(existing_hashes)} existing hashes")
 
     all_items = []
-    async with Fetcher(timeout=settings.get("fetch_timeout", 20), max_retries=settings.get("max_retries", 2)) as fetcher:
-        tasks = [process_source(fetcher, src, existing_hashes, existing_titles) for src in sources]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        for result in results:
-            if isinstance(result, Exception):
-                logger.error(f"Source processing error: {result}")
-            elif isinstance(result, list):
-                all_items.extend(result)
+    async with Fetcher(
+        timeout=settings.get("fetch_timeout", 20),
+        max_retries=settings.get("max_retries", 2),
+        max_concurrent=BATCH_SIZE,
+    ) as fetcher:
+        batches = [sources[i:i + BATCH_SIZE] for i in range(0, len(sources), BATCH_SIZE)]
+
+        for batch_idx, batch in enumerate(batches):
+            logger.info(f"Processing batch {batch_idx + 1}/{len(batches)} ({len(batch)} sources)")
+
+            tasks = [process_source(fetcher, src, existing_hashes, existing_titles) for src in batch]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for result in results:
+                if isinstance(result, Exception):
+                    logger.error(f"Source processing error: {result}")
+                elif isinstance(result, list):
+                    all_items.extend(result)
+
+            if batch_idx < len(batches) - 1:
+                delay = random.uniform(BATCH_DELAY_MIN, BATCH_DELAY_MAX)
+                logger.info(f"Waiting {delay:.1f}s before next batch")
+                await asyncio.sleep(delay)
 
     if all_items:
         saved = await save_news(all_items)

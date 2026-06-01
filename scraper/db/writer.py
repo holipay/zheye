@@ -5,6 +5,8 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from models.base import async_session
 from models.news import News
 from models.source_health import SourceHealth
+from scraper.pipeline.keywords import match_keywords, sync_keywords_to_db, save_article_keywords, load_keywords
+from scraper.pipeline.relations import calculate_and_save_relations
 
 logger = logging.getLogger(__name__)
 
@@ -12,17 +14,42 @@ logger = logging.getLogger(__name__)
 async def save_news(items: list[dict]) -> int:
     if not items:
         return 0
+
+    keywords_data = load_keywords()
     saved = 0
+
     async with async_session() as session:
+        term_to_id = await sync_keywords_to_db(session, keywords_data)
+        await session.commit()
+
         for item in items:
             try:
                 stmt = pg_insert(News).values(**item).on_conflict_do_nothing(index_elements=["link_hash"])
                 result = await session.execute(stmt)
                 if result.rowcount > 0:
                     saved += 1
+
+                    get_id = select(News.id).where(News.link_hash == item["link_hash"])
+                    id_result = await session.execute(get_id)
+                    article_id = id_result.scalar_one_or_none()
+
+                    if article_id:
+                        matched = match_keywords(
+                            title=item.get("title"),
+                            translated_title=item.get("translated_title"),
+                            summary=item.get("summary"),
+                            category=item.get("category", ""),
+                        )
+
+                        if matched:
+                            await save_article_keywords(session, article_id, matched, term_to_id)
+                            await calculate_and_save_relations(session, article_id, item.get("category", ""))
+
             except Exception as e:
                 logger.error(f"Error saving news {item.get('link')}: {e}")
+
         await session.commit()
+
     return saved
 
 

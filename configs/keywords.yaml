@@ -1,0 +1,1118 @@
+# 专业术语词库 - 经济/金融/社科
+# 长期稳定，极少修改，保证数据关联一致性
+
+keywords:
+  # ==================== 宏观经济 ====================
+  # 核心指标
+  - term: "GDP"
+    lang: en
+    category: "宏观经济"
+    weight: 2.0
+  - term: "国内生产总值"
+    lang: zh
+    category: "宏观经济"
+    weight: 2.0
+  - term: "CPI"
+    lang: en
+    category: "宏观经济"
+    weight: 2.0
+  - term: "消费者物价指数"
+    lang: zh
+    category: "宏观经济"
+    weight: 2.0
+  - term: "PPI"
+    lang: en
+    category: "宏观经济"
+    weight: 1.8
+  - term: "生产者物价指数"
+    lang: zh
+    category: "宏观经济"
+    weight: 1.8
+  - term: "PMI"
+    lang: en
+    category: "宏观经济"
+    weight: 1.8
+  - term: "采购经理指数"
+    lang: zh
+    category: "宏观经济"
+    weight: 1.8
+
+  # 通胀与就业
+  - term: "inflation"
+    lang: en
+    category: "宏观经济"
+    weight: 1.8
+  - term: "通胀"
+    lang: zh
+    category: "宏观经济"
+    weight: 1.8
+  - term: "通缩"
+    lang: zh
+    category: "宏观经济"
+    weight: 1.8
+  - term: "deflation"
+    lang: en
+    category: "宏观经济"
+    weight: 1.8
+  - term: "stagflation"
+    lang: en
+    category: "宏观经济"
+    weight: 1.5
+  - term: "滞胀"
+    lang: zh
+    category: "宏观经济"
+    weight: 1.5
+  - term: "unemployment"
+    lang: en
+    category: "宏观经济"
+    weight: 1.5
+  - term: "失业率"
+    lang: zh
+    category: "宏观经济"
+    weight: 1.5
+  - term: "就业"
+    lang: zh
+    category: "宏观经济"
+    weight: 1.2
+  - term: "employment"
+    lang: en
+    category: "宏观经济"
+    weight: 1.2
+  - term: "非农"
+    lang: zh
+    category: "宏观经济"
+    weight: 1.8
+  - term: "nonfarm"
+    lang: en
+    category: "宏观经济"
+    weight: 1.8
+
+  # 经济指标
+  - term: "retail sales"
+    lang: en
+    category: "宏观经济"
+    weight: 1.5
+  - term: "零售"
+    lang: zh
+    category: "宏观经济"
+    weight: 1.2
+  - term: "consumer spending"
+    lang: en
+    category: "宏观经济"
+    weight: 1.5
+  - term: "消费支出"
+    lang: zh
+    category: "宏观经济"
+    weight: 1.5
+  - term: "housing"
+    lang: en
+    category: "宏观经济"
+    weight: 1.2
+  - term: "房地产"
+    lang: zh
+    category: "宏观经济"
+    weight: 1.2
+  - term: "recession"
+    lang: en
+    category: "宏观经济"
+    weight: 2.0
+  - term: "衰退"
+    lang: zh
+    category: "宏观经济"
+    weight: 2.0
+  - term: "economic growth"
+    lang: en
+    category: "宏观经济"
+    weight: 1.5
+  - term: "经济增长"
+    lang: zh
+    category: "宏观经济"
+    weight: 1.5
+  - term: "fiscal policy"
+    lang: en
+    category: "宏观经济"
+    weight: 1.5
+  - term: "财政政策"
+    lang: zh
+    category: "宏观经济"
+    weight: 1.5
+  - term: "stimulus"
+    lang: en
+    category: "宏观经济"
+    weight: 1.5
+  - term: "刺激"
+    lang: zh
+    category: "宏观经济"
+    weight: 1.0
+
+  # ==================== 央行与利率 ====================
+  # 主要央行
+  - term: "Federal Reserve"
+    lang: en
+    category: "央行与利率"
+    weight: 2.0
+  - term: "Fed"
+    lang: en
+    category: "央行与利率"
+    weight: 2.0
+  - term: "美联储"
+    lang: zh
+    category: "央行与利率"
+    weight: 2.0
+  - term: "ECB"
+    lang: en
+    category: "央行与利率"
+    weight: 1.8
+  - term: "欧央行"
+    lang: zh
+    category: "央行与利率"
+    weight: 1.8
+  - term: "BOJ"
+    lang: en
+    category: "央行与利率"
+    weight: 1.8
+  - term: "日本央行"
+    lang: zh
+    category: "央行与利率"
+    weight: 1.8
+  - term: "PBOC"
+    lang: en
+    category: "央行与利率"
+    weight: 1.8
+  - term: "人民银行"
+    lang: zh
+    category: "央行与利率"
+    weight: 1.8
+  - term: "央行"
+    lang: zh
+    category: "央行与利率"
+    weight: 1.2
+  - term: "central bank"
+    lang: en
+    category: "央行与利率"
+    weight: 1.2
+
+  # 利率政策
+  - term: "interest rate"
+    lang: en
+    category: "央行与利率"
+    weight: 1.8
+  - term: "利率"
+    lang: zh
+    category: "央行与利率"
+    weight: 1.8
+  - term: "rate hike"
+    lang: en
+    category: "央行与利率"
+    weight: 1.8
+  - term: "加息"
+    lang: zh
+    category: "央行与利率"
+    weight: 1.8
+  - term: "rate cut"
+    lang: en
+    category: "央行与利率"
+    weight: 1.8
+  - term: "降息"
+    lang: zh
+    category: "央行与利率"
+    weight: 1.8
+  - term: "monetary policy"
+    lang: en
+    category: "央行与利率"
+    weight: 1.5
+  - term: "货币政策"
+    lang: zh
+    category: "央行与利率"
+    weight: 1.5
+  - term: "quantitative easing"
+    lang: en
+    category: "央行与利率"
+    weight: 1.8
+  - term: "QE"
+    lang: en
+    category: "央行与利率"
+    weight: 1.8
+  - term: "量化宽松"
+    lang: zh
+    category: "央行与利率"
+    weight: 1.8
+  - term: "quantitative tightening"
+    lang: en
+    category: "央行与利率"
+    weight: 1.8
+  - term: "QT"
+    lang: en
+    category: "央行与利率"
+    weight: 1.8
+  - term: "量化紧缩"
+    lang: zh
+    category: "央行与利率"
+    weight: 1.8
+
+  # 债券
+  - term: "treasury"
+    lang: en
+    category: "央行与利率"
+    weight: 1.5
+  - term: "国债"
+    lang: zh
+    category: "央行与利率"
+    weight: 1.5
+  - term: "bond"
+    lang: en
+    category: "央行与利率"
+    weight: 1.2
+  - term: "债券"
+    lang: zh
+    category: "央行与利率"
+    weight: 1.2
+  - term: "yield"
+    lang: en
+    category: "央行与利率"
+    weight: 1.5
+  - term: "收益率"
+    lang: zh
+    category: "央行与利率"
+    weight: 1.5
+  - term: "yield curve"
+    lang: en
+    category: "央行与利率"
+    weight: 1.8
+  - term: "收益率曲线"
+    lang: zh
+    category: "央行与利率"
+    weight: 1.8
+
+  # ==================== 股市与市场 ====================
+  - term: "stock"
+    lang: en
+    category: "股市与市场"
+    weight: 1.0
+  - term: "股票"
+    lang: zh
+    category: "股市与市场"
+    weight: 1.0
+  - term: "equity"
+    lang: en
+    category: "股市与市场"
+    weight: 1.0
+  - term: "IPO"
+    lang: en
+    category: "股市与市场"
+    weight: 1.8
+  - term: "上市"
+    lang: zh
+    category: "股市与市场"
+    weight: 1.5
+  - term: "earnings"
+    lang: en
+    category: "股市与市场"
+    weight: 1.5
+  - term: "财报"
+    lang: zh
+    category: "股市与市场"
+    weight: 1.5
+  - term: "revenue"
+    lang: en
+    category: "股市与市场"
+    weight: 1.2
+  - term: "营收"
+    lang: zh
+    category: "股市与市场"
+    weight: 1.2
+  - term: "profit"
+    lang: en
+    category: "股市与市场"
+    weight: 1.2
+  - term: "利润"
+    lang: zh
+    category: "股市与市场"
+    weight: 1.2
+  - term: "market cap"
+    lang: en
+    category: "股市与市场"
+    weight: 1.2
+  - term: "市值"
+    lang: zh
+    category: "股市与市场"
+    weight: 1.2
+  - term: "valuation"
+    lang: en
+    category: "股市与市场"
+    weight: 1.2
+  - term: "估值"
+    lang: zh
+    category: "股市与市场"
+    weight: 1.2
+  - term: "dividend"
+    lang: en
+    category: "股市与市场"
+    weight: 1.2
+  - term: "股息"
+    lang: zh
+    category: "股市与市场"
+    weight: 1.2
+  - term: "ETF"
+    lang: en
+    category: "股市与市场"
+    weight: 1.2
+  - term: "index"
+    lang: en
+    category: "股市与市场"
+    weight: 1.0
+  - term: "指数"
+    lang: zh
+    category: "股市与市场"
+    weight: 1.0
+  - term: "rally"
+    lang: en
+    category: "股市与市场"
+    weight: 1.5
+  - term: "selloff"
+    lang: en
+    category: "股市与市场"
+    weight: 1.5
+  - term: "bear market"
+    lang: en
+    category: "股市与市场"
+    weight: 1.5
+  - term: "牛市"
+    lang: zh
+    category: "股市与市场"
+    weight: 1.5
+  - term: "熊市"
+    lang: zh
+    category: "股市与市场"
+    weight: 1.5
+  - term: "volatility"
+    lang: en
+    category: "股市与市场"
+    weight: 1.5
+  - term: "波动"
+    lang: zh
+    category: "股市与市场"
+    weight: 1.0
+
+  # ==================== 大宗商品与能源 ====================
+  - term: "oil"
+    lang: en
+    category: "大宗商品与能源"
+    weight: 1.5
+  - term: "crude"
+    lang: en
+    category: "大宗商品与能源"
+    weight: 1.5
+  - term: "原油"
+    lang: zh
+    category: "大宗商品与能源"
+    weight: 1.5
+  - term: "OPEC"
+    lang: en
+    category: "大宗商品与能源"
+    weight: 1.8
+  - term: "欧佩克"
+    lang: zh
+    category: "大宗商品与能源"
+    weight: 1.8
+  - term: "natural gas"
+    lang: en
+    category: "大宗商品与能源"
+    weight: 1.5
+  - term: "天然气"
+    lang: zh
+    category: "大宗商品与能源"
+    weight: 1.5
+  - term: "gold"
+    lang: en
+    category: "大宗商品与能源"
+    weight: 1.5
+  - term: "黄金"
+    lang: zh
+    category: "大宗商品与能源"
+    weight: 1.5
+  - term: "silver"
+    lang: en
+    category: "大宗商品与能源"
+    weight: 1.2
+  - term: "白银"
+    lang: zh
+    category: "大宗商品与能源"
+    weight: 1.2
+  - term: "copper"
+    lang: en
+    category: "大宗商品与能源"
+    weight: 1.2
+  - term: "铜"
+    lang: zh
+    category: "大宗商品与能源"
+    weight: 1.2
+  - term: "iron ore"
+    lang: en
+    category: "大宗商品与能源"
+    weight: 1.5
+  - term: "铁矿石"
+    lang: zh
+    category: "大宗商品与能源"
+    weight: 1.5
+  - term: "commodity"
+    lang: en
+    category: "大宗商品与能源"
+    weight: 1.2
+  - term: "大宗商品"
+    lang: zh
+    category: "大宗商品与能源"
+    weight: 1.2
+  - term: "lithium"
+    lang: en
+    category: "大宗商品与能源"
+    weight: 1.2
+  - term: "锂"
+    lang: zh
+    category: "大宗商品与能源"
+    weight: 1.2
+  - term: "futures"
+    lang: en
+    category: "大宗商品与能源"
+    weight: 1.0
+  - term: "期货"
+    lang: zh
+    category: "大宗商品与能源"
+    weight: 1.0
+
+  # ==================== 科技与企业 ====================
+  # 科技巨头
+  - term: "Apple"
+    lang: en
+    category: "科技与企业"
+    weight: 1.5
+  - term: "苹果"
+    lang: zh
+    category: "科技与企业"
+    weight: 1.5
+  - term: "Google"
+    lang: en
+    category: "科技与企业"
+    weight: 1.5
+  - term: "谷歌"
+    lang: zh
+    category: "科技与企业"
+    weight: 1.5
+  - term: "Microsoft"
+    lang: en
+    category: "科技与企业"
+    weight: 1.5
+  - term: "微软"
+    lang: zh
+    category: "科技与企业"
+    weight: 1.5
+  - term: "Amazon"
+    lang: en
+    category: "科技与企业"
+    weight: 1.5
+  - term: "亚马逊"
+    lang: zh
+    category: "科技与企业"
+    weight: 1.5
+  - term: "Meta"
+    lang: en
+    category: "科技与企业"
+    weight: 1.5
+  - term: "Tesla"
+    lang: en
+    category: "科技与企业"
+    weight: 1.5
+  - term: "特斯拉"
+    lang: zh
+    category: "科技与企业"
+    weight: 1.5
+  - term: "Nvidia"
+    lang: en
+    category: "科技与企业"
+    weight: 1.5
+  - term: "英伟达"
+    lang: zh
+    category: "科技与企业"
+    weight: 1.5
+  - term: "TSMC"
+    lang: en
+    category: "科技与企业"
+    weight: 1.5
+  - term: "台积电"
+    lang: zh
+    category: "科技与企业"
+    weight: 1.5
+
+  # AI 与半导体
+  - term: "artificial intelligence"
+    lang: en
+    category: "科技与企业"
+    weight: 1.8
+  - term: "人工智能"
+    lang: zh
+    category: "科技与企业"
+    weight: 1.8
+  - term: "chip"
+    lang: en
+    category: "科技与企业"
+    weight: 1.2
+  - term: "芯片"
+    lang: zh
+    category: "科技与企业"
+    weight: 1.2
+  - term: "semiconductor"
+    lang: en
+    category: "科技与企业"
+    weight: 1.5
+  - term: "半导体"
+    lang: zh
+    category: "科技与企业"
+    weight: 1.5
+
+  # 企业活动
+  - term: "merger"
+    lang: en
+    category: "科技与企业"
+    weight: 1.5
+  - term: "acquisition"
+    lang: en
+    category: "科技与企业"
+    weight: 1.5
+  - term: "并购"
+    lang: zh
+    category: "科技与企业"
+    weight: 1.5
+  - term: "收购"
+    lang: zh
+    category: "科技与企业"
+    weight: 1.5
+  - term: "layoff"
+    lang: en
+    category: "科技与企业"
+    weight: 1.5
+  - term: "裁员"
+    lang: zh
+    category: "科技与企业"
+    weight: 1.5
+  - term: "bankruptcy"
+    lang: en
+    category: "科技与企业"
+    weight: 1.8
+  - term: "破产"
+    lang: zh
+    category: "科技与企业"
+    weight: 1.8
+  - term: "restructuring"
+    lang: en
+    category: "科技与企业"
+    weight: 1.2
+  - term: "重组"
+    lang: zh
+    category: "科技与企业"
+    weight: 1.2
+
+  # ==================== 国际财经 ====================
+  - term: "tariff"
+    lang: en
+    category: "国际财经"
+    weight: 1.8
+  - term: "关税"
+    lang: zh
+    category: "国际财经"
+    weight: 1.8
+  - term: "trade war"
+    lang: en
+    category: "国际财经"
+    weight: 2.0
+  - term: "贸易战"
+    lang: zh
+    category: "国际财经"
+    weight: 2.0
+  - term: "sanctions"
+    lang: en
+    category: "国际财经"
+    weight: 1.8
+  - term: "制裁"
+    lang: zh
+    category: "国际财经"
+    weight: 1.8
+  - term: "forex"
+    lang: en
+    category: "国际财经"
+    weight: 1.5
+  - term: "汇率"
+    lang: zh
+    category: "国际财经"
+    weight: 1.5
+  - term: "dollar"
+    lang: en
+    category: "国际财经"
+    weight: 1.2
+  - term: "美元"
+    lang: zh
+    category: "国际财经"
+    weight: 1.2
+  - term: "euro"
+    lang: en
+    category: "国际财经"
+    weight: 1.2
+  - term: "欧元"
+    lang: zh
+    category: "国际财经"
+    weight: 1.2
+  - term: "yen"
+    lang: en
+    category: "国际财经"
+    weight: 1.2
+  - term: "日元"
+    lang: zh
+    category: "国际财经"
+    weight: 1.2
+  - term: "yuan"
+    lang: en
+    category: "国际财经"
+    weight: 1.2
+  - term: "人民币"
+    lang: zh
+    category: "国际财经"
+    weight: 1.2
+  - term: "WTO"
+    lang: en
+    category: "国际财经"
+    weight: 1.5
+  - term: "IMF"
+    lang: en
+    category: "国际财经"
+    weight: 1.5
+  - term: "World Bank"
+    lang: en
+    category: "国际财经"
+    weight: 1.5
+  - term: "世界银行"
+    lang: zh
+    category: "国际财经"
+    weight: 1.5
+  - term: "geopolitics"
+    lang: en
+    category: "国际财经"
+    weight: 1.5
+  - term: "地缘政治"
+    lang: zh
+    category: "国际财经"
+    weight: 1.5
+  - term: "emerging market"
+    lang: en
+    category: "国际财经"
+    weight: 1.2
+  - term: "新兴市场"
+    lang: zh
+    category: "国际财经"
+    weight: 1.2
+  - term: "globalization"
+    lang: en
+    category: "国际财经"
+    weight: 1.2
+  - term: "全球化"
+    lang: zh
+    category: "国际财经"
+    weight: 1.2
+  - term: "decoupling"
+    lang: en
+    category: "国际财经"
+    weight: 1.5
+  - term: "脱钩"
+    lang: zh
+    category: "国际财经"
+    weight: 1.5
+  - term: "supply chain"
+    lang: en
+    category: "国际财经"
+    weight: 1.5
+  - term: "供应链"
+    lang: zh
+    category: "国际财经"
+    weight: 1.5
+
+  # ==================== 社会与人口 ====================
+  - term: "demographic"
+    lang: en
+    category: "社会与人口"
+    weight: 1.5
+  - term: "人口"
+    lang: zh
+    category: "社会与人口"
+    weight: 1.5
+  - term: "aging"
+    lang: en
+    category: "社会与人口"
+    weight: 1.5
+  - term: "老龄化"
+    lang: zh
+    category: "社会与人口"
+    weight: 1.5
+  - term: "migration"
+    lang: en
+    category: "社会与人口"
+    weight: 1.2
+  - term: "移民"
+    lang: zh
+    category: "社会与人口"
+    weight: 1.2
+  - term: "inequality"
+    lang: en
+    category: "社会与人口"
+    weight: 1.5
+  - term: "不平等"
+    lang: zh
+    category: "社会与人口"
+    weight: 1.5
+  - term: "poverty"
+    lang: en
+    category: "社会与人口"
+    weight: 1.2
+  - term: "贫困"
+    lang: zh
+    category: "社会与人口"
+    weight: 1.2
+  - term: "urbanization"
+    lang: en
+    category: "社会与人口"
+    weight: 1.2
+  - term: "城镇化"
+    lang: zh
+    category: "社会与人口"
+    weight: 1.2
+
+  # ==================== 政治与治理 ====================
+  - term: "election"
+    lang: en
+    category: "政治与治理"
+    weight: 1.5
+  - term: "选举"
+    lang: zh
+    category: "政治与治理"
+    weight: 1.5
+  - term: "president"
+    lang: en
+    category: "政治与治理"
+    weight: 1.2
+  - term: "总统"
+    lang: zh
+    category: "政治与治理"
+    weight: 1.2
+  - term: "congress"
+    lang: en
+    category: "政治与治理"
+    weight: 1.2
+  - term: "国会"
+    lang: zh
+    category: "政治与治理"
+    weight: 1.2
+  - term: "senate"
+    lang: en
+    category: "政治与治理"
+    weight: 1.2
+  - term: "参议院"
+    lang: zh
+    category: "政治与治理"
+    weight: 1.2
+  - term: "reform"
+    lang: en
+    category: "政治与治理"
+    weight: 1.2
+  - term: "改革"
+    lang: zh
+    category: "政治与治理"
+    weight: 1.2
+  - term: "regulation"
+    lang: en
+    category: "政治与治理"
+    weight: 1.5
+  - term: "监管"
+    lang: zh
+    category: "政治与治理"
+    weight: 1.5
+  - term: "antitrust"
+    lang: en
+    category: "政治与治理"
+    weight: 1.8
+  - term: "反垄断"
+    lang: zh
+    category: "政治与治理"
+    weight: 1.8
+
+  # ==================== 心理学与认知 ====================
+  - term: "psychology"
+    lang: en
+    category: "心理学与认知"
+    weight: 1.2
+  - term: "心理学"
+    lang: zh
+    category: "心理学与认知"
+    weight: 1.2
+  - term: "mental health"
+    lang: en
+    category: "心理学与认知"
+    weight: 1.5
+  - term: "心理健康"
+    lang: zh
+    category: "心理学与认知"
+    weight: 1.5
+  - term: "cognitive"
+    lang: en
+    category: "心理学与认知"
+    weight: 1.2
+  - term: "认知"
+    lang: zh
+    category: "心理学与认知"
+    weight: 1.2
+  - term: "bias"
+    lang: en
+    category: "心理学与认知"
+    weight: 1.2
+  - term: "偏见"
+    lang: zh
+    category: "心理学与认知"
+    weight: 1.2
+  - term: "decision making"
+    lang: en
+    category: "心理学与认知"
+    weight: 1.2
+  - term: "决策"
+    lang: zh
+    category: "心理学与认知"
+    weight: 1.2
+
+  # ==================== 科技与研究 ====================
+  - term: "LLM"
+    lang: en
+    category: "科技与研究"
+    weight: 1.8
+  - term: "大语言模型"
+    lang: zh
+    category: "科技与研究"
+    weight: 1.8
+  - term: "algorithm"
+    lang: en
+    category: "科技与研究"
+    weight: 1.2
+  - term: "算法"
+    lang: zh
+    category: "科技与研究"
+    weight: 1.2
+  - term: "automation"
+    lang: en
+    category: "科技与研究"
+    weight: 1.2
+  - term: "自动化"
+    lang: zh
+    category: "科技与研究"
+    weight: 1.2
+  - term: "robotics"
+    lang: en
+    category: "科技与研究"
+    weight: 1.2
+  - term: "机器人"
+    lang: zh
+    category: "科技与研究"
+    weight: 1.2
+  - term: "privacy"
+    lang: en
+    category: "科技与研究"
+    weight: 1.2
+  - term: "隐私"
+    lang: zh
+    category: "科技与研究"
+    weight: 1.2
+  - term: "blockchain"
+    lang: en
+    category: "科技与研究"
+    weight: 1.5
+  - term: "区块链"
+    lang: zh
+    category: "科技与研究"
+    weight: 1.5
+  - term: "cryptocurrency"
+    lang: en
+    category: "科技与研究"
+    weight: 1.5
+  - term: "加密货币"
+    lang: zh
+    category: "科技与研究"
+    weight: 1.5
+
+  # ==================== 健康与公共卫生 ====================
+  - term: "pandemic"
+    lang: en
+    category: "健康与公共卫生"
+    weight: 1.8
+  - term: "大流行"
+    lang: zh
+    category: "健康与公共卫生"
+    weight: 1.8
+  - term: "vaccine"
+    lang: en
+    category: "健康与公共卫生"
+    weight: 1.5
+  - term: "疫苗"
+    lang: zh
+    category: "健康与公共卫生"
+    weight: 1.5
+  - term: "pharmaceutical"
+    lang: en
+    category: "健康与公共卫生"
+    weight: 1.5
+  - term: "制药"
+    lang: zh
+    category: "健康与公共卫生"
+    weight: 1.5
+  - term: "healthcare"
+    lang: en
+    category: "健康与公共卫生"
+    weight: 1.2
+  - term: "医疗"
+    lang: zh
+    category: "健康与公共卫生"
+    weight: 1.2
+  - term: "health insurance"
+    lang: en
+    category: "健康与公共卫生"
+    weight: 1.2
+  - term: "医保"
+    lang: zh
+    category: "健康与公共卫生"
+    weight: 1.2
+
+  # ==================== 环境与能源 ====================
+  - term: "climate change"
+    lang: en
+    category: "环境与能源"
+    weight: 1.8
+  - term: "气候变化"
+    lang: zh
+    category: "环境与能源"
+    weight: 1.8
+  - term: "carbon"
+    lang: en
+    category: "环境与能源"
+    weight: 1.5
+  - term: "碳"
+    lang: zh
+    category: "环境与能源"
+    weight: 1.0
+  - term: "emission"
+    lang: en
+    category: "环境与能源"
+    weight: 1.5
+  - term: "排放"
+    lang: zh
+    category: "环境与能源"
+    weight: 1.2
+  - term: "net zero"
+    lang: en
+    category: "环境与能源"
+    weight: 1.8
+  - term: "碳中和"
+    lang: zh
+    category: "环境与能源"
+    weight: 1.8
+  - term: "renewable"
+    lang: en
+    category: "环境与能源"
+    weight: 1.5
+  - term: "可再生能源"
+    lang: zh
+    category: "环境与能源"
+    weight: 1.5
+  - term: "solar"
+    lang: en
+    category: "环境与能源"
+    weight: 1.2
+  - term: "太阳能"
+    lang: zh
+    category: "环境与能源"
+    weight: 1.2
+  - term: "electric vehicle"
+    lang: en
+    category: "环境与能源"
+    weight: 1.5
+  - term: "电动车"
+    lang: zh
+    category: "环境与能源"
+    weight: 1.5
+  - term: "ESG"
+    lang: en
+    category: "环境与能源"
+    weight: 1.5
+
+  # ==================== 教育与媒体 ====================
+  - term: "education"
+    lang: en
+    category: "教育与媒体"
+    weight: 1.2
+  - term: "教育"
+    lang: zh
+    category: "教育与媒体"
+    weight: 1.2
+  - term: "journalism"
+    lang: en
+    category: "教育与媒体"
+    weight: 1.2
+  - term: "新闻"
+    lang: zh
+    category: "教育与媒体"
+    weight: 1.0
+  - term: "media"
+    lang: en
+    category: "教育与媒体"
+    weight: 1.0
+  - term: "媒体"
+    lang: zh
+    category: "教育与媒体"
+    weight: 1.0
+  - term: "censorship"
+    lang: en
+    category: "教育与媒体"
+    weight: 1.5
+  - term: "审查"
+    lang: zh
+    category: "教育与媒体"
+    weight: 1.5
+
+  # ==================== 法律与伦理 ====================
+  - term: "lawsuit"
+    lang: en
+    category: "法律与伦理"
+    weight: 1.5
+  - term: "诉讼"
+    lang: zh
+    category: "法律与伦理"
+    weight: 1.5
+  - term: "court"
+    lang: en
+    category: "法律与伦理"
+    weight: 1.2
+  - term: "法院"
+    lang: zh
+    category: "法律与伦理"
+    weight: 1.2
+  - term: "GDPR"
+    lang: en
+    category: "法律与伦理"
+    weight: 1.5
+  - term: "data protection"
+    lang: en
+    category: "法律与伦理"
+    weight: 1.5
+  - term: "数据保护"
+    lang: zh
+    category: "法律与伦理"
+    weight: 1.5
+  - term: "intellectual property"
+    lang: en
+    category: "法律与伦理"
+    weight: 1.5
+  - term: "知识产权"
+    lang: zh
+    category: "法律与伦理"
+    weight: 1.5

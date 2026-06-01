@@ -13,16 +13,40 @@
                 <a href="/news?category=all" class="tab {% if category == 'all' %}active{% endif %}">全部</a>
             </div>
         </div>
+        <div class="sort-toggle">
+            <a href="/news?category={{ category or 'all' }}&sort=date" 
+               class="sort-btn {% if sort != 'weight' %}active{% endif %}"
+               hx-get="/api/news?category={{ category or 'all' }}&sort=date"
+               hx-target="#news-list"
+               hx-swap="innerHTML">最新</a>
+            <a href="/news?category={{ category or 'all' }}&sort=weight" 
+               class="sort-btn {% if sort == 'weight' %}active{% endif %}"
+               hx-get="/api/news?category={{ category or 'all' }}&sort=weight"
+               hx-target="#news-list"
+               hx-swap="innerHTML">重要</a>
+        </div>
     </div>
 </div>
 
-<div class="news-container">
-    <div id="news-list" 
-         hx-get="/api/news?category={{ category }}&page={{ page }}" 
-         hx-trigger="load"
-         hx-target="#news-list"
-         hx-swap="innerHTML">
-        <div class="loading">加载中...</div>
-    </div>
+<div class="content-layout">
+    <aside class="sidebar">
+        <div id="keyword-nav"
+             hx-get="/api/keywords/popular?limit=20"
+             hx-trigger="load"
+             hx-target="#keyword-nav"
+             hx-swap="innerHTML">
+            <div class="loading">加载关键字...</div>
+        </div>
+    </aside>
+    
+    <main class="news-container">
+        <div id="news-list" 
+             hx-get="/api/news?category={{ category or 'all' }}&sort={{ sort or 'date' }}&page={{ page or 1 }}" 
+             hx-trigger="load"
+             hx-target="#news-list"
+             hx-swap="innerHTML">
+            <div class="loading">加载中...</div>
+        </div>
+    </main>
 </div>
 {% endblock %}

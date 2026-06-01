@@ -12,10 +12,12 @@ async def index(request: Request):
 
 
 @router.get("/news")
-async def news(request: Request, category: str = "all", page: int = 1):
+async def news(request: Request, category: str = "all", keyword_id: int = None, sort: str = "date", page: int = 1):
     return templates.TemplateResponse(request=request, name="news.html", context={
         "title": "新闻",
         "category": category,
+        "keyword_id": keyword_id,
+        "sort": sort,
         "page": page,
     })
 

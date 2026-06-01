@@ -95,6 +95,11 @@ body {
 /* Filter Bar */
 .filter-bar {
     margin-top: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .category-tabs {
@@ -119,6 +124,123 @@ body {
     background: var(--primary);
     color: white;
     border-color: var(--primary);
+}
+
+/* Sort Toggle */
+.sort-toggle {
+    display: flex;
+    gap: 4px;
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 4px;
+}
+
+.sort-btn {
+    padding: 6px 16px;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-gray);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.sort-btn:hover {
+    background: var(--bg-white);
+    color: var(--text);
+}
+
+.sort-btn.active {
+    background: var(--primary);
+    color: white;
+}
+
+/* Content Layout */
+.content-layout {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 24px;
+    margin-top: 24px;
+}
+
+.sidebar {
+    position: sticky;
+    top: 80px;
+    align-self: start;
+}
+
+/* Keyword List */
+.keyword-list {
+    background: var(--bg-white);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+}
+
+.keyword-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+}
+
+.keyword-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.keyword-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: var(--bg);
+    border-radius: 20px;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.keyword-tag:hover {
+    background: var(--primary);
+    color: white;
+}
+
+.keyword-tag:hover .keyword-term {
+    color: white;
+}
+
+.keyword-tag:hover .keyword-count {
+    background: rgba(255,255,255,0.2);
+    color: white;
+}
+
+.keyword-term {
+    font-size: 0.85rem;
+    color: var(--text);
+    transition: color 0.2s;
+}
+
+.keyword-count {
+    font-size: 0.75rem;
+    background: var(--bg-white);
+    padding: 1px 6px;
+    border-radius: 10px;
+    color: var(--text-gray);
+    transition: all 0.2s;
+}
+
+/* News Weight */
+.news-weight {
+    background: #fef3c7;
+    color: #92400e;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
 }
 
 /* Analysis */
@@ -325,20 +447,6 @@ body {
     margin-bottom: 12px;
 }
 
-.keyword-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.keyword-tag {
-    background: var(--bg);
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    color: var(--primary);
-}
-
 /* Loading & Empty States */
 .loading {
     text-align: center;
@@ -397,5 +505,18 @@ body {
     
     .nav {
         gap: 16px;
+    }
+    
+    .content-layout {
+        grid-template-columns: 1fr;
+    }
+    
+    .sidebar {
+        position: static;
+    }
+    
+    .filter-bar {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
