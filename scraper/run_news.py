@@ -14,7 +14,7 @@ load_dotenv()
 
 from scraper.sources.fetcher import Fetcher
 from scraper.sources.rss_parser import parse_feed
-from scraper.sources.article_extractor import extract_article_async
+from scraper.sources.article_extractor import extract_article_from_html
 from scraper.pipeline.dedup import get_link_hash, is_duplicate
 from scraper.pipeline.classify import classify_by_keywords
 from scraper.db.writer import save_news, get_existing_hashes, get_existing_titles, update_source_health, get_source_conditional_headers
@@ -70,12 +70,16 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
             continue
 
         content = None
-        if extract_content and fetcher._client:
-            content = await extract_article_async(item.link, fetcher._client)
-            if content:
-                logger.debug(f"Extracted content from {item.link} ({len(content)} chars)")
+        if extract_content:
+            html = await fetcher.fetch_html(item.link)
+            if html:
+                content = extract_article_from_html(item.link, html)
+                if content:
+                    logger.debug(f"Extracted content from {item.link} ({len(content)} chars)")
+                else:
+                    logger.debug(f"Content extraction failed for {item.link}, using summary only")
             else:
-                logger.debug(f"Content extraction failed for {item.link}, using summary only")
+                logger.debug(f"Failed to fetch HTML from {item.link}")
             delay = random.uniform(ARTICLE_DELAY_MIN, ARTICLE_DELAY_MAX)
             await asyncio.sleep(delay)
 

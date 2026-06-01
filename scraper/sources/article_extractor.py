@@ -31,12 +31,8 @@ def extract_article(url: str, html: Optional[str] = None) -> Optional[str]:
         return None
 
 
-async def extract_article_async(url: str, client) -> Optional[str]:
+def extract_article_from_html(url: str, html: str) -> Optional[str]:
     try:
-        response = await client.get(url, follow_redirects=True)
-        response.raise_for_status()
-        html = response.text
-
         result = trafilatura.extract(
             html,
             url=url,

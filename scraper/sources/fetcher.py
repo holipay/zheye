@@ -118,6 +118,13 @@ class Fetcher:
         return {"status": "error", "url": url, "error": "Max retries exceeded"}
 
 
+    async def fetch_html(self, url: str) -> Optional[str]:
+        result = await self.fetch(url)
+        if result["status"] == "ok":
+            return result["content"]
+        return None
+
+
 async def fetch_url(url: str, timeout: int = DEFAULT_TIMEOUT, max_retries: int = DEFAULT_RETRIES) -> dict:
     async with Fetcher(timeout=timeout, max_retries=max_retries) as fetcher:
         return await fetcher.fetch(url)
