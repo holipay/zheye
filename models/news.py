@@ -1,5 +1,6 @@
 from datetime import datetime
 from sqlalchemy import Column, BigInteger, String, Text, DateTime, Index, func
+from sqlalchemy.dialects.postgresql import JSONB
 from models.base import Base
 
 
@@ -16,6 +17,8 @@ class News(Base):
     lang = Column(String(10), default="en")
     summary = Column(Text)
     content = Column(Text)
+    article_type = Column(String(20), default="news")
+    regions = Column(JSONB)
     date = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

@@ -24,3 +24,7 @@ CREATE TABLE IF NOT EXISTS article_entities (
 
 CREATE INDEX IF NOT EXISTS idx_article_entity_article ON article_entities (article_id);
 CREATE INDEX IF NOT EXISTS idx_article_entity_entity ON article_entities (entity_id);
+
+-- news 表新增文章类型和地域标记
+ALTER TABLE news ADD COLUMN IF NOT EXISTS article_type VARCHAR(20) DEFAULT 'news';
+ALTER TABLE news ADD COLUMN IF NOT EXISTS regions JSONB;

@@ -16,7 +16,8 @@ from scraper.sources.fetcher import Fetcher
 from scraper.sources.rss_parser import parse_feed
 from scraper.sources.article_extractor import extract_article_from_html, extract_date_from_html
 from scraper.pipeline.dedup import get_link_hash, is_duplicate
-from scraper.pipeline.classify import classify_by_keywords
+from scraper.pipeline.classify import classify_by_keywords, detect_article_type
+from scraper.pipeline.regions import extract_regions
 from scraper.db.writer import save_news, get_existing_hashes, get_existing_titles, update_source_health, get_source_conditional_headers
 
 logging.basicConfig(
@@ -91,6 +92,9 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
         if not pub_date:
             logger.warning(f"No publication date for: {item.title} ({item.link})")
 
+        article_type = detect_article_type(item.title, item.summary, content)
+        regions = extract_regions(item.title, item.summary, content)
+
         news_item = {
             "title": item.title,
             "translated_title": None,
@@ -101,6 +105,8 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
             "lang": lang,
             "summary": item.summary,
             "content": content,
+            "article_type": article_type,
+            "regions": regions if regions else None,
             "date": pub_date,
         }
         items.append(news_item)
