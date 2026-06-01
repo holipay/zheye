@@ -28,3 +28,4 @@ apscheduler
 # Testing
 pytest
 pytest-asyncio
+pytest-cov
