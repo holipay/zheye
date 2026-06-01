@@ -1,0 +1,188 @@
+# 实体词库 - 用于从新闻正文中提取命名实体
+# 按 entity_type 分组，每条包含 name (显示名) 和 aliases (匹配别名)
+
+companies:
+  # 科技
+  - name: "Apple"
+    aliases: ["Apple", "AAPL", "苹果", "Apple Inc"]
+  - name: "Microsoft"
+    aliases: ["Microsoft", "MSFT", "微软"]
+  - name: "Google"
+    aliases: ["Google", "GOOGL", "谷歌", "Alphabet"]
+  - name: "Amazon"
+    aliases: ["Amazon", "AMZN", "亚马逊"]
+  - name: "Meta"
+    aliases: ["Meta", "META", "Facebook", "脸书"]
+  - name: "Tesla"
+    aliases: ["Tesla", "TSLA", "特斯拉"]
+  - name: "Nvidia"
+    aliases: ["Nvidia", "NVDA", "英伟达"]
+  - name: "TSMC"
+    aliases: ["TSMC", "台积电", "Taiwan Semiconductor"]
+  - name: "Samsung"
+    aliases: ["Samsung", "三星"]
+  - name: "Netflix"
+    aliases: ["Netflix", "NFLX"]
+  - name: "Adobe"
+    aliases: ["Adobe", "ADBE"]
+  - name: "Intel"
+    aliases: ["Intel", "INTC", "英特尔"]
+  - name: "AMD"
+    aliases: ["AMD", "Advanced Micro Devices"]
+  - name: "Qualcomm"
+    aliases: ["Qualcomm", "QCOM", "高通"]
+  - name: "Broadcom"
+    aliases: ["Broadcom", "AVGO"]
+  - name: "Oracle"
+    aliases: ["Oracle", "ORCL", "甲骨文"]
+  - name: "IBM"
+    aliases: ["IBM"]
+  - name: "Salesforce"
+    aliases: ["Salesforce", "CRM"]
+  - name: "Uber"
+    aliases: ["Uber", "UBER"]
+  - name: "Airbnb"
+    aliases: ["Airbnb", "ABNB"]
+  # 金融
+  - name: "JPMorgan"
+    aliases: ["JPMorgan", "JPM", "摩根大通"]
+  - name: "Goldman Sachs"
+    aliases: ["Goldman Sachs", "GS", "高盛"]
+  - name: "Morgan Stanley"
+    aliases: ["Morgan Stanley", "MS", "摩根士丹利"]
+  - name: "Bank of America"
+    aliases: ["Bank of America", "BAC", "美银"]
+  - name: "Citigroup"
+    aliases: ["Citigroup", "C", "花旗"]
+  - name: "HSBC"
+    aliases: ["HSBC", "汇丰"]
+  - name: "BlackRock"
+    aliases: ["BlackRock", "BLK", "贝莱德"]
+  - name: "Berkshire Hathaway"
+    aliases: ["Berkshire Hathaway", "BRK", "伯克希尔"]
+  # 汽车
+  - name: "Toyota"
+    aliases: ["Toyota", "TM", "丰田"]
+  - name: "Volkswagen"
+    aliases: ["Volkswagen", "VW", "大众"]
+  - name: "BYD"
+    aliases: ["BYD", "比亚迪"]
+  # 能源
+  - name: "ExxonMobil"
+    aliases: ["ExxonMobil", "XOM", "埃克森美孚"]
+  - name: "Shell"
+    aliases: ["Shell", "SHEL", "壳牌"]
+  - name: "Saudi Aramco"
+    aliases: ["Saudi Aramco", "沙特阿美"]
+  # 中概股
+  - name: "Alibaba"
+    aliases: ["Alibaba", "BABA", "阿里巴巴"]
+  - name: "Tencent"
+    aliases: ["Tencent", "腾讯"]
+  - name: "Baidu"
+    aliases: ["Baidu", "BIDU", "百度"]
+  - name: "JD.com"
+    aliases: ["JD.com", "JD", "京东"]
+  - name: "Pinduoduo"
+    aliases: ["Pinduoduo", "PDD", "拼多多"]
+  - name: "NetEase"
+    aliases: ["NetEase", "NTES", "网易"]
+  - name: "NIO"
+    aliases: ["NIO", "蔚来"]
+  - name: "Xpeng"
+    aliases: ["Xpeng", "XPEV", "小鹏"]
+  - name: "Li Auto"
+    aliases: ["Li Auto", "LI", "理想"]
+
+indicators:
+  - name: "GDP"
+    aliases: ["GDP", "国内生产总值", "gross domestic product"]
+  - name: "CPI"
+    aliases: ["CPI", "消费者物价指数", "consumer price index"]
+  - name: "PPI"
+    aliases: ["PPI", "生产者物价指数", "producer price index"]
+  - name: "PMI"
+    aliases: ["PMI", "采购经理指数", "purchasing managers"]
+  - name: "非农就业"
+    aliases: ["nonfarm payroll", "非农", "non-farm payroll", "NFP"]
+  - name: "失业率"
+    aliases: ["unemployment rate", "失业率", "jobless rate"]
+  - name: "零售销售"
+    aliases: ["retail sales", "零售"]
+  - name: "消费者信心"
+    aliases: ["consumer confidence", "消费者信心指数"]
+  - name: "贸易差额"
+    aliases: ["trade balance", "贸易差额", "贸易逆差", "贸易顺差"]
+  - name: "工业产出"
+    aliases: ["industrial production", "工业产出"]
+  - name: "房屋开工"
+    aliases: ["housing starts", "房屋开工"]
+  - name: "核心通胀"
+    aliases: ["core inflation", "核心通胀", "core CPI"]
+
+organizations:
+  # 央行
+  - name: "美联储"
+    aliases: ["Federal Reserve", "Fed", "美联储", "FOMC"]
+  - name: "欧央行"
+    aliases: ["European Central Bank", "ECB", "欧央行"]
+  - name: "日本央行"
+    aliases: ["Bank of Japan", "BOJ", "日本央行"]
+  - name: "中国人民银行"
+    aliases: ["PBOC", "人民银行", "中国人民银行", "People's Bank of China"]
+  - name: "英国央行"
+    aliases: ["Bank of England", "BOE", "英国央行"]
+  - name: "瑞士央行"
+    aliases: ["Swiss National Bank", "SNB", "瑞士央行"]
+  # 国际组织
+  - name: "IMF"
+    aliases: ["IMF", "International Monetary Fund", "国际货币基金组织"]
+  - name: "World Bank"
+    aliases: ["World Bank", "世界银行"]
+  - name: "WTO"
+    aliases: ["WTO", "World Trade Organization", "世贸组织"]
+  - name: "OPEC"
+    aliases: ["OPEC", "欧佩克", "石油输出国组织"]
+  - name: "联合国"
+    aliases: ["United Nations", "UN", "联合国"]
+  - name: "NATO"
+    aliases: ["NATO", "北约"]
+  - name: "EU"
+    aliases: ["European Union", "EU", "欧盟"]
+  # 评级机构
+  - name: "Moody's"
+    aliases: ["Moody's", "穆迪"]
+  - name: "S&P"
+    aliases: ["S&P", "Standard & Poor's", "标普"]
+  - name: "Fitch"
+    aliases: ["Fitch", "惠誉"]
+
+countries:
+  - name: "美国"
+    aliases: ["United States", "U.S.", "US", "USA", "美国", "America"]
+  - name: "中国"
+    aliases: ["China", "中国", "PRC"]
+  - name: "欧盟"
+    aliases: ["Europe", "EU", "欧元区", "Eurozone", "欧盟"]
+  - name: "日本"
+    aliases: ["Japan", "日本"]
+  - name: "英国"
+    aliases: ["United Kingdom", "UK", "Britain", "英国"]
+  - name: "德国"
+    aliases: ["Germany", "德国"]
+  - name: "法国"
+    aliases: ["France", "法国"]
+  - name: "印度"
+    aliases: ["India", "印度"]
+  - name: "俄罗斯"
+    aliases: ["Russia", "俄罗斯"]
+  - name: "巴西"
+    aliases: ["Brazil", "巴西"]
+  - name: "韩国"
+    aliases: ["South Korea", "Korea", "韩国"]
+  - name: "加拿大"
+    aliases: ["Canada", "加拿大"]
+  - name: "澳大利亚"
+    aliases: ["Australia", "澳大利亚", "澳洲"]
+  - name: "中东"
+    aliases: ["Middle East", "中东", "Saudi Arabia", "沙特"]

@@ -6,6 +6,7 @@ from models.base import async_session
 from models.news import News
 from models.source_health import SourceHealth
 from scraper.pipeline.keywords import match_keywords, sync_keywords_to_db, save_article_keywords, load_keywords
+from scraper.pipeline.entities import extract_entities, sync_entities_to_db, save_article_entities
 from scraper.pipeline.relations import calculate_and_save_relations
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,15 @@ async def save_news(items: list[dict]) -> int:
                         if matched:
                             await save_article_keywords(session, article_id, matched, term_to_id)
                             await calculate_and_save_relations(session, article_id, item.get("category", ""))
+
+                        entities = extract_entities(
+                            title=item.get("title", ""),
+                            summary=item.get("summary", ""),
+                            content=item.get("content", ""),
+                        )
+                        if entities:
+                            entity_name_to_id = await sync_entities_to_db(session, entities)
+                            await save_article_entities(session, article_id, entities, entity_name_to_id)
 
             except Exception as e:
                 logger.error(f"Error saving news {item.get('link')}: {e}")
