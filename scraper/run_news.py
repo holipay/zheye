@@ -26,8 +26,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 BATCH_SIZE = 5
-BATCH_DELAY_MIN = 10.0
-BATCH_DELAY_MAX = 30.0
+BATCH_DELAY_MIN = 15.0
+BATCH_DELAY_MAX = 40.0
+ARTICLE_DELAY_MIN = 2.0
+ARTICLE_DELAY_MAX = 5.0
 
 
 def load_config() -> dict:
@@ -68,6 +70,8 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
                 logger.debug(f"Extracted content from {item.link} ({len(content)} chars)")
             else:
                 logger.debug(f"Content extraction failed for {item.link}, using summary only")
+            delay = random.uniform(ARTICLE_DELAY_MIN, ARTICLE_DELAY_MAX)
+            await asyncio.sleep(delay)
 
         news_item = {
             "title": item.title,
