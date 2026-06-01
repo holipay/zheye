@@ -70,7 +70,14 @@ async def get_existing_titles(category: str = None, limit: int = 500) -> list[st
         return [row[0] for row in result.fetchall()]
 
 
-async def update_source_health(source_name: str, success: bool, items_count: int = 0, error: str = None):
+async def update_source_health(
+    source_name: str,
+    success: bool,
+    items_count: int = 0,
+    error: str = None,
+    etag: str = None,
+    last_modified: str = None,
+):
     async with async_session() as session:
         result = await session.execute(select(SourceHealth).where(SourceHealth.source_name == source_name))
         health = result.scalar_one_or_none()
@@ -88,6 +95,22 @@ async def update_source_health(source_name: str, success: bool, items_count: int
             health.total_failure = (health.total_failure or 0) + 1
             health.consecutive_failures = (health.consecutive_failures or 0) + 1
             health.last_error = error
+        if etag is not None:
+            health.last_etag = etag
+        if last_modified is not None:
+            health.last_rss_modified = last_modified
         if health.total_checks > 0:
             health.success_rate = round((health.total_success or 0) / health.total_checks * 100, 2)
         await session.commit()
+
+
+async def get_source_conditional_headers(source_name: str) -> dict:
+    async with async_session() as session:
+        result = await session.execute(select(SourceHealth).where(SourceHealth.source_name == source_name))
+        health = result.scalar_one_or_none()
+        if health:
+            return {
+                "etag": health.last_etag,
+                "last_modified": health.last_rss_modified,
+            }
+        return {"etag": None, "last_modified": None}

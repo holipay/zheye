@@ -17,7 +17,7 @@ from scraper.sources.rss_parser import parse_feed
 from scraper.sources.article_extractor import extract_article_async
 from scraper.pipeline.dedup import get_link_hash, is_duplicate
 from scraper.pipeline.classify import classify_by_keywords
-from scraper.db.writer import save_news, get_existing_hashes, get_existing_titles, update_source_health
+from scraper.db.writer import save_news, get_existing_hashes, get_existing_titles, update_source_health, get_source_conditional_headers
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,8 +45,14 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
     category = source.get("category", "其他")
     items = []
 
+    headers = await get_source_conditional_headers(name)
     logger.info(f"Fetching {name} from {url}")
-    result = await fetcher.fetch(url)
+    result = await fetcher.fetch(url, etag=headers["etag"], last_modified=headers["last_modified"])
+
+    if result["status"] == "not_modified":
+        logger.info(f"{name} not modified (304), skipping")
+        await update_source_health(name, success=True, items_count=0)
+        return []
 
     if result["status"] != "ok":
         logger.warning(f"Failed to fetch {name}: {result.get('error', 'unknown')}")
@@ -89,7 +95,13 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
         existing_hashes.add(link_hash)
         existing_titles.append(item.title)
 
-    await update_source_health(name, success=True, items_count=len(items))
+    await update_source_health(
+        name,
+        success=True,
+        items_count=len(items),
+        etag=result.get("etag"),
+        last_modified=result.get("last_modified"),
+    )
     return items
 
 

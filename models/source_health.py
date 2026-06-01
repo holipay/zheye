@@ -16,3 +16,5 @@ class SourceHealth(Base):
     last_error = Column(Text)
     last_items = Column(Integer, default=0)
     success_rate = Column(Numeric(5, 2), default=0)
+    last_etag = Column(String(200))
+    last_rss_modified = Column(String(200))
