@@ -27,15 +27,15 @@ def load_keywords() -> list[dict]:
         return _keywords_cache
 
 
-def match_keywords(title: str, translated_title: str, summary: str, category: str) -> list[dict]:
+def match_keywords(title: str, translated_title: str, summary: str, category: str, content: str = None) -> list[dict]:
     keywords = load_keywords()
     if not keywords:
         return []
 
-    text_parts = [title or "", translated_title or "", summary or ""]
-    text = " ".join(text_parts).lower()
+    title_text = " ".join([title or "", translated_title or "", summary or ""]).lower()
+    full_text = (title_text + " " + (content or "")).lower()
 
-    if not text.strip():
+    if not full_text.strip():
         return []
 
     matched = []
@@ -54,31 +54,57 @@ def match_keywords(title: str, translated_title: str, summary: str, category: st
             if len(term) < 3:
                 continue
             pattern = r'\b' + re.escape(term) + r'\b'
-            if re.search(pattern, text, re.IGNORECASE):
+            in_title = re.search(pattern, title_text, re.IGNORECASE)
+            in_content = re.search(pattern, full_text, re.IGNORECASE) if content else False
+
+            if in_title:
                 entry = {
                     "term": term,
                     "keyword_id": None,
                     "weight": weight,
                     "relevance": weight if is_same_category else weight * 0.8,
                 }
-                if is_same_category:
-                    matched_same_category.append(entry)
-                else:
-                    matched_cross_category.append(entry)
+            elif in_content:
+                entry = {
+                    "term": term,
+                    "keyword_id": None,
+                    "weight": weight,
+                    "relevance": weight * 0.5 if is_same_category else weight * 0.4,
+                }
+            else:
+                continue
+
+            if is_same_category:
+                matched_same_category.append(entry)
+            else:
+                matched_cross_category.append(entry)
         else:
             if len(term) < 2:
                 continue
-            if term.lower() in text:
+            in_title = term.lower() in title_text
+            in_content = term.lower() in full_text if content else False
+
+            if in_title:
                 entry = {
                     "term": term,
                     "keyword_id": None,
                     "weight": weight,
                     "relevance": weight if is_same_category else weight * 0.8,
                 }
-                if is_same_category:
-                    matched_same_category.append(entry)
-                else:
-                    matched_cross_category.append(entry)
+            elif in_content:
+                entry = {
+                    "term": term,
+                    "keyword_id": None,
+                    "weight": weight,
+                    "relevance": weight * 0.5 if is_same_category else weight * 0.4,
+                }
+            else:
+                continue
+
+            if is_same_category:
+                matched_same_category.append(entry)
+            else:
+                matched_cross_category.append(entry)
 
     if matched_same_category:
         matched = matched_same_category

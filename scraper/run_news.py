@@ -14,6 +14,7 @@ load_dotenv()
 
 from scraper.sources.fetcher import Fetcher
 from scraper.sources.rss_parser import parse_feed
+from scraper.sources.article_extractor import extract_article_async
 from scraper.pipeline.dedup import get_link_hash, is_duplicate
 from scraper.pipeline.classify import classify_by_keywords
 from scraper.db.writer import save_news, get_existing_hashes, get_existing_titles, update_source_health
@@ -35,7 +36,7 @@ def load_config() -> dict:
         return yaml.safe_load(f)
 
 
-async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, existing_titles: list) -> list[dict]:
+async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, existing_titles: list, extract_content: bool = True) -> list[dict]:
     name = source["name"]
     url = source["url"]
     lang = source.get("lang", "en")
@@ -60,6 +61,14 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
         if is_duplicate(item.title, existing_titles):
             continue
 
+        content = None
+        if extract_content and fetcher._client:
+            content = await extract_article_async(item.link, fetcher._client)
+            if content:
+                logger.debug(f"Extracted content from {item.link} ({len(content)} chars)")
+            else:
+                logger.debug(f"Content extraction failed for {item.link}, using summary only")
+
         news_item = {
             "title": item.title,
             "translated_title": None,
@@ -69,6 +78,7 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
             "category": category,
             "lang": lang,
             "summary": item.summary,
+            "content": content,
             "date": item.date,
         }
         items.append(news_item)

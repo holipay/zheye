@@ -39,6 +39,7 @@ async def save_news(items: list[dict]) -> int:
                             translated_title=item.get("translated_title"),
                             summary=item.get("summary"),
                             category=item.get("category", ""),
+                            content=item.get("content"),
                         )
 
                         if matched:

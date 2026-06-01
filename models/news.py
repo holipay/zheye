@@ -15,6 +15,7 @@ class News(Base):
     category = Column(String(50), nullable=False)
     lang = Column(String(10), default="en")
     summary = Column(Text)
+    content = Column(Text)
     date = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
