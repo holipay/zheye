@@ -1,0 +1,19 @@
+<div class="type-list">
+    <a href="/news?category={{ category or 'all' }}&article_type=all" 
+       class="type-item {% if not article_type or article_type == 'all' %}active{% endif %}"
+       hx-get="/api/news?category={{ category or 'all' }}&article_type=all&sort={{ sort or 'date' }}"
+       hx-target="#news-list"
+       hx-swap="innerHTML">
+        <span class="type-name">全部类型</span>
+    </a>
+    {% for type_name, count in article_types %}
+    <a href="/news?category={{ category or 'all' }}&article_type={{ type_name }}" 
+       class="type-item {% if article_type == type_name %}active{% endif %}"
+       hx-get="/api/news?category={{ category or 'all' }}&article_type={{ type_name }}&sort={{ sort or 'date' }}"
+       hx-target="#news-list"
+       hx-swap="innerHTML">
+        <span class="type-name">{{ type_name }}</span>
+        <span class="type-count">{{ count }}</span>
+    </a>
+    {% endfor %}
+</div>

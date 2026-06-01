@@ -13,15 +13,24 @@
                 <a href="/news?category=all" class="tab {% if category == 'all' %}active{% endif %}">全部</a>
             </div>
         </div>
+        <div class="type-tabs"
+             hx-get="/api/article-types" 
+             hx-trigger="load"
+             hx-target="#type-tabs"
+             hx-swap="innerHTML">
+            <div id="type-tabs">
+                <a href="/news?category={{ category or 'all' }}&article_type=all" class="tab {% if article_type == 'all' %}active{% endif %}">全部类型</a>
+            </div>
+        </div>
         <div class="sort-toggle">
-            <a href="/news?category={{ category or 'all' }}&sort=date" 
+            <a href="/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort=date" 
                class="sort-btn {% if sort != 'weight' %}active{% endif %}"
-               hx-get="/api/news?category={{ category or 'all' }}&sort=date"
+               hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort=date"
                hx-target="#news-list"
                hx-swap="innerHTML">最新</a>
-            <a href="/news?category={{ category or 'all' }}&sort=weight" 
+            <a href="/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort=weight" 
                class="sort-btn {% if sort == 'weight' %}active{% endif %}"
-               hx-get="/api/news?category={{ category or 'all' }}&sort=weight"
+               hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort=weight"
                hx-target="#news-list"
                hx-swap="innerHTML">重要</a>
         </div>
@@ -37,11 +46,18 @@
              hx-swap="innerHTML">
             <div class="loading">加载关键字...</div>
         </div>
+        <div id="entity-nav"
+             hx-get="/api/entities/popular?limit=15"
+             hx-trigger="load"
+             hx-target="#entity-nav"
+             hx-swap="innerHTML">
+            <div class="loading">加载实体...</div>
+        </div>
     </aside>
     
     <main class="news-container">
         <div id="news-list" 
-             hx-get="/api/news?category={{ category or 'all' }}&sort={{ sort or 'date' }}&page={{ page or 1 }}" 
+             hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page or 1 }}" 
              hx-trigger="load"
              hx-target="#news-list"
              hx-swap="innerHTML">

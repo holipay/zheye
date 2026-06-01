@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <a href="/news" class="back-link">&larr; 返回新闻列表</a>
+</div>
+
+<div id="news-detail"
+     hx-get="/api/news/{{ news_id }}"
+     hx-trigger="load"
+     hx-target="#news-detail"
+     hx-swap="innerHTML">
+    <div class="loading">加载中...</div>
+</div>
+{% endblock %}

@@ -1,0 +1,32 @@
+<div class="entity-nav">
+    <h4 class="entity-nav-title">实体导航</h4>
+    <div class="entity-type-btns">
+        <button class="entity-type-btn active"
+                hx-get="/api/entities/popular?limit=15"
+                hx-target="#entity-list"
+                hx-swap="innerHTML">全部</button>
+        <button class="entity-type-btn"
+                hx-get="/api/entities/popular?entity_type=company&limit=15"
+                hx-target="#entity-list"
+                hx-swap="innerHTML">公司</button>
+        <button class="entity-type-btn"
+                hx-get="/api/entities/popular?entity_type=indicator&limit=15"
+                hx-target="#entity-list"
+                hx-swap="innerHTML">指标</button>
+        <button class="entity-type-btn"
+                hx-get="/api/entities/popular?entity_type=organization&limit=15"
+                hx-target="#entity-list"
+                hx-swap="innerHTML">组织</button>
+        <button class="entity-type-btn"
+                hx-get="/api/entities/popular?entity_type=country&limit=15"
+                hx-target="#entity-list"
+                hx-swap="innerHTML">国家</button>
+    </div>
+    <div id="entity-list"
+         hx-get="/api/entities/popular?limit=15"
+         hx-trigger="load"
+         hx-target="#entity-list"
+         hx-swap="innerHTML">
+        <span class="loading">加载实体...</span>
+    </div>
+</div>

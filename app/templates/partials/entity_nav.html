@@ -1,0 +1,19 @@
+<div class="entity-nav">
+    <h4 class="entity-nav-title">实体导航</h4>
+    <div class="entity-type-tabs"
+         hx-get="/api/entities/types"
+         hx-trigger="load"
+         hx-target="#entity-type-tabs"
+         hx-swap="innerHTML">
+        <div id="entity-type-tabs">
+            <span class="loading">加载类型...</span>
+        </div>
+    </div>
+    <div id="entity-list"
+         hx-get="/api/entities/popular?limit=15"
+         hx-trigger="load"
+         hx-target="#entity-list"
+         hx-swap="innerHTML">
+        <span class="loading">加载实体...</span>
+    </div>
+</div>

@@ -5,10 +5,14 @@
             <div class="news-meta">
                 <span class="news-source">{{ item.source }}</span>
                 <span class="news-category">{{ item.category }}</span>
+                {% if item.article_type and item.article_type != 'news' %}
+                <span class="news-type type-{{ item.article_type }}">{{ item.article_type }}</span>
+                {% endif %}
                 <span class="news-date">{{ item.date.strftime('%Y-%m-%d') if item.date else '' }}</span>
                 {% if item._weight is defined and item._weight %}
                 <span class="news-weight">权重: {{ "%.1f"|format(item._weight) }}</span>
                 {% endif %}
+                <a href="/news/{{ item.id }}" class="news-detail-link">详情</a>
             </div>
             <h3 class="news-title">
                 <a href="{{ item.link }}" target="_blank" rel="noopener">
@@ -24,9 +28,9 @@
         {% if total_pages > 1 %}
         <div class="pagination">
             {% if page > 1 %}
-            <a href="/news?category={{ category or 'all' }}&sort={{ sort or 'date' }}&page={{ page - 1 }}" 
+            <a href="/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page - 1 }}" 
                class="page-btn"
-               hx-get="/api/news?category={{ category or 'all' }}&sort={{ sort or 'date' }}&page={{ page - 1 }}"
+               hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page - 1 }}"
                hx-target="#news-list"
                hx-swap="innerHTML">上一页</a>
             {% endif %}
@@ -34,9 +38,9 @@
             <span class="page-info">第 {{ page }} / {{ total_pages }} 页 (共 {{ total }} 条)</span>
             
             {% if page < total_pages %}
-            <a href="/news?category={{ category or 'all' }}&sort={{ sort or 'date' }}&page={{ page + 1 }}" 
+            <a href="/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page + 1 }}" 
                class="page-btn"
-               hx-get="/api/news?category={{ category or 'all' }}&sort={{ sort or 'date' }}&page={{ page + 1 }}"
+               hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page + 1 }}"
                hx-target="#news-list"
                hx-swap="innerHTML">下一页</a>
             {% endif %}

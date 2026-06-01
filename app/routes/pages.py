@@ -12,10 +12,11 @@ async def index(request: Request):
 
 
 @router.get("/news")
-async def news(request: Request, category: str = "all", keyword_id: int = None, sort: str = "date", page: int = 1):
+async def news(request: Request, category: str = "all", article_type: str = "all", keyword_id: int = None, sort: str = "date", page: int = 1):
     return templates.TemplateResponse(request=request, name="news.html", context={
         "title": "新闻",
         "category": category,
+        "article_type": article_type,
         "keyword_id": keyword_id,
         "sort": sort,
         "page": page,
@@ -25,3 +26,11 @@ async def news(request: Request, category: str = "all", keyword_id: int = None, 
 @router.get("/articles")
 async def articles(request: Request):
     return templates.TemplateResponse(request=request, name="articles.html", context={"title": "文章"})
+
+
+@router.get("/news/{news_id}")
+async def news_detail(request: Request, news_id: int):
+    return templates.TemplateResponse(request=request, name="news_detail.html", context={
+        "title": "新闻详情",
+        "news_id": news_id,
+    })

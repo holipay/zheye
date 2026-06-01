@@ -8,6 +8,8 @@ from models.news import News
 from models.keyword import Keyword
 from models.article_keyword import ArticleKeyword
 from models.article_relation import ArticleRelation
+from models.entity import Entity
+from models.article_entity import ArticleEntity
 
 router = APIRouter(prefix="/api")
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -17,6 +19,7 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templa
 async def get_news(
     request: Request,
     category: str = "all",
+    article_type: str = "all",
     keyword_id: int = None,
     sort: str = "date",
     page: int = 1,
@@ -48,6 +51,9 @@ async def get_news(
             if category and category != "all":
                 base_query = base_query.where(News.category == category)
                 count_query = count_query.where(News.category == category)
+            if article_type and article_type != "all":
+                base_query = base_query.where(News.article_type == article_type)
+                count_query = count_query.where(News.article_type == article_type)
             if keyword_id:
                 base_query = base_query.where(ArticleKeyword.keyword_id == keyword_id)
 
@@ -68,6 +74,9 @@ async def get_news(
             if category and category != "all":
                 query = query.where(News.category == category)
                 count_query = count_query.where(News.category == category)
+            if article_type and article_type != "all":
+                query = query.where(News.article_type == article_type)
+                count_query = count_query.where(News.article_type == article_type)
             if keyword_id:
                 query = (
                     query.join(ArticleKeyword, ArticleKeyword.article_id == News.id)
@@ -91,6 +100,7 @@ async def get_news(
     return templates.TemplateResponse(request=request, name="partials/news_list.html", context={
         "news_items": news_items,
         "category": category,
+        "article_type": article_type,
         "keyword_id": keyword_id,
         "sort": sort,
         "page": page,
@@ -108,6 +118,18 @@ async def get_categories(request: Request):
     
     return templates.TemplateResponse(request=request, name="partials/categories.html", context={
         "categories": categories,
+    })
+
+
+@router.get("/article-types", response_class=HTMLResponse)
+async def get_article_types(request: Request):
+    async with async_session() as session:
+        query = select(News.article_type, func.count(News.id)).group_by(News.article_type).order_by(desc(func.count(News.id)))
+        result = await session.execute(query)
+        article_types = result.all()
+    
+    return templates.TemplateResponse(request=request, name="partials/article_types.html", context={
+        "article_types": article_types,
     })
 
 
@@ -303,3 +325,150 @@ async def get_articles_by_keyword(keyword_id: int, page: int = 1, page_size: int
         "page_size": page_size,
         "articles": articles,
     }
+
+
+@router.get("/news/{news_id}", response_class=HTMLResponse)
+async def get_news_detail(request: Request, news_id: int):
+    async with async_session() as session:
+        news_result = await session.execute(select(News).where(News.id == news_id))
+        news = news_result.scalar_one_or_none()
+        if not news:
+            raise HTTPException(status_code=404, detail="News not found")
+
+        keywords_query = (
+            select(Keyword)
+            .join(ArticleKeyword, ArticleKeyword.keyword_id == Keyword.id)
+            .where(ArticleKeyword.article_id == news_id)
+            .order_by(desc(Keyword.weight))
+        )
+        keywords_result = await session.execute(keywords_query)
+        keywords = keywords_result.scalars().all()
+
+        entities_query = (
+            select(Entity, ArticleEntity.context)
+            .join(ArticleEntity, ArticleEntity.entity_id == Entity.id)
+            .where(ArticleEntity.article_id == news_id)
+            .order_by(Entity.entity_type, Entity.name)
+        )
+        entities_result = await session.execute(entities_query)
+        entities = [
+            {
+                "name": entity.name,
+                "entity_type": entity.entity_type,
+                "context": context,
+            }
+            for entity, context in entities_result.all()
+        ]
+
+        related_query = (
+            select(News, ArticleRelation.score, ArticleRelation.relation_type)
+            .join(ArticleRelation, ArticleRelation.target_id == News.id)
+            .where(ArticleRelation.source_id == news_id)
+            .order_by(desc(ArticleRelation.score))
+            .limit(10)
+        )
+        related_result = await session.execute(related_query)
+        related = [
+            {
+                "id": r.id,
+                "title": r.title,
+                "translated_title": r.translated_title,
+                "source": r.source,
+                "category": r.category,
+                "date": r.date.strftime("%Y-%m-%d") if r.date else None,
+                "score": score,
+                "relation_type": relation_type,
+            }
+            for r, score, relation_type in related_result.all()
+        ]
+
+    return templates.TemplateResponse(request=request, name="partials/news_detail.html", context={
+        "news": news,
+        "keywords": keywords,
+        "entities": entities,
+        "related": related,
+    })
+
+
+@router.get("/entities/popular", response_class=HTMLResponse)
+async def get_popular_entities(request: Request, entity_type: str = None, limit: int = 15):
+    async with async_session() as session:
+        query = (
+            select(Entity, func.count(ArticleEntity.id).label("article_count"))
+            .join(ArticleEntity, ArticleEntity.entity_id == Entity.id)
+            .group_by(Entity.id)
+            .having(func.count(ArticleEntity.id) > 0)
+        )
+
+        if entity_type:
+            query = query.where(Entity.entity_type == entity_type)
+
+        query = query.order_by(desc(func.count(ArticleEntity.id))).limit(limit)
+        result = await session.execute(query)
+        rows = result.all()
+
+        entities = []
+        for ent, count in rows:
+            entities.append({
+                "id": ent.id,
+                "name": ent.name,
+                "entity_type": ent.entity_type,
+                "article_count": count,
+            })
+
+    return templates.TemplateResponse(request=request, name="partials/entity_list.html", context={
+        "entities": entities,
+        "entity_type": entity_type,
+    })
+
+
+@router.get("/entities/types", response_class=HTMLResponse)
+async def get_entity_types(request: Request):
+    async with async_session() as session:
+        query = (
+            select(Entity.entity_type, func.count(Entity.id))
+            .group_by(Entity.entity_type)
+            .order_by(desc(func.count(Entity.id)))
+        )
+        result = await session.execute(query)
+        types = result.all()
+
+    return templates.TemplateResponse(request=request, name="partials/entity_types.html", context={
+        "types": types,
+    })
+
+
+@router.get("/news/by-entity/{entity_id}", response_class=HTMLResponse)
+async def get_news_by_entity(request: Request, entity_id: int, page: int = 1, page_size: int = 20):
+    async with async_session() as session:
+        ent_result = await session.execute(select(Entity).where(Entity.id == entity_id))
+        entity = ent_result.scalar_one_or_none()
+        if not entity:
+            raise HTTPException(status_code=404, detail="Entity not found")
+
+        count_query = select(func.count(ArticleEntity.id)).where(ArticleEntity.entity_id == entity_id)
+        total_result = await session.execute(count_query)
+        total = total_result.scalar()
+
+        offset = (page - 1) * page_size
+        query = (
+            select(News)
+            .join(ArticleEntity, ArticleEntity.article_id == News.id)
+            .where(ArticleEntity.entity_id == entity_id)
+            .order_by(desc(News.date))
+            .offset(offset)
+            .limit(page_size)
+        )
+        result = await session.execute(query)
+        news_items = result.scalars().all()
+
+        total_pages = (total + page_size - 1) // page_size
+
+    return templates.TemplateResponse(request=request, name="partials/news_list.html", context={
+        "news_items": news_items,
+        "category": "all",
+        "article_type": "all",
+        "page": page,
+        "total_pages": total_pages,
+        "total": total,
+    })

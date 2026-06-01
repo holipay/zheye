@@ -1,0 +1,12 @@
+<div class="entity-list">
+    {% for ent in entities %}
+    <a href="/news?entity_id={{ ent.id }}" 
+       class="entity-tag"
+       hx-get="/api/news/by-entity/{{ ent.id }}"
+       hx-target="#news-list"
+       hx-swap="innerHTML">
+        <span class="entity-tag-name">{{ ent.name }}</span>
+        <span class="entity-tag-count">{{ ent.article_count }}</span>
+    </a>
+    {% endfor %}
+</div>
