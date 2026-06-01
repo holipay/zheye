@@ -1,5 +1,6 @@
 import logging
 import re
+from datetime import datetime
 from typing import Optional
 import trafilatura
 
@@ -46,4 +47,28 @@ def extract_article_from_html(url: str, html: str) -> Optional[str]:
         return None
     except Exception as e:
         logger.warning(f"Failed to extract article from {url}: {e}")
+        return None
+
+
+def extract_date_from_html(url: str, html: str) -> Optional[datetime]:
+    try:
+        metadata = trafilatura.extract(
+            html,
+            url=url,
+            include_comments=False,
+            include_tables=False,
+            output_format='json',
+        )
+        if metadata:
+            import json
+            data = json.loads(metadata)
+            date_str = data.get("date")
+            if date_str:
+                try:
+                    return datetime.strptime(date_str, "%Y-%m-%d")
+                except ValueError:
+                    pass
+        return None
+    except Exception as e:
+        logger.debug(f"Failed to extract date from {url}: {e}")
         return None
