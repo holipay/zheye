@@ -1692,3 +1692,125 @@ async def trigger_analogy_analysis(event_id: str):
             "candidates_found": len(candidates),
             "analogies_created": analogies_created,
         }
+
+
+# ============================================================
+# P2: 未来情景推演 API
+# ============================================================
+
+@router.get("/events/{event_id}/scenarios", response_class=HTMLResponse)
+async def get_event_scenarios(request: Request, event_id: str, lang: str = "zh"):
+    """获取事件的情景推演框架"""
+    cache_key = f"api:events:scenarios:{event_id}:{lang}"
+    cached = get_cached(cache_key)
+    if cached:
+        return HTMLResponse(content=cached)
+
+    async with async_session() as session:
+        from models.scenario import EventScenario
+        
+        result = await session.execute(
+            select(EventScenario).where(EventScenario.event_id == event_id)
+        )
+        scenario = result.scalar_one_or_none()
+        
+        if not scenario:
+            return templates.TemplateResponse(request=request, name="partials/scenario_empty.html", context={
+                "event_id": event_id,
+                "lang": lang,
+            })
+
+    response = templates.TemplateResponse(request=request, name="partials/event_scenarios.html", context={
+        "event_id": event_id,
+        "lang": lang,
+        "key_variables": scenario.key_variables or [],
+        "observation_signals": scenario.observation_signals or [],
+        "scenarios": scenario.scenarios or [],
+        "thinking_questions": scenario.thinking_questions or [],
+    })
+    set_cached(cache_key, response.body.decode(), ttl=600)
+    return response
+
+
+@router.post("/events/{event_id}/scenarios/analyze")
+async def trigger_scenario_analysis(event_id: str):
+    """触发情景推演分析"""
+    from scraper.pipeline.ai_analysis import DeepSeekClient
+    from scraper.pipeline.scenario import analyze_scenarios
+    from models.scenario import EventScenario
+    from models.event_representation import EventRepresentation
+    
+    async with async_session() as session:
+        # 获取事件
+        result = await session.execute(
+            select(Event).where(Event.event_id == event_id)
+        )
+        event = result.scalar_one_or_none()
+        
+        if not event:
+            raise HTTPException(status_code=404, detail="事件未找到")
+        
+        # 获取相关文章
+        articles = []
+        if event.related_articles:
+            for article_ref in event.related_articles[:5]:
+                if isinstance(article_ref, dict):
+                    articles.append(article_ref)
+        
+        # 获取因果模式（如果已有表征）
+        repr_result = await session.execute(
+            select(EventRepresentation).where(EventRepresentation.event_id == event_id)
+        )
+        representation = repr_result.scalar_one_or_none()
+        causal_pattern = representation.causal_pattern_desc if representation else None
+        
+        # 调用AI分析
+        ai_client = DeepSeekClient()
+        event_data = {
+            "title": event.title,
+            "description": event.description,
+            "category": event.category,
+        }
+        
+        analysis = await analyze_scenarios(event_data, articles, ai_client, causal_pattern)
+        
+        if not analysis:
+            raise HTTPException(status_code=500, detail="情景分析失败")
+        
+        # 保存情景推演
+        existing = await session.execute(
+            select(EventScenario).where(EventScenario.event_id == event_id)
+        )
+        es = existing.scalar_one_or_none()
+        
+        if es:
+            es.key_variables = analysis.get('key_variables')
+            es.observation_signals = analysis.get('observation_signals')
+            es.scenarios = analysis.get('scenarios')
+            es.thinking_questions = analysis.get('thinking_questions')
+            es.ai_model = analysis.get('ai_model')
+            es.ai_confidence = analysis.get('ai_confidence')
+        else:
+            es = EventScenario(
+                event_id=event_id,
+                key_variables=analysis.get('key_variables'),
+                observation_signals=analysis.get('observation_signals'),
+                scenarios=analysis.get('scenarios'),
+                thinking_questions=analysis.get('thinking_questions'),
+                ai_model=analysis.get('ai_model'),
+                ai_confidence=analysis.get('ai_confidence'),
+            )
+            session.add(es)
+        
+        await session.commit()
+        
+        # 清除缓存
+        from app.cache import invalidate_cache
+        invalidate_cache(f"api:events:scenarios:{event_id}")
+        
+        return {
+            "status": "ok",
+            "event_id": event_id,
+            "key_variables_count": len(analysis.get('key_variables', [])),
+            "scenarios_count": len(analysis.get('scenarios', [])),
+        }

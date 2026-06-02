@@ -51,6 +51,9 @@
         <button class="tab-btn" onclick="switchTab('analogies')">
             {{ "Historical" if lang == "en" else "历史类比" }}
         </button>
+        <button class="tab-btn" onclick="switchTab('scenarios')">
+            {{ "Scenarios" if lang == "en" else "情景推演" }}
+        </button>
         <button class="tab-btn" onclick="switchTab('timeline')">
             {{ "Timeline" if lang == "en" else "事件时间线" }}
         </button>
@@ -79,6 +82,15 @@
         <div hx-get="/api/events/{{ event.event_id }}/analogies?lang={{ lang }}" 
              hx-trigger="load" 
              hx-target="#tab-analogies">
+            <div class="loading">{{ "Loading..." if lang == "en" else "加载中..." }}</div>
+        </div>
+    </div>
+
+    <!-- 情景推演 Tab -->
+    <div id="tab-scenarios" class="tab-content">
+        <div hx-get="/api/events/{{ event.event_id }}/scenarios?lang={{ lang }}" 
+             hx-trigger="load" 
+             hx-target="#tab-scenarios">
             <div class="loading">{{ "Loading..." if lang == "en" else "加载中..." }}</div>
         </div>
     </div>
