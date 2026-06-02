@@ -275,11 +275,12 @@ async def get_keywords(category: str = None, lang: str = None, page: int = 1, pa
 
 
 @router.get("/keywords/popular", response_class=HTMLResponse)
-async def get_popular_keywords(request: Request, limit: int = 20):
+async def get_popular_keywords(request: Request, lang: str = "en", limit: int = 20):
     async with async_session() as session:
         query = (
             select(Keyword, func.count(ArticleKeyword.id).label("article_count"))
             .outerjoin(ArticleKeyword, ArticleKeyword.keyword_id == Keyword.id)
+            .where(Keyword.lang == lang)
             .group_by(Keyword.id)
             .having(func.count(ArticleKeyword.id) > 0)
             .order_by(desc(func.count(ArticleKeyword.id)))
@@ -299,6 +300,7 @@ async def get_popular_keywords(request: Request, limit: int = 20):
 
     return templates.TemplateResponse(request=request, name="partials/keywords.html", context={
         "keywords": keywords,
+        "lang": lang,
     })
 
 

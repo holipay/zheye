@@ -1,24 +1,16 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <div id="event-detail-content">
-        <!-- 通过 HTMX 加载事件详情 -->
-        <div hx-get="/api/events/{{ event_id }}?lang={{ lang }}" 
-             hx-trigger="load" 
-             hx-target="#event-detail-content">
-            <div class="loading">{{ t("common.loading") }}</div>
-        </div>
+<div id="event-detail-content">
+    <!-- 通过 HTMX 加载事件详情 -->
+    <div hx-get="/api/events/{{ event_id }}?lang={{ lang }}" 
+         hx-trigger="load" 
+         hx-target="#event-detail-content">
+        <div class="loading">{{ t("common.loading") }}</div>
     </div>
 </div>
 
 <style>
-.container {
-    max-width: 1000px;
-    margin: 0 auto;
-    padding: 2rem 1rem;
-}
-
 .loading {
     text-align: center;
     padding: 3rem;
