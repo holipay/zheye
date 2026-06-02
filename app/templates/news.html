@@ -29,7 +29,7 @@
 
 <div class="content-layout" style="display: grid; grid-template-columns: 1fr 280px; gap: var(--spacing-lg);">
     <!-- 新闻列表 -->
-    <main>
+    <div class="news-main">
         <div class="card">
             <div id="news-list" 
                  hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page or 1 }}&lang={{ lang }}" 
@@ -39,7 +39,7 @@
                 <div class="loading">{{ t("common.loading") }}</div>
             </div>
         </div>
-    </main>
+    </div>
 
     <!-- 侧边栏 -->
     <aside class="sidebar">
