@@ -285,6 +285,85 @@ class DeepSeekClient:
             return json.loads(result[json_start:json_end])
         except json.JSONDecodeError:
             return None
+    
+    def generate_period_report(self, articles: list[dict], stats_summary: dict, period: str = "weekly") -> Optional[dict]:
+        """
+        生成周报/月报
+        
+        Args:
+            articles: 文章列表
+            stats_summary: 统计摘要
+            period: 周期类型 (weekly/monthly)
+        
+        Returns:
+            报告内容
+        """
+        period_cn = "周" if period == "weekly" else "月"
+        
+        # 构建文章摘要列表
+        article_summaries = []
+        for i, article in enumerate(articles[:50], 1):
+            summary = f"{i}. [{article.get('category', '未分类')}] {article['title']}"
+            if article.get('summary'):
+                summary += f" - {article['summary'][:100]}"
+            article_summaries.append(summary)
+        
+        articles_text = "\n".join(article_summaries)
+        
+        # 构建统计信息
+        stats_text = f"""
+统计信息：
+- 时间范围：{stats_summary.get('start_date', '')} ~ {stats_summary.get('end_date', '')}
+- 文章总数：{stats_summary.get('total_articles', 0)}
+- 分类分布：{json.dumps(stats_summary.get('category_stats', []), ensure_ascii=False)}
+- 情感分布：{json.dumps(stats_summary.get('sentiment_distribution', {}), ensure_ascii=False)}
+"""
+        
+        messages = [
+            {
+                "role": "system",
+                "content": f"""你是一个资深的财经分析师。请根据近{period_cn}的新闻数据生成专业的财经分析报告。
+
+返回 JSON 格式：
+{{
+    "overview": "本{period_cn}财经形势概述，300字以内",
+    "hot_topics": [
+        {{"topic": "话题名称", "description": "描述", "impact": "影响评估"}}
+    ],
+    "market_sentiment": "bullish/bearish/neutral/mixed",
+    "key_events": [
+        {{"event": "事件描述", "significance": "重要性说明", "category": "分类"}}
+    ],
+    "trend_analysis": "趋势分析，包括短期和中期展望，500字以内"
+}}
+
+注意：
+1. overview 要全面概括本{period_cn}财经动态
+2. hot_topics 提取 3-5 个最热门话题
+3. key_events 提取 3-5 个最关键事件
+4. trend_analysis 要深入分析趋势并给出展望"""
+            },
+            {
+                "role": "user",
+                "content": f"{stats_text}\n\n文章列表：\n{articles_text}"
+            }
+        ]
+        
+        result = self._call_api(messages, temperature=0.5, max_tokens=3000)
+        if not result:
+            return None
+        
+        try:
+            json_start = result.find("{")
+            json_end = result.rfind("}") + 1
+            if json_start == -1 or json_end == 0:
+                logger.error(f"无法解析 AI 返回结果: {result}")
+                return None
+            
+            return json.loads(result[json_start:json_end])
+        except json.JSONDecodeError as e:
+            logger.error(f"解析 AI 返回结果失败: {e}")
+            return None
 
 
 # 全局实例

@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}每日分析报告 - 者也{% endblock %}
+{% block title %}分析报告 - 者也{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <div class="flex justify-between items-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">每日分析报告</h1>
+        <h1 class="text-3xl font-bold text-gray-900">分析报告</h1>
         <div class="flex items-center space-x-4">
             <input type="date" id="report-date" 
                    class="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -15,6 +15,24 @@
                 加载报告
             </button>
         </div>
+    </div>
+
+    <!-- 报告类型选项卡 -->
+    <div class="mb-8 border-b border-gray-200">
+        <nav class="flex space-x-8">
+            <button onclick="switchTab('weekly')" id="tab-weekly" 
+                    class="py-4 px-1 border-b-2 font-medium text-sm transition-colors border-blue-500 text-blue-600">
+                📊 周报
+            </button>
+            <button onclick="switchTab('monthly')" id="tab-monthly" 
+                    class="py-4 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                📈 月报
+            </button>
+            <button onclick="switchTab('daily')" id="tab-daily" 
+                    class="py-4 px-1 border-b-2 font-medium text-sm transition-colors border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                📰 每日快报
+            </button>
+        </nav>
     </div>
 
     <!-- AI 分析状态 -->
@@ -40,13 +58,24 @@
         </div>
     </div>
 
-    <!-- 每日报告内容 -->
+    <!-- 报告列表 -->
+    <div class="mb-8 bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4 text-gray-800">
+            <span class="mr-2">📋</span>历史报告
+        </h2>
+        <div id="reports-list" class="space-y-3">
+            <p class="text-gray-500">加载中...</p>
+        </div>
+    </div>
+
+    <!-- 报告内容 -->
     <div id="report-content" class="hidden">
-        <!-- 市场情绪 -->
+        <!-- 报告头部 -->
         <div class="mb-8 bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-semibold mb-4 text-gray-800">
-                <span class="mr-2">📊</span>市场情绪
-            </h2>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold text-gray-800" id="report-title">周报</h2>
+                <span class="text-sm text-gray-500" id="report-period">-</span>
+            </div>
             <div class="flex items-center justify-between">
                 <div class="text-2xl font-bold" id="market-sentiment">-</div>
                 <div class="text-sm text-gray-500">
@@ -58,7 +87,7 @@
         <!-- 总体概述 -->
         <div class="mb-8 bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold mb-4 text-gray-800">
-                <span class="mr-2">📝</span>今日概述
+                <span class="mr-2">📝</span>概述
             </h2>
             <p id="overview" class="text-gray-700 leading-relaxed">加载中...</p>
         </div>
@@ -90,31 +119,30 @@
             </h2>
             <p id="trend-analysis" class="text-gray-700 leading-relaxed">加载中...</p>
         </div>
+
+        <!-- 分类统计 -->
+        <div class="mb-8 bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">
+                <span class="mr-2">📊</span>分类统计
+            </h2>
+            <div id="category-stats" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <!-- 动态填充 -->
+            </div>
+        </div>
     </div>
 
     <!-- 无报告提示 -->
     <div id="no-report" class="hidden bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
         <div class="text-yellow-600 text-4xl mb-4">📭</div>
         <h3 class="text-lg font-semibold text-yellow-800 mb-2">暂无分析报告</h3>
-        <p class="text-yellow-700">该日期的分析报告尚未生成，请稍后再试或选择其他日期。</p>
-    </div>
-
-    <!-- 情感分析统计 -->
-    <div class="mb-8 bg-white rounded-lg shadow-md p-6">
-        <h2 class="text-xl font-semibold mb-4 text-gray-800">
-            <span class="mr-2">😊</span>情感分析统计
-        </h2>
-        <div id="sentiment-stats" class="grid grid-cols-3 gap-4 mb-6">
-            <!-- 动态填充 -->
-        </div>
-        <h3 class="text-lg font-semibold mb-3 text-gray-700">重要文章</h3>
-        <div id="important-articles" class="space-y-3">
-            <!-- 动态填充 -->
-        </div>
+        <p class="text-yellow-700">该时段的分析报告尚未生成，请稍后再试或选择其他日期。</p>
+        <p class="text-yellow-600 text-sm mt-2">周报每周一生成，月报每月1日生成</p>
     </div>
 </div>
 
 <script>
+let currentTab = 'weekly';
+
 // 页面加载时获取状态
 document.addEventListener('DOMContentLoaded', function() {
     loadStatus();
@@ -122,8 +150,52 @@ document.addEventListener('DOMContentLoaded', function() {
     // 设置默认日期为今天
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('report-date').value = today;
-    loadReport();
+    
+    // 加载报告列表
+    loadReportsList();
+    
+    // 尝试加载当前周的报告
+    loadCurrentPeriodReport();
 });
+
+function switchTab(tab) {
+    currentTab = tab;
+    
+    // 更新选项卡样式
+    document.querySelectorAll('[id^="tab-"]').forEach(el => {
+        el.classList.remove('border-blue-500', 'text-blue-600');
+        el.classList.add('border-transparent', 'text-gray-500');
+    });
+    document.getElementById(`tab-${tab}`).classList.add('border-blue-500', 'text-blue-600');
+    document.getElementById(`tab-${tab}`).classList.remove('border-transparent', 'text-gray-500');
+    
+    // 重新加载报告列表
+    loadReportsList();
+    
+    // 尝试加载当前周期的报告
+    loadCurrentPeriodReport();
+}
+
+function loadCurrentPeriodReport() {
+    const today = new Date();
+    let targetDate;
+    
+    if (currentTab === 'weekly') {
+        // 获取本周一
+        const weekday = today.getDay();
+        const monday = new Date(today);
+        monday.setDate(today.getDate() - weekday + (weekday === 0 ? -6 : 1));
+        targetDate = monday.toISOString().split('T')[0];
+    } else if (currentTab === 'monthly') {
+        // 获取本月1号
+        targetDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`;
+    } else {
+        targetDate = today.toISOString().split('T')[0];
+    }
+    
+    document.getElementById('report-date').value = targetDate;
+    loadReport();
+}
 
 async function loadStatus() {
     try {
@@ -139,25 +211,70 @@ async function loadStatus() {
     }
 }
 
+async function loadReportsList() {
+    try {
+        const response = await fetch(`/api/analysis/reports?period=${currentTab}&limit=10`);
+        const data = await response.json();
+        
+        const container = document.getElementById('reports-list');
+        if (data.reports && data.reports.length > 0) {
+            container.innerHTML = data.reports.map(report => `
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                     onclick="loadReportByDate('${report.period_start}')">
+                    <div>
+                        <div class="font-medium text-gray-800">${report.period_start} ~ ${report.period_end}</div>
+                        <div class="text-sm text-gray-500 mt-1">${report.overview ? report.overview.substring(0, 100) + '...' : '暂无概述'}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-semibold ${
+                            report.market_sentiment === 'bullish' ? 'text-green-600' :
+                            report.market_sentiment === 'bearish' ? 'text-red-600' :
+                            'text-gray-600'
+                        }">${report.market_sentiment || '-'}</div>
+                        <div class="text-xs text-gray-400">${report.news_count || 0} 篇</div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = '<p class="text-gray-500">暂无历史报告</p>';
+        }
+    } catch (error) {
+        console.error('获取报告列表失败:', error);
+    }
+}
+
+function loadReportByDate(date) {
+    document.getElementById('report-date').value = date;
+    loadReport();
+}
+
 async function loadReport() {
     const dateInput = document.getElementById('report-date').value;
     
     try {
-        // 加载每日报告
-        const reportResponse = await fetch(`/api/analysis/daily/${dateInput}`);
+        let reportData = null;
         
-        if (reportResponse.ok) {
-            const report = await reportResponse.json();
-            displayReport(report);
+        if (currentTab === 'weekly') {
+            const response = await fetch(`/api/analysis/weekly/${dateInput}`);
+            if (response.ok) {
+                reportData = await response.json();
+            }
+        } else if (currentTab === 'monthly') {
+            const response = await fetch(`/api/analysis/monthly/${dateInput}`);
+            if (response.ok) {
+                reportData = await response.json();
+            }
         } else {
-            showNoReport();
+            const response = await fetch(`/api/analysis/daily/${dateInput}`);
+            if (response.ok) {
+                reportData = await response.json();
+            }
         }
         
-        // 加载情感统计
-        const sentimentResponse = await fetch(`/api/analysis/sentiment?target_date=${dateInput}`);
-        if (sentimentResponse.ok) {
-            const sentiment = await sentimentResponse.json();
-            displaySentimentStats(sentiment);
+        if (reportData) {
+            displayReport(reportData);
+        } else {
+            showNoReport();
         }
     } catch (error) {
         console.error('加载报告失败:', error);
@@ -168,6 +285,17 @@ async function loadReport() {
 function displayReport(report) {
     document.getElementById('report-content').classList.remove('hidden');
     document.getElementById('no-report').classList.add('hidden');
+    
+    // 更新标题
+    const titleMap = {
+        'weekly': '周报',
+        'monthly': '月报',
+        'daily': '每日快报'
+    };
+    document.getElementById('report-title').textContent = titleMap[currentTab] || '分析报告';
+    document.getElementById('report-period').textContent = 
+        report.period_start && report.period_end ? `${report.period_start} ~ ${report.period_end}` : 
+        report.date || '-';
     
     document.getElementById('market-sentiment').textContent = report.market_sentiment || '-';
     document.getElementById('news-count').textContent = report.news_count || 0;
@@ -180,14 +308,13 @@ function displayReport(report) {
         hotTopicsContainer.innerHTML = report.hot_topics.map(topic => `
             <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                 <div class="flex justify-between items-start mb-2">
-                    <h4 class="font-semibold text-gray-800">${topic.topic}</h4>
+                    <h4 class="font-semibold text-gray-800">${topic.topic || topic}</h4>
                     <span class="text-sm px-2 py-1 rounded ${
-                        topic.sentiment === 'positive' ? 'bg-green-100 text-green-800' :
-                        topic.sentiment === 'negative' ? 'bg-red-100 text-red-800' :
+                        topic.impact === 'high' ? 'bg-red-100 text-red-800' :
+                        topic.impact === 'medium' ? 'bg-yellow-100 text-yellow-800' :
                         'bg-gray-100 text-gray-800'
-                    }">${topic.sentiment || '中性'}</span>
+                    }">${topic.impact || '中'}</span>
                 </div>
-                <div class="text-sm text-gray-500 mb-2">提及 ${topic.count || 0} 次</div>
                 <p class="text-sm text-gray-600">${topic.description || ''}</p>
             </div>
         `).join('');
@@ -200,76 +327,37 @@ function displayReport(report) {
     if (report.key_events && report.key_events.length > 0) {
         keyEventsContainer.innerHTML = report.key_events.map(event => `
             <div class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                <span class="text-lg">${
-                    event.impact === 'high' ? '🔴' :
-                    event.impact === 'medium' ? '🟡' : '🟢'
-                }</span>
+                <span class="text-lg">⚡</span>
                 <div>
-                    <div class="font-medium text-gray-800">${event.event}</div>
-                    <div class="text-sm text-gray-500">${event.category || ''} · 影响: ${event.impact || '中'}</div>
+                    <div class="font-medium text-gray-800">${event.event || event}</div>
+                    <div class="text-sm text-gray-500">${event.category || ''} · ${event.significance || ''}</div>
                 </div>
             </div>
         `).join('');
     } else {
         keyEventsContainer.innerHTML = '<p class="text-gray-500">暂无关键事件</p>';
     }
+    
+    // 分类统计
+    const categoryStatsContainer = document.getElementById('category-stats');
+    if (report.category_stats && report.category_stats.length > 0) {
+        categoryStatsContainer.innerHTML = report.category_stats.map(stat => `
+            <div class="text-center p-4 bg-gray-50 rounded-lg">
+                <div class="text-2xl font-bold text-blue-600">${stat.count}</div>
+                <div class="text-sm text-gray-600 mt-1">${stat.category}</div>
+                <div class="text-xs text-gray-400 mt-1">
+                    情感: ${stat.avg_sentiment > 0 ? '+' : ''}${stat.avg_sentiment}
+                </div>
+            </div>
+        `).join('');
+    } else {
+        categoryStatsContainer.innerHTML = '<p class="text-gray-500">暂无分类统计</p>';
+    }
 }
 
 function showNoReport() {
     document.getElementById('report-content').classList.add('hidden');
     document.getElementById('no-report').classList.remove('hidden');
-}
-
-function displaySentimentStats(data) {
-    // 情感分布
-    const sentimentContainer = document.getElementById('sentiment-stats');
-    if (data.sentiment_distribution && data.sentiment_distribution.length > 0) {
-        sentimentContainer.innerHTML = data.sentiment_distribution.map(item => `
-            <div class="text-center p-4 ${
-                item.sentiment === 'positive' ? 'bg-green-50' :
-                item.sentiment === 'negative' ? 'bg-red-50' :
-                'bg-gray-50'
-            } rounded-lg">
-                <div class="text-2xl font-bold ${
-                    item.sentiment === 'positive' ? 'text-green-600' :
-                    item.sentiment === 'negative' ? 'text-red-600' :
-                    'text-gray-600'
-                }">${item.count}</div>
-                <div class="text-sm text-gray-500">${
-                    item.sentiment === 'positive' ? '😊 积极' :
-                    item.sentiment === 'negative' ? '😟 消极' :
-                    '😐 中性'
-                }</div>
-                <div class="text-xs text-gray-400 mt-1">
-                    平均分: ${item.avg_score}
-                </div>
-            </div>
-        `).join('');
-    }
-    
-    // 重要文章
-    const articlesContainer = document.getElementById('important-articles');
-    if (data.important_articles && data.important_articles.length > 0) {
-        articlesContainer.innerHTML = data.important_articles.map(article => `
-            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                <div class="flex-1">
-                    <a href="/news/${article.id}" class="text-blue-600 hover:text-blue-800 font-medium">
-                        ${article.translated_title || article.title}
-                    </a>
-                    <div class="text-sm text-gray-500 mt-1">
-                        ${article.category} · 重要性: ${article.importance}
-                    </div>
-                </div>
-                <span class="ml-4 px-2 py-1 text-sm rounded ${
-                    article.sentiment === 'positive' ? 'bg-green-100 text-green-800' :
-                    article.sentiment === 'negative' ? 'bg-red-100 text-red-800' :
-                    'bg-gray-100 text-gray-800'
-                }">${article.sentiment || '中性'}</span>
-            </div>
-        `).join('');
-    } else {
-        articlesContainer.innerHTML = '<p class="text-gray-500">暂无重要文章</p>';
-    }
 }
 </script>
 {% endblock %}

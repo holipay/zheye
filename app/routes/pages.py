@@ -32,7 +32,7 @@ async def articles(request: Request):
 @router.get("/analysis")
 async def analysis(request: Request):
     return templates.TemplateResponse(request=request, name="analysis.html", context={
-        "title": "每日分析报告",
+        "title": "分析报告",
         "report_date": date.today().isoformat(),
     })
 

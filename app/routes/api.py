@@ -711,6 +711,131 @@ async def get_analysis_status():
         }
 
 
+@router.get("/analysis/weekly/{target_date}")
+async def get_weekly_report(target_date: str):
+    """获取周报"""
+    cache_key = f"api:analysis:weekly:{target_date}"
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+
+    try:
+        report_date = date.fromisoformat(target_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式无效，请使用 YYYY-MM-DD")
+    
+    async with async_session() as session:
+        # 计算周范围
+        from datetime import timedelta
+        weekday = report_date.weekday()
+        start_date = report_date - timedelta(days=weekday)
+        end_date = start_date + timedelta(days=6)
+        
+        result = await session.execute(text("""
+            SELECT * FROM weekly_reports 
+            WHERE period_start = :start_date
+        """), {"start_date": start_date})
+        report = result.mappings().first()
+        
+        if not report:
+            raise HTTPException(status_code=404, detail=f"未找到 {start_date} 的周报")
+        
+        data = {
+            "period": "weekly",
+            "period_start": str(report["period_start"]),
+            "period_end": str(report["period_end"]),
+            "overview": report["overview"],
+            "hot_topics": report["hot_topics"],
+            "market_sentiment": report["market_sentiment"],
+            "key_events": report["key_events"],
+            "trend_analysis": report["trend_analysis"],
+            "category_stats": report["category_stats"],
+            "sentiment_stats": report["sentiment_stats"],
+            "news_count": report["news_count"],
+            "generated_at": report["generated_at"].isoformat() if report["generated_at"] else None,
+        }
+        set_cached(cache_key, data, ttl=600)
+        return data
+
+
+@router.get("/analysis/monthly/{target_date}")
+async def get_monthly_report(target_date: str):
+    """获取月报"""
+    cache_key = f"api:analysis:monthly:{target_date}"
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+
+    try:
+        report_date = date.fromisoformat(target_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式无效，请使用 YYYY-MM-DD")
+    
+    async with async_session() as session:
+        # 计算月范围
+        start_date = report_date.replace(day=1)
+        
+        result = await session.execute(text("""
+            SELECT * FROM monthly_reports 
+            WHERE period_start = :start_date
+        """), {"start_date": start_date})
+        report = result.mappings().first()
+        
+        if not report:
+            raise HTTPException(status_code=404, detail=f"未找到 {start_date.strftime('%Y-%m')} 的月报")
+        
+        data = {
+            "period": "monthly",
+            "period_start": str(report["period_start"]),
+            "period_end": str(report["period_end"]),
+            "overview": report["overview"],
+            "hot_topics": report["hot_topics"],
+            "market_sentiment": report["market_sentiment"],
+            "key_events": report["key_events"],
+            "trend_analysis": report["trend_analysis"],
+            "category_stats": report["category_stats"],
+            "sentiment_stats": report["sentiment_stats"],
+            "news_count": report["news_count"],
+            "generated_at": report["generated_at"].isoformat() if report["generated_at"] else None,
+        }
+        set_cached(cache_key, data, ttl=600)
+        return data
+
+
+@router.get("/analysis/reports")
+async def get_reports_list(period: str = "weekly", limit: int = 10):
+    """获取报告列表"""
+    cache_key = f"api:analysis:reports:{period}:{limit}"
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+
+    table_name = "weekly_reports" if period == "weekly" else "monthly_reports"
+    
+    async with async_session() as session:
+        result = await session.execute(text(f"""
+            SELECT period_start, period_end, overview, market_sentiment, news_count, generated_at
+            FROM {table_name}
+            ORDER BY period_start DESC
+            LIMIT :limit
+        """), {"limit": limit})
+        
+        reports = []
+        for row in result.mappings():
+            reports.append({
+                "period_start": str(row["period_start"]),
+                "period_end": str(row["period_end"]),
+                "overview": row["overview"][:200] if row["overview"] else "",
+                "market_sentiment": row["market_sentiment"],
+                "news_count": row["news_count"],
+                "generated_at": row["generated_at"].isoformat() if row["generated_at"] else None,
+            })
+        
+        data = {"period": period, "reports": reports}
+        set_cached(cache_key, data, ttl=300)
+        return data
+
+
 @router.get("/search", response_class=HTMLResponse)
 async def search_news(
     request: Request,
