@@ -1,0 +1,79 @@
+<!-- 因果链空状态 -->
+<div class="causal-chain-empty">
+    <div class="empty-icon">🔗</div>
+    <div class="empty-text">
+        {% if lang == "en" %}
+        <p>Causal chain analysis not yet available for this event.</p>
+        <button class="btn-analyze" onclick="analyzeCausalChain('{{ event_id }}')">
+            Generate Causal Analysis
+        </button>
+        {% else %}
+        <p>该事件的因果链分析尚未生成</p>
+        <button class="btn-analyze" onclick="analyzeCausalChain('{{ event_id }}')">
+            生成因果分析
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.causal-chain-empty {
+    text-align: center;
+    padding: 2rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px dashed #cbd5e1;
+}
+
+.empty-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.empty-text p {
+    color: #64748b;
+    margin-bottom: 1rem;
+}
+
+.btn-analyze {
+    padding: 0.5rem 1.25rem;
+    background: #8b5cf6;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-analyze:hover {
+    background: #7c3aed;
+}
+</style>
+
+<script>
+async function analyzeCausalChain(eventId) {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '{{ "Analyzing..." if lang == "en" else "分析中..." }}';
+    
+    try {
+        const response = await fetch(`/api/events/${eventId}/causal-chain/analyze`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            const error = await response.json();
+            alert(error.detail || '分析失败');
+            btn.disabled = false;
+            btn.textContent = '{{ "Retry" if lang == "en" else "重试" }}';
+        }
+    } catch (e) {
+        alert('网络错误');
+        btn.disabled = false;
+        btn.textContent = '{{ "Retry" if lang == "en" else "重试" }}';
+    }
+}
+</script>

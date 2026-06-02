@@ -1275,3 +1275,166 @@ async def trigger_knowledge_analysis(event_id: str):
         invalidate_cache(f"api:events:knowledge:{event_id}")
         
         return {"status": "ok", "event_id": event_id, "version": ek.analysis_version}
+
+
+# P1: 因果链 API
+
+@router.get("/events/{event_id}/causal-chain", response_class=HTMLResponse)
+async def get_event_causal_chain(request: Request, event_id: str, lang: str = "zh"):
+    """获取事件的因果链结构"""
+    cache_key = f"api:events:causal:{event_id}:{lang}"
+    cached = get_cached(cache_key)
+    if cached:
+        return HTMLResponse(content=cached)
+
+    async with async_session() as session:
+        from models.causal_chain import CausalNode, CausalLink
+        
+        # 获取因果节点
+        nodes_result = await session.execute(
+            select(CausalNode)
+            .where(CausalNode.event_id == event_id)
+            .order_by(CausalNode.node_type, CausalNode.id)
+        )
+        nodes = nodes_result.scalars().all()
+        
+        if not nodes:
+            return templates.TemplateResponse(request=request, name="partials/causal_chain_empty.html", context={
+                "event_id": event_id,
+                "lang": lang,
+            })
+        
+        # 获取因果关系
+        node_ids = [n.id for n in nodes]
+        links_result = await session.execute(
+            select(CausalLink)
+            .where(CausalLink.source_node_id.in_(node_ids))
+        )
+        links = links_result.scalars().all()
+        
+        # 构建节点数据
+        nodes_data = []
+        for node in nodes:
+            nodes_data.append({
+                "id": node.id,
+                "type": node.node_type,
+                "title": node.title,
+                "description": node.description,
+                "probability": node.probability,
+                "impact_level": node.impact_level,
+                "time_horizon": node.time_horizon,
+                "entities": node.entities or [],
+                "confidence": node.confidence,
+            })
+        
+        # 构建关系数据
+        links_data = []
+        for link in links:
+            links_data.append({
+                "source": link.source_node_id,
+                "target": link.target_node_id,
+                "type": link.link_type,
+                "strength": link.strength,
+                "description": link.description,
+            })
+
+    response = templates.TemplateResponse(request=request, name="partials/causal_chain.html", context={
+        "event_id": event_id,
+        "lang": lang,
+        "nodes": nodes_data,
+        "links": links_data,
+    })
+    set_cached(cache_key, response.body.decode(), ttl=600)
+    return response
+
+
+@router.post("/events/{event_id}/causal-chain/analyze")
+async def trigger_causal_chain_analysis(event_id: str):
+    """触发因果链分析"""
+    from scraper.pipeline.ai_analysis import DeepSeekClient
+    from scraper.pipeline.knowledge import analyze_causal_chain
+    from models.causal_chain import CausalNode, CausalLink
+    
+    async with async_session() as session:
+        # 获取事件
+        result = await session.execute(
+            select(Event).where(Event.event_id == event_id)
+        )
+        event = result.scalar_one_or_none()
+        
+        if not event:
+            raise HTTPException(status_code=404, detail="事件未找到")
+        
+        # 获取相关文章
+        articles = []
+        if event.related_articles:
+            for article_ref in event.related_articles[:5]:
+                if isinstance(article_ref, dict):
+                    articles.append(article_ref)
+        
+        # 调用AI分析
+        ai_client = DeepSeekClient()
+        event_data = {
+            "title": event.title,
+            "description": event.description,
+            "category": event.category,
+        }
+        
+        analysis = await analyze_causal_chain(event_data, articles, ai_client)
+        
+        if not analysis:
+            raise HTTPException(status_code=500, detail="因果链分析失败")
+        
+        # 删除旧的因果节点
+        old_nodes = await session.execute(
+            select(CausalNode).where(CausalNode.event_id == event_id)
+        )
+        for node in old_nodes.scalars().all():
+            await session.delete(node)
+        
+        # 保存新的因果节点
+        node_id_map = {}  # AI返回的ID -> 数据库ID
+        for node_data in analysis.get('nodes', []):
+            node = CausalNode(
+                event_id=event_id,
+                node_type=node_data['node_type'],
+                title=node_data['title'],
+                description=node_data.get('description'),
+                probability=node_data.get('probability'),
+                impact_level=node_data.get('impact_level'),
+                time_horizon=node_data.get('time_horizon'),
+                entities=node_data.get('entities'),
+                confidence=node_data.get('confidence', 0.8),
+            )
+            session.add(node)
+            await session.flush()
+            node_id_map[node_data['id']] = node.id
+        
+        # 保存因果关系
+        for link_data in analysis.get('links', []):
+            source_id = node_id_map.get(link_data['source'])
+            target_id = node_id_map.get(link_data['target'])
+            
+            if source_id and target_id:
+                link = CausalLink(
+                    source_node_id=source_id,
+                    target_node_id=target_id,
+                    link_type=link_data.get('link_type', 'causes'),
+                    strength=link_data.get('strength', 1.0),
+                    description=link_data.get('description'),
+                )
+                session.add(link)
+        
+        await session.commit()
+        
+        # 清除缓存
+        from app.cache import invalidate_cache
+        invalidate_cache(f"api:events:causal:{event_id}")
+        
+        return {
+            "status": "ok",
+            "event_id": event_id,
+            "nodes_count": len(analysis.get('nodes', [])),
+            "links_count": len(analysis.get('links', [])),
+            "summary": analysis.get('summary'),
+        }

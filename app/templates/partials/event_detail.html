@@ -45,6 +45,9 @@
         <button class="tab-btn active" onclick="switchTab('knowledge')">
             {{ "Knowledge" if lang == "en" else "知识框架" }}
         </button>
+        <button class="tab-btn" onclick="switchTab('causal')">
+            {{ "Causal Chain" if lang == "en" else "因果链" }}
+        </button>
         <button class="tab-btn" onclick="switchTab('timeline')">
             {{ "Timeline" if lang == "en" else "事件时间线" }}
         </button>
@@ -55,6 +58,15 @@
         <div hx-get="/api/events/{{ event.event_id }}/knowledge?lang={{ lang }}" 
              hx-trigger="load" 
              hx-target="#tab-knowledge">
+            <div class="loading">{{ "Loading..." if lang == "en" else "加载中..." }}</div>
+        </div>
+    </div>
+
+    <!-- 因果链 Tab -->
+    <div id="tab-causal" class="tab-content">
+        <div hx-get="/api/events/{{ event.event_id }}/causal-chain?lang={{ lang }}" 
+             hx-trigger="load" 
+             hx-target="#tab-causal">
             <div class="loading">{{ "Loading..." if lang == "en" else "加载中..." }}</div>
         </div>
     </div>
