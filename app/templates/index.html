@@ -23,10 +23,45 @@
     </div>
 </div>
 
+<!-- 图表区域 -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
+    <!-- 每日趋势 -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">每日新闻趋势</h2>
+            <span style="font-size: 12px; color: var(--text-muted);">近30天</span>
+        </div>
+        <div class="card-body" style="height: 250px;">
+            <div id="daily-trend-chart" class="loading">加载中...</div>
+        </div>
+    </div>
+
+    <!-- 情感分布 -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">情感分布</h2>
+            <span style="font-size: 12px; color: var(--text-muted);">近7天</span>
+        </div>
+        <div class="card-body" style="height: 250px;">
+            <div id="sentiment-chart" class="loading">加载中...</div>
+        </div>
+    </div>
+</div>
+
 <!-- 主内容网格 -->
 <div class="home-grid">
     <!-- 左侧：新闻流 -->
     <div>
+        <!-- 分类统计 -->
+        <div class="card" style="margin-bottom: var(--spacing-md);">
+            <div class="card-header">
+                <h2 class="card-title">分类热度</h2>
+            </div>
+            <div class="card-body" style="height: 200px;">
+                <div id="category-chart" class="loading">加载中...</div>
+            </div>
+        </div>
+
         <!-- 头条新闻 -->
         <div class="card">
             <div class="card-header">
@@ -65,32 +100,6 @@
 
     <!-- 右侧：侧边栏 -->
     <aside class="sidebar">
-        <!-- 市场情绪 -->
-        <div class="sidebar-widget">
-            <div class="widget-header">市场情绪</div>
-            <div class="widget-content">
-                <div id="sentiment-bar" class="sentiment-bar">
-                    <div class="sentiment-positive" style="width: 40%"></div>
-                    <div class="sentiment-neutral" style="width: 30%"></div>
-                    <div class="sentiment-negative" style="width: 30%"></div>
-                </div>
-                <div class="sentiment-labels">
-                    <span class="sentiment-label">
-                        <span class="sentiment-dot" style="background: var(--color-up)"></span>
-                        积极 <span id="sentiment-pos">-</span>
-                    </span>
-                    <span class="sentiment-label">
-                        <span class="sentiment-dot" style="background: var(--color-neutral)"></span>
-                        中性 <span id="sentiment-neu">-</span>
-                    </span>
-                    <span class="sentiment-label">
-                        <span class="sentiment-dot" style="background: var(--color-down)"></span>
-                        消极 <span id="sentiment-neg">-</span>
-                    </span>
-                </div>
-            </div>
-        </div>
-
         <!-- 热门关键词 -->
         <div class="sidebar-widget">
             <div class="widget-header">热门关键词</div>
@@ -113,25 +122,66 @@
             </div>
         </div>
 
-        <!-- 分类统计 -->
+        <!-- 地域分布 -->
         <div class="sidebar-widget">
-            <div class="widget-header">分类分布</div>
-            <div class="widget-content" id="categories"
-                 hx-get="/api/categories" hx-trigger="load" hx-target="#categories" hx-swap="innerHTML">
-                <div class="loading">加载中...</div>
+            <div class="widget-header">地域分布</div>
+            <div class="widget-content" style="height: 200px;">
+                <div id="region-chart" class="loading">加载中...</div>
             </div>
         </div>
     </aside>
 </div>
 
+<script src="/static/js/chart.min.js"></script>
+<script src="/static/js/charts.js"></script>
 <script>
-// 加载统计数据
 document.addEventListener('DOMContentLoaded', function() {
+    // 加载统计数据
     fetch('/api/meta')
         .then(r => r.json())
         .then(data => {
             document.getElementById('stat-total').textContent = data.total || 0;
         });
+
+    // 加载图表
+    loadCharts();
 });
+
+async function loadCharts() {
+    // 每日趋势
+    ChartUtils.loadAndCreate(
+        '/api/charts/daily-trend?days=30',
+        (ctx, data) => ChartUtils.createLineChart(ctx, data.labels, [{
+            label: '新闻数量',
+            data: data.values,
+            borderColor: ChartUtils.colors.accent,
+            backgroundColor: ChartUtils.colors.accent + '20',
+            fill: true,
+            tension: 0.3
+        }]),
+        'daily-trend-chart'
+    );
+
+    // 情感分布
+    ChartUtils.loadAndCreate(
+        '/api/charts/sentiment?days=7',
+        (ctx, data) => ChartUtils.createPieChart(ctx, data.labels, data.values, data.colors),
+        'sentiment-chart'
+    );
+
+    // 分类统计
+    ChartUtils.loadAndCreate(
+        '/api/charts/categories?days=30',
+        (ctx, data) => ChartUtils.createBarChart(ctx, data.labels, data.values),
+        'category-chart'
+    );
+
+    // 地域分布
+    ChartUtils.loadAndCreate(
+        '/api/charts/regions?days=30',
+        (ctx, data) => ChartUtils.createPieChart(ctx, data.labels, data.values, data.colors),
+        'region-chart'
+    );
+}
 </script>
 {% endblock %}

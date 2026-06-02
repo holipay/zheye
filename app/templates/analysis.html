@@ -11,6 +11,53 @@
     </div>
 </div>
 
+<!-- 图表区域 -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
+    <!-- 关键词趋势 -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">关键词趋势</h2>
+            <span style="font-size: 12px; color: var(--text-muted);">Top 10 关键词</span>
+        </div>
+        <div class="card-body" style="height: 300px;">
+            <div id="keyword-trend-chart" class="loading">加载中...</div>
+        </div>
+    </div>
+
+    <!-- 情感趋势 -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">情感趋势</h2>
+            <span style="font-size: 12px; color: var(--text-muted);">近30天</span>
+        </div>
+        <div class="card-body" style="height: 300px;">
+            <div id="sentiment-trend-chart" class="loading">加载中...</div>
+        </div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
+    <!-- 来源分布 -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">来源分布</h2>
+        </div>
+        <div class="card-body" style="height: 300px;">
+            <div id="source-chart" class="loading">加载中...</div>
+        </div>
+    </div>
+
+    <!-- 重要性分布 -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">重要性分布</h2>
+        </div>
+        <div class="card-body" style="height: 300px;">
+            <div id="importance-chart" class="loading">加载中...</div>
+        </div>
+    </div>
+</div>
+
 <!-- 报告类型选项卡 -->
 <div class="report-tabs">
     <button onclick="switchTab('weekly')" id="tab-weekly" class="report-tab active">
@@ -150,6 +197,8 @@
     </aside>
 </div>
 
+<script src="/static/js/chart.min.js"></script>
+<script src="/static/js/charts.js"></script>
 <script>
 let currentTab = 'weekly';
 
@@ -159,6 +208,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('report-date').value = today;
     loadReportsList();
     loadCurrentPeriodReport();
+    loadCharts();
 });
 
 function switchTab(tab) {
@@ -190,6 +240,40 @@ function loadCurrentPeriodReport() {
     
     document.getElementById('report-date').value = targetDate;
     loadReport();
+}
+
+async function loadCharts() {
+    // 关键词趋势
+    ChartUtils.loadAndCreate(
+        '/api/charts/keywords?limit=10&days=30',
+        (ctx, data) => ChartUtils.createLineChart(ctx, data.labels, data.datasets),
+        'keyword-trend-chart'
+    );
+
+    // 情感趋势
+    ChartUtils.loadAndCreate(
+        '/api/charts/sentiment-trend?days=30',
+        (ctx, data) => ChartUtils.createAreaChart(ctx, data.labels, [
+            { label: '积极', data: data.positive, borderColor: '#00c853' },
+            { label: '中性', data: data.neutral, borderColor: '#78909c' },
+            { label: '消极', data: data.negative, borderColor: '#ff1744' }
+        ]),
+        'sentiment-trend-chart'
+    );
+
+    // 来源分布
+    ChartUtils.loadAndCreate(
+        '/api/charts/sources?days=30',
+        (ctx, data) => ChartUtils.createHorizontalBarChart(ctx, data.labels, data.values),
+        'source-chart'
+    );
+
+    // 重要性分布
+    ChartUtils.loadAndCreate(
+        '/api/charts/importance?days=30',
+        (ctx, data) => ChartUtils.createPieChart(ctx, data.labels, data.values, data.colors),
+        'importance-chart'
+    );
 }
 
 async function loadStatus() {
