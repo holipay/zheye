@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from datetime import date, datetime
-from sqlalchemy import select, func, desc, case, text
+from sqlalchemy import select, func, desc, case, text, or_, cast, String
 from models.base import async_session
 from models.news import News
 from models.keyword import Keyword
@@ -11,6 +11,9 @@ from models.article_keyword import ArticleKeyword
 from models.article_relation import ArticleRelation
 from models.entity import Entity
 from models.article_entity import ArticleEntity
+from models.daily_report import DailyReport
+from models.trend import Trend
+from app.cache import get_cached, set_cached
 
 router = APIRouter(prefix="/api")
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -112,26 +115,40 @@ async def get_news(
 
 @router.get("/categories", response_class=HTMLResponse)
 async def get_categories(request: Request):
+    cache_key = "api:categories:html"
+    cached = get_cached(cache_key)
+    if cached:
+        return HTMLResponse(content=cached)
+
     async with async_session() as session:
         query = select(News.category, func.count(News.id)).group_by(News.category).order_by(desc(func.count(News.id)))
         result = await session.execute(query)
         categories = result.all()
     
-    return templates.TemplateResponse(request=request, name="partials/categories.html", context={
+    response = templates.TemplateResponse(request=request, name="partials/categories.html", context={
         "categories": categories,
     })
+    set_cached(cache_key, response.body.decode(), ttl=300)
+    return response
 
 
 @router.get("/article-types", response_class=HTMLResponse)
 async def get_article_types(request: Request):
+    cache_key = "api:article-types:html"
+    cached = get_cached(cache_key)
+    if cached:
+        return HTMLResponse(content=cached)
+
     async with async_session() as session:
         query = select(News.article_type, func.count(News.id)).group_by(News.article_type).order_by(desc(func.count(News.id)))
         result = await session.execute(query)
         article_types = result.all()
     
-    return templates.TemplateResponse(request=request, name="partials/article_types.html", context={
+    response = templates.TemplateResponse(request=request, name="partials/article_types.html", context={
         "article_types": article_types,
     })
+    set_cached(cache_key, response.body.decode(), ttl=300)
+    return response
 
 
 @router.get("/latest", response_class=HTMLResponse)
@@ -152,6 +169,11 @@ async def get_latest(request: Request, limit: int = 10):
 
 @router.get("/meta")
 async def get_meta():
+    cache_key = "api:meta"
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+
     async with async_session() as session:
         count_result = await session.execute(select(func.count(News.id)))
         total = count_result.scalar()
@@ -164,11 +186,13 @@ async def get_meta():
         category_result = await session.execute(category_query)
         categories = [{"name": row[0], "count": row[1]} for row in category_result.all()]
     
-    return {
+    result = {
         "total": total,
         "sources": sources,
         "categories": categories,
     }
+    set_cached(cache_key, result, ttl=300)
+    return result
 
 
 @router.get("/news/{news_id}/related")
@@ -425,6 +449,11 @@ async def get_popular_entities(request: Request, entity_type: str = None, limit:
 
 @router.get("/entities/types", response_class=HTMLResponse)
 async def get_entity_types(request: Request):
+    cache_key = "api:entity-types:html"
+    cached = get_cached(cache_key)
+    if cached:
+        return HTMLResponse(content=cached)
+
     async with async_session() as session:
         query = (
             select(Entity.entity_type, func.count(Entity.id))
@@ -434,9 +463,11 @@ async def get_entity_types(request: Request):
         result = await session.execute(query)
         types = result.all()
 
-    return templates.TemplateResponse(request=request, name="partials/entity_types.html", context={
+    response = templates.TemplateResponse(request=request, name="partials/entity_types.html", context={
         "types": types,
     })
+    set_cached(cache_key, response.body.decode(), ttl=300)
+    return response
 
 
 @router.get("/news/by-entity/{entity_id}", response_class=HTMLResponse)
@@ -482,64 +513,68 @@ async def get_news_by_entity(request: Request, entity_id: int, page: int = 1, pa
 @router.get("/analysis/daily/{target_date}")
 async def get_daily_report(target_date: str):
     """获取每日分析报告"""
+    cache_key = f"api:analysis:daily:{target_date}"
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+
     try:
         report_date = date.fromisoformat(target_date)
     except ValueError:
         raise HTTPException(status_code=400, detail="日期格式无效，请使用 YYYY-MM-DD")
     
     async with async_session() as session:
-        # 查询每日报告
-        stmt = text("""
-            SELECT date, overview, hot_topics, market_sentiment, key_events, 
-                   trend_analysis, news_count, generated_at
-            FROM daily_reports
-            WHERE date = :report_date
-        """)
-        result = await session.execute(stmt, {"report_date": report_date})
-        report = result.mappings().first()
+        result = await session.execute(
+            select(DailyReport).where(DailyReport.date == report_date)
+        )
+        report = result.scalar_one_or_none()
         
         if not report:
             raise HTTPException(status_code=404, detail=f"未找到 {target_date} 的分析报告")
         
-        return {
-            "date": str(report["date"]),
-            "overview": report["overview"],
-            "hot_topics": report["hot_topics"],
-            "market_sentiment": report["market_sentiment"],
-            "key_events": report["key_events"],
-            "trend_analysis": report["trend_analysis"],
-            "news_count": report["news_count"],
-            "generated_at": report["generated_at"].isoformat() if report["generated_at"] else None,
+        data = {
+            "date": str(report.date),
+            "overview": report.overview,
+            "hot_topics": report.hot_topics,
+            "market_sentiment": report.market_sentiment,
+            "key_events": report.key_events,
+            "trend_analysis": report.trend_analysis,
+            "news_count": report.news_count,
+            "generated_at": report.generated_at.isoformat() if report.generated_at else None,
         }
+        set_cached(cache_key, data, ttl=600)
+        return data
 
 
 @router.get("/analysis/latest")
 async def get_latest_report():
     """获取最新的每日分析报告"""
+    cache_key = "api:analysis:latest"
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+
     async with async_session() as session:
-        stmt = text("""
-            SELECT date, overview, hot_topics, market_sentiment, key_events, 
-                   trend_analysis, news_count, generated_at
-            FROM daily_reports
-            ORDER BY date DESC
-            LIMIT 1
-        """)
-        result = await session.execute(stmt)
-        report = result.mappings().first()
+        result = await session.execute(
+            select(DailyReport).order_by(desc(DailyReport.date)).limit(1)
+        )
+        report = result.scalar_one_or_none()
         
         if not report:
             return {"message": "暂无分析报告"}
         
-        return {
-            "date": str(report["date"]),
-            "overview": report["overview"],
-            "hot_topics": report["hot_topics"],
-            "market_sentiment": report["market_sentiment"],
-            "key_events": report["key_events"],
-            "trend_analysis": report["trend_analysis"],
-            "news_count": report["news_count"],
-            "generated_at": report["generated_at"].isoformat() if report["generated_at"] else None,
+        data = {
+            "date": str(report.date),
+            "overview": report.overview,
+            "hot_topics": report.hot_topics,
+            "market_sentiment": report.market_sentiment,
+            "key_events": report.key_events,
+            "trend_analysis": report.trend_analysis,
+            "news_count": report.news_count,
+            "generated_at": report.generated_at.isoformat() if report.generated_at else None,
         }
+        set_cached(cache_key, data, ttl=300)
+        return data
 
 
 @router.get("/analysis/sentiment")
@@ -612,6 +647,11 @@ async def get_sentiment_stats(target_date: str = None):
 @router.get("/analysis/trends")
 async def get_trends(target_date: str = None, keyword: str = None, limit: int = 20):
     """获取趋势数据"""
+    cache_key = f"api:analysis:trends:{target_date}:{keyword}:{limit}"
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+
     if target_date:
         try:
             report_date = date.fromisoformat(target_date)
@@ -621,30 +661,30 @@ async def get_trends(target_date: str = None, keyword: str = None, limit: int = 
         report_date = date.today()
     
     async with async_session() as session:
-        stmt = text("""
-            SELECT keyword, count, sentiment, trend, analysis, related_topics
-            FROM trends
-            WHERE date = :report_date
-            ORDER BY count DESC
-            LIMIT :limit
-        """)
-        result = await session.execute(stmt, {"report_date": report_date, "limit": limit})
-        trends = result.mappings().all()
+        query = select(Trend).where(Trend.date == report_date)
+        if keyword:
+            query = query.where(Trend.keyword.ilike(f"%{keyword}%"))
+        query = query.order_by(desc(Trend.count)).limit(limit)
         
-        return {
+        result = await session.execute(query)
+        trends = result.scalars().all()
+        
+        data = {
             "date": str(report_date),
             "trends": [
                 {
-                    "keyword": row["keyword"],
-                    "count": row["count"],
-                    "sentiment": row["sentiment"],
-                    "trend": row["trend"],
-                    "analysis": row["analysis"],
-                    "related_topics": row["related_topics"],
+                    "keyword": t.keyword,
+                    "count": t.count,
+                    "sentiment": t.sentiment,
+                    "trend": t.trend,
+                    "analysis": t.analysis,
+                    "related_topics": t.related_topics,
                 }
-                for row in trends
+                for t in trends
             ],
         }
+        set_cached(cache_key, data, ttl=300)
+        return data
 
 
 @router.get("/analysis/status")
@@ -653,16 +693,12 @@ async def get_analysis_status():
     from scraper.pipeline.ai_analysis import is_ai_enabled
     
     async with async_session() as session:
-        # 统计已分析和未分析的文章数量
-        stmt_analyzed = text("""
-            SELECT COUNT(*) FROM news WHERE ai_analyzed_at IS NOT NULL
-        """)
+        stmt_analyzed = text("SELECT COUNT(*) FROM news WHERE ai_analyzed_at IS NOT NULL")
         stmt_total = text("SELECT COUNT(*) FROM news")
         
         analyzed = (await session.execute(stmt_analyzed)).scalar()
         total = (await session.execute(stmt_total)).scalar()
         
-        # 最近的报告日期
         stmt_latest = text("SELECT MAX(date) FROM daily_reports")
         latest_report = (await session.execute(stmt_latest)).scalar()
         
@@ -673,3 +709,261 @@ async def get_analysis_status():
             "analysis_coverage": round(analyzed / total * 100, 1) if total > 0 else 0,
             "latest_report_date": str(latest_report) if latest_report else None,
         }
+
+
+@router.get("/search", response_class=HTMLResponse)
+async def search_news(
+    request: Request,
+    q: str = "",
+    category: str = "all",
+    page: int = 1,
+    page_size: int = 20,
+):
+    """全文搜索新闻"""
+    if not q or len(q.strip()) < 2:
+        return templates.TemplateResponse(request=request, name="partials/news_list.html", context={
+            "news_items": [],
+            "category": category,
+            "page": 1,
+            "total_pages": 0,
+            "total": 0,
+            "search_query": q,
+        })
+
+    offset = (page - 1) * page_size
+    search_term = f"%{q.strip()}%"
+
+    async with async_session() as session:
+        base_filter = or_(
+            News.title.ilike(search_term),
+            News.translated_title.ilike(search_term),
+            News.summary.ilike(search_term),
+        )
+
+        count_query = select(func.count(News.id)).where(base_filter)
+        if category and category != "all":
+            count_query = count_query.where(News.category == category)
+        
+        total_result = await session.execute(count_query)
+        total = total_result.scalar()
+
+        query = (
+            select(News)
+            .where(base_filter)
+            .order_by(desc(News.date))
+            .offset(offset)
+            .limit(page_size)
+        )
+        if category and category != "all":
+            query = query.where(News.category == category)
+
+        result = await session.execute(query)
+        news_items = result.scalars().all()
+
+        total_pages = (total + page_size - 1) // page_size
+
+    return templates.TemplateResponse(request=request, name="partials/news_list.html", context={
+        "news_items": news_items,
+        "category": category,
+        "page": page,
+        "total_pages": total_pages,
+        "total": total,
+        "search_query": q,
+    })
+
+
+# ============================================================
+# 事件追踪 API
+# ============================================================
+
+@router.get("/events")
+async def get_events(
+    category: str = None,
+    status: str = "active",
+    page: int = 1,
+    page_size: int = 20,
+):
+    """获取事件列表"""
+    cache_key = f"api:events:{category}:{status}:{page}"
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+
+    offset = (page - 1) * page_size
+
+    async with async_session() as session:
+        query = select(Event)
+        count_query = select(func.count(Event.id))
+
+        if category:
+            query = query.where(Event.category == category)
+            count_query = count_query.where(Event.category == category)
+        if status:
+            query = query.where(Event.status == status)
+            count_query = count_query.where(Event.status == status)
+
+        total_result = await session.execute(count_query)
+        total = total_result.scalar()
+
+        query = query.order_by(desc(Event.last_updated)).offset(offset).limit(page_size)
+        result = await session.execute(query)
+        events = result.scalars().all()
+
+        event_list = []
+        for event in events:
+            event_list.append({
+                "id": event.id,
+                "event_id": event.event_id,
+                "title": event.title,
+                "description": event.description,
+                "category": event.category,
+                "first_seen": str(event.first_seen) if event.first_seen else None,
+                "last_updated": str(event.last_updated) if event.last_updated else None,
+                "update_count": event.update_count,
+                "status": event.status,
+                "article_count": len(event.related_articles) if event.related_articles else 0,
+            })
+
+        total_pages = (total + page_size - 1) // page_size
+
+        data = {
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+            "events": event_list,
+        }
+        set_cached(cache_key, data, ttl=120)
+        return data
+
+
+@router.get("/events/{event_id}")
+async def get_event_detail(event_id: str):
+    """获取事件详情和时间线"""
+    cache_key = f"api:events:detail:{event_id}"
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+
+    async with async_session() as session:
+        result = await session.execute(
+            select(Event).where(Event.event_id == event_id)
+        )
+        event = result.scalar_one_or_none()
+
+        if not event:
+            raise HTTPException(status_code=404, detail="事件未找到")
+
+        # 获取关联文章详情
+        articles = []
+        if event.related_articles:
+            for article_ref in event.related_articles[:10]:
+                if isinstance(article_ref, dict):
+                    articles.append(article_ref)
+
+        # 获取事件类型的其他事件（相关事件）
+        related_events = []
+        if event.data and event.data.get("event_type"):
+            event_type = event.data["event_type"]
+            related_result = await session.execute(
+                select(Event)
+                .where(Event.data["event_type"].as_string() == event_type)
+                .where(Event.event_id != event_id)
+                .order_by(desc(Event.last_updated))
+                .limit(5)
+            )
+            for related in related_result.scalars().all():
+                related_events.append({
+                    "event_id": related.event_id,
+                    "title": related.title,
+                    "category": related.category,
+                    "last_updated": str(related.last_updated) if related.last_updated else None,
+                    "update_count": related.update_count,
+                })
+
+        data = {
+            "event_id": event.event_id,
+            "title": event.title,
+            "description": event.description,
+            "category": event.category,
+            "first_seen": str(event.first_seen) if event.first_seen else None,
+            "last_updated": str(event.last_updated) if event.last_updated else None,
+            "update_count": event.update_count,
+            "status": event.status,
+            "event_type": event.data.get("event_type") if event.data else None,
+            "timeline": articles,
+            "related_events": related_events,
+        }
+        set_cached(cache_key, data, ttl=300)
+        return data
+
+
+@router.get("/events/timeline", response_class=HTMLResponse)
+async def get_events_timeline(
+    request: Request,
+    category: str = None,
+    days: int = 7,
+    limit: int = 20,
+):
+    """获取事件时间线（HTML）"""
+    from datetime import timedelta
+    
+    cache_key = f"api:events:timeline:{category}:{days}:{limit}"
+    cached = get_cached(cache_key)
+    if cached:
+        return HTMLResponse(content=cached)
+
+    cutoff_date = date.today() - timedelta(days=days)
+
+    async with async_session() as session:
+        query = select(Event).where(Event.last_updated >= cutoff_date)
+        if category:
+            query = query.where(Event.category == category)
+        query = query.order_by(desc(Event.last_updated)).limit(limit)
+
+        result = await session.execute(query)
+        events = result.scalars().all()
+
+        event_list = []
+        for event in events:
+            event_list.append({
+                "event_id": event.event_id,
+                "title": event.title,
+                "category": event.category,
+                "first_seen": str(event.first_seen) if event.first_seen else None,
+                "last_updated": str(event.last_updated) if event.last_updated else None,
+                "update_count": event.update_count,
+                "status": event.status,
+                "article_count": len(event.related_articles) if event.related_articles else 0,
+            })
+
+    response = templates.TemplateResponse(request=request, name="partials/events_timeline.html", context={
+        "events": event_list,
+        "category": category,
+        "days": days,
+    })
+    set_cached(cache_key, response.body.decode(), ttl=120)
+    return response
+
+
+@router.get("/events/categories")
+async def get_event_categories():
+    """获取事件分类统计"""
+    cache_key = "api:events:categories"
+    cached = get_cached(cache_key)
+    if cached:
+        return cached
+
+    async with async_session() as session:
+        query = (
+            select(Event.category, func.count(Event.id))
+            .where(Event.status == "active")
+            .group_by(Event.category)
+            .order_by(desc(func.count(Event.id)))
+        )
+        result = await session.execute(query)
+        categories = [{"name": row[0], "count": row[1]} for row in result.all()]
+
+        data = {"categories": categories}
+        set_cached(cache_key, data, ttl=300)
+        return data

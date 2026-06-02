@@ -43,3 +43,20 @@ async def news_detail(request: Request, news_id: int):
         "title": "新闻详情",
         "news_id": news_id,
     })
+
+
+@router.get("/events")
+async def events(request: Request, category: str = None, days: int = 7):
+    return templates.TemplateResponse(request=request, name="events.html", context={
+        "title": "事件追踪",
+        "category": category,
+        "days": days,
+    })
+
+
+@router.get("/events/{event_id}")
+async def event_detail(request: Request, event_id: str):
+    return templates.TemplateResponse(request=request, name="event_detail.html", context={
+        "title": "事件详情",
+        "event_id": event_id,
+    })

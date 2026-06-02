@@ -19,6 +19,8 @@ from scraper.pipeline.dedup import get_link_hash, is_duplicate
 from scraper.pipeline.classify import classify_by_keywords, detect_article_type
 from scraper.pipeline.regions import extract_regions
 from scraper.db.writer import save_news, get_existing_hashes, get_existing_titles, update_source_health, get_source_conditional_headers
+from models.run_metrics import RunMetrics
+from models.base import async_session
 
 logging.basicConfig(
     level=logging.INFO,
@@ -26,11 +28,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-BATCH_SIZE = 5
-BATCH_DELAY_MIN = 15.0
-BATCH_DELAY_MAX = 40.0
-ARTICLE_DELAY_MIN = 2.0
-ARTICLE_DELAY_MAX = 5.0
+# 抓取配置 - 44个源，包括央行/国际组织等敏感站点
+BATCH_SIZE = 4                          # 每批处理源数量（减少并发）
+BATCH_DELAY_MIN = 20.0                  # 批次间最小延迟（秒）
+BATCH_DELAY_MAX = 45.0                  # 批次间最大延迟（秒）
+ARTICLE_DELAY_MIN = 2.0                 # 文章间最小延迟
+ARTICLE_DELAY_MAX = 5.0                 # 文章间最大延迟
 
 
 def load_config() -> dict:
@@ -138,6 +141,12 @@ async def main():
     logger.info(f"Found {len(existing_hashes)} existing hashes")
 
     all_items = []
+    sources_attempted = len(sources)
+    sources_succeeded = 0
+    sources_failed = 0
+    items_fetched = 0
+    items_deduped = 0
+
     async with Fetcher(
         timeout=settings.get("fetch_timeout", 20),
         max_retries=settings.get("max_retries", 2),
@@ -153,22 +162,50 @@ async def main():
             for result in results:
                 if isinstance(result, Exception):
                     logger.error(f"Source processing error: {result}")
+                    sources_failed += 1
                 elif isinstance(result, list):
                     all_items.extend(result)
+                    if len(result) > 0:
+                        sources_succeeded += 1
 
             if batch_idx < len(batches) - 1:
                 delay = random.uniform(BATCH_DELAY_MIN, BATCH_DELAY_MAX)
                 logger.info(f"Waiting {delay:.1f}s before next batch")
                 await asyncio.sleep(delay)
 
+    items_fetched = len(all_items)
+    items_final = 0
+
     if all_items:
         saved = await save_news(all_items)
+        items_final = saved
+        items_deduped = items_fetched - saved
         logger.info(f"Saved {saved} new items to database")
     else:
         logger.info("No new items to save")
 
     duration = (datetime.utcnow() - start_time).total_seconds()
     logger.info(f"Scrape completed in {duration:.1f}s")
+
+    try:
+        async with async_session() as session:
+            metrics = RunMetrics(
+                run_type="news_scrape",
+                started_at=start_time,
+                finished_at=datetime.utcnow(),
+                duration_seconds=int(duration),
+                sources_attempted=sources_attempted,
+                sources_succeeded=sources_succeeded,
+                sources_failed=sources_failed,
+                items_fetched=items_fetched,
+                items_deduped=items_deduped,
+                items_final=items_final,
+            )
+            session.add(metrics)
+            await session.commit()
+            logger.info("Run metrics saved")
+    except Exception as e:
+        logger.error(f"Failed to save run metrics: {e}")
 
 
 if __name__ == "__main__":

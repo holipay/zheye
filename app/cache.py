@@ -12,7 +12,9 @@ def get_cached(key: str) -> Optional[Any]:
 
 def set_cached(key: str, value: Any, ttl: int = None):
     if ttl:
-        _cache[key] = value
+        cache = TTLCache(maxsize=1, ttl=ttl)
+        cache[key] = value
+        _cache[key] = cache[key]
     else:
         _cache[key] = value
 

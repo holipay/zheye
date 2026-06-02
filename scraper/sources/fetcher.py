@@ -21,10 +21,10 @@ USER_AGENTS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
 ]
 
-MIN_DELAY = 1.0
+MIN_DELAY = 1.5
 MAX_DELAY = 4.0
-DOMAIN_MIN_DELAY = 5.0
-DOMAIN_MAX_DELAY = 12.0
+DOMAIN_MIN_DELAY = 6.0
+DOMAIN_MAX_DELAY = 15.0
 
 
 def get_random_ua() -> str:

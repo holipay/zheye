@@ -20,7 +20,7 @@ class ConfigChecker:
     
     def check_rss_sources(self) -> dict:
         """检查 RSS 源配置"""
-        config_path = Path(__file__).parent / "sources" / "config.yaml"
+        config_path = Path(__file__).parent.parent / "scraper" / "sources" / "config.yaml"
         
         if not config_path.exists():
             return {"status": "error", "message": "config.yaml not found"}

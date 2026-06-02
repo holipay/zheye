@@ -7,6 +7,12 @@ from models.run_metrics import RunMetrics
 from models.keyword import Keyword
 from models.article_keyword import ArticleKeyword
 from models.article_relation import ArticleRelation
+from models.entity import Entity
+from models.article_entity import ArticleEntity
+from models.daily_report import DailyReport
+from models.trend import Trend
+from models.event import Event
+from models.market_data import MarketData
 
 __all__ = [
     "Base",
@@ -21,4 +27,10 @@ __all__ = [
     "Keyword",
     "ArticleKeyword",
     "ArticleRelation",
+    "Entity",
+    "ArticleEntity",
+    "DailyReport",
+    "Trend",
+    "Event",
+    "MarketData",
 ]

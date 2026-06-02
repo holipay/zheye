@@ -271,7 +271,7 @@ class DeepSeekClient:
             },
             {
                 "role": "user",
-                "content": f"关键词: {keyword\n相关文章:\n{articles_text}"
+                "content": f"关键词: {keyword}\n相关文章:\n{articles_text}"
             }
         ]
         
