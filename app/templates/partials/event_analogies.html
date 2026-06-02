@@ -1,0 +1,445 @@
+<!-- 历史类比展示模板 -->
+<div class="analogies-framework">
+    <!-- 当前事件表征 -->
+    {% if source_repr %}
+    <div class="source-repr-section">
+        <h3 class="section-title">
+            <span class="icon">🔍</span>
+            {{ "Event Pattern" if lang == "en" else "事件模式识别" }}
+        </h3>
+        <div class="repr-cards">
+            {% if source_repr.causal_pattern %}
+            <div class="repr-card">
+                <div class="repr-label">{{ "Causal Pattern" if lang == "en" else "因果模式" }}</div>
+                <div class="repr-value">{{ source_repr.causal_pattern }}</div>
+            </div>
+            {% endif %}
+            {% if source_repr.economic_principle %}
+            <div class="repr-card">
+                <div class="repr-label">{{ "Economic Principle" if lang == "en" else "经济学原理" }}</div>
+                <div class="repr-value">{{ source_repr.economic_principle }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 历史类比列表 -->
+    {% if analogies %}
+    <div class="analogies-section">
+        <h3 class="section-title">
+            <span class="icon">📚</span>
+            {{ "Historical Analogies" if lang == "en" else "历史类比" }}
+        </h3>
+        
+        <div class="analogies-list">
+            {% for analogy in analogies %}
+            <div class="analogy-card">
+                <!-- 头部：标题和相似度 -->
+                <div class="analogy-header">
+                    <div class="analogy-title-section">
+                        <a href="/{{ lang }}/events/{{ analogy.target_event_id }}" 
+                           class="analogy-title"
+                           hx-get="/api/events/{{ analogy.target_event_id }}?lang={{ lang }}" 
+                           hx-target="#main-content" 
+                           hx-push-url="true">
+                            {{ analogy.target_title }}
+                        </a>
+                        <span class="analogy-category">{{ analogy.target_category }}</span>
+                    </div>
+                    <div class="similarity-badge">
+                        <div class="similarity-score">{{ (analogy.overall_similarity * 100) | int }}%</div>
+                        <div class="similarity-label">{{ "Match" if lang == "en" else "匹配度" }}</div>
+                    </div>
+                </div>
+
+                <!-- 类比概述 -->
+                {% if analogy.analogy_summary %}
+                <div class="analogy-summary">
+                    {{ analogy.analogy_summary }}
+                </div>
+                {% endif %}
+
+                <!-- 匹配维度评分 -->
+                <div class="similarity-dimensions">
+                    <div class="dimension">
+                        <span class="dim-label">{{ "Causal" if lang == "en" else "因果" }}</span>
+                        <div class="dim-bar">
+                            <div class="dim-fill" style="width: {{ (analogy.causal_similarity * 100) | int }}%"></div>
+                        </div>
+                        <span class="dim-value">{{ (analogy.causal_similarity * 100) | int }}%</span>
+                    </div>
+                    <div class="dimension">
+                        <span class="dim-label">{{ "Decision" if lang == "en" else "决策" }}</span>
+                        <div class="dim-bar">
+                            <div class="dim-fill" style="width: {{ (analogy.decision_similarity * 100) | int }}%"></div>
+                        </div>
+                        <span class="dim-value">{{ (analogy.decision_similarity * 100) | int }}%</span>
+                    </div>
+                    <div class="dimension">
+                        <span class="dim-label">{{ "Constraint" if lang == "en" else "约束" }}</span>
+                        <div class="dim-bar">
+                            <div class="dim-fill" style="width: {{ (analogy.constraint_similarity * 100) | int }}%"></div>
+                        </div>
+                        <span class="dim-value">{{ (analogy.constraint_similarity * 100) | int }}%</span>
+                    </div>
+                    <div class="dimension">
+                        <span class="dim-label">{{ "Mechanism" if lang == "en" else "传导" }}</span>
+                        <div class="dim-bar">
+                            <div class="dim-fill" style="width: {{ (analogy.mechanism_similarity * 100) | int }}%"></div>
+                        </div>
+                        <span class="dim-value">{{ (analogy.mechanism_similarity * 100) | int }}%</span>
+                    </div>
+                </div>
+
+                <!-- 关键洞察 -->
+                {% if analogy.key_insight %}
+                <div class="insight-section">
+                    <div class="insight-label">
+                        <span class="icon">💡</span>
+                        {{ "Key Insight" if lang == "en" else "关键洞察" }}
+                    </div>
+                    <div class="insight-content">{{ analogy.key_insight }}</div>
+                </div>
+                {% endif %}
+
+                <!-- 历史教训 -->
+                {% if analogy.lessons_learned %}
+                <div class="lessons-section">
+                    <div class="lessons-label">
+                        <span class="icon">📖</span>
+                        {{ "Lessons Learned" if lang == "en" else "历史教训" }}
+                    </div>
+                    <div class="lessons-content">{{ analogy.lessons_learned }}</div>
+                </div>
+                {% endif %}
+
+                <!-- 差异分析 -->
+                {% if analogy.surface_differences or analogy.structural_differences %}
+                <div class="differences-section">
+                    <button class="diff-toggle" onclick="this.parentElement.classList.toggle('expanded')">
+                        {{ "Show Differences" if lang == "en" else "查看差异分析" }}
+                    </button>
+                    <div class="diff-content">
+                        {% if analogy.surface_differences %}
+                        <div class="diff-group">
+                            <div class="diff-label">{{ "Surface Differences" if lang == "en" else "表面差异" }}</div>
+                            <ul class="diff-list">
+                                {% for diff in analogy.surface_differences %}
+                                <li>{{ diff }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                        {% if analogy.structural_differences %}
+                        <div class="diff-group">
+                            <div class="diff-label">{{ "Structural Differences" if lang == "en" else "结构差异" }}</div>
+                            <ul class="diff-list">
+                                {% for diff in analogy.structural_differences %}
+                                <li>{{ diff }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- 类比类型标签 -->
+                <div class="analogy-footer">
+                    <span class="analogy-type-badge">
+                        {% if analogy.analogy_type == 'structural' %}
+                            {{ "Structural" if lang == "en" else "结构性类比" }}
+                        {% elif analogy.analogy_type == 'pattern' %}
+                            {{ "Pattern" if lang == "en" else "模式类比" }}
+                        {% elif analogy.analogy_type == 'principle' %}
+                            {{ "Principle" if lang == "en" else "原理类比" }}
+                        {% else %}
+                            {{ analogy.analogy_type }}
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="no-analogies">
+        <p>{{ "No historical analogies found." if lang == "en" else "未找到历史类比事件。" }}</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.analogies-framework {
+    margin-top: 1.5rem;
+}
+
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #1e293b;
+}
+
+/* 事件表征 */
+.source-repr-section {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.repr-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.repr-card {
+    background: #f0fdf4;
+    border-radius: 6px;
+    padding: 1rem;
+    border-left: 3px solid #22c55e;
+}
+
+.repr-label {
+    font-size: 0.8rem;
+    color: #166534;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.repr-value {
+    font-size: 0.9rem;
+    color: #1e293b;
+    line-height: 1.5;
+}
+
+/* 类比卡片 */
+.analogies-section {
+    background: #fff;
+    border-radius: 8px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.analogies-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.analogy-card {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 1.25rem;
+    border: 1px solid #e2e8f0;
+}
+
+.analogy-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.analogy-title-section {
+    flex: 1;
+}
+
+.analogy-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #1e293b;
+    text-decoration: none;
+}
+
+.analogy-title:hover {
+    color: #3b82f6;
+}
+
+.analogy-category {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.5rem;
+    background: #e0e7ff;
+    color: #4338ca;
+    border-radius: 4px;
+    margin-left: 0.5rem;
+}
+
+.similarity-badge {
+    text-align: center;
+    padding: 0.5rem 1rem;
+    background: #dbeafe;
+    border-radius: 8px;
+}
+
+.similarity-score {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1d4ed8;
+}
+
+.similarity-label {
+    font-size: 0.7rem;
+    color: #3b82f6;
+}
+
+.analogy-summary {
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: #fff;
+    border-radius: 6px;
+}
+
+/* 匹配维度 */
+.similarity-dimensions {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.dimension {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.dim-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    width: 40px;
+}
+
+.dim-bar {
+    flex: 1;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.dim-fill {
+    height: 100%;
+    background: #3b82f6;
+    border-radius: 3px;
+    transition: width 0.3s;
+}
+
+.dim-value {
+    font-size: 0.75rem;
+    color: #475569;
+    width: 35px;
+    text-align: right;
+}
+
+/* 洞察和教训 */
+.insight-section, .lessons-section {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: #fff;
+    border-radius: 6px;
+}
+
+.insight-label, .lessons-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.insight-content, .lessons-content {
+    font-size: 0.9rem;
+    color: #475569;
+    line-height: 1.6;
+}
+
+/* 差异分析 */
+.differences-section {
+    margin-bottom: 1rem;
+}
+
+.diff-toggle {
+    font-size: 0.85rem;
+    color: #3b82f6;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.diff-toggle:hover {
+    text-decoration: underline;
+}
+
+.diff-content {
+    display: none;
+    margin-top: 0.75rem;
+    padding: 1rem;
+    background: #fff;
+    border-radius: 6px;
+}
+
+.differences-section.expanded .diff-content {
+    display: block;
+}
+
+.diff-group {
+    margin-bottom: 1rem;
+}
+
+.diff-group:last-child {
+    margin-bottom: 0;
+}
+
+.diff-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 0.5rem;
+}
+
+.diff-list {
+    margin: 0;
+    padding-left: 1.5rem;
+    font-size: 0.85rem;
+    color: #475569;
+}
+
+.diff-list li {
+    margin-bottom: 0.25rem;
+}
+
+/* 底部 */
+.analogy-footer {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.analogy-type-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.75rem;
+    background: #f1f5f9;
+    color: #475569;
+    border-radius: 4px;
+}
+
+.no-analogies {
+    text-align: center;
+    padding: 2rem;
+    color: #64748b;
+}
+</style>

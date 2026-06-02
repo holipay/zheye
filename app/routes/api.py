@@ -1438,3 +1438,257 @@ async def trigger_causal_chain_analysis(event_id: str):
             "links_count": len(analysis.get('links', [])),
             "summary": analysis.get('summary'),
         }
+
+
+# ============================================================
+# P1: 历史类比检索 API
+# ============================================================
+
+@router.get("/events/{event_id}/analogies", response_class=HTMLResponse)
+async def get_event_analogies(request: Request, event_id: str, lang: str = "zh"):
+    """获取事件的历史类比"""
+    cache_key = f"api:events:analogies:{event_id}:{lang}"
+    cached = get_cached(cache_key)
+    if cached:
+        return HTMLResponse(content=cached)
+
+    async with async_session() as session:
+        from models.event_representation import HistoricalAnalogy, EventRepresentation
+        
+        # 获取事件表征
+        repr_result = await session.execute(
+            select(EventRepresentation).where(EventRepresentation.event_id == event_id)
+        )
+        source_repr = repr_result.scalar_one_or_none()
+        
+        # 获取历史类比
+        analogies_result = await session.execute(
+            select(HistoricalAnalogy, Event)
+            .join(Event, Event.event_id == HistoricalAnalogy.target_event_id)
+            .where(HistoricalAnalogy.source_event_id == event_id)
+            .order_by(HistoricalAnalogy.overall_similarity.desc())
+            .limit(5)
+        )
+        analogies = []
+        for analogy, target_event in analogies_result.all():
+            analogies.append({
+                "id": analogy.id,
+                "target_event_id": analogy.target_event_id,
+                "target_title": target_event.title,
+                "target_category": target_event.category,
+                "overall_similarity": analogy.overall_similarity,
+                "causal_similarity": analogy.causal_similarity,
+                "decision_similarity": analogy.decision_similarity,
+                "constraint_similarity": analogy.constraint_similarity,
+                "mechanism_similarity": analogy.mechanism_similarity,
+                "game_similarity": analogy.game_similarity,
+                "analogy_type": analogy.analogy_type,
+                "analogy_summary": analogy.analogy_summary,
+                "key_insight": analogy.key_insight,
+                "lessons_learned": analogy.lessons_learned,
+                "surface_differences": analogy.surface_differences or [],
+                "structural_differences": analogy.structural_differences or [],
+            })
+
+    if not analogies and not source_repr:
+        return templates.TemplateResponse(request=request, name="partials/analogy_empty.html", context={
+            "event_id": event_id,
+            "lang": lang,
+        })
+
+    response = templates.TemplateResponse(request=request, name="partials/event_analogies.html", context={
+        "event_id": event_id,
+        "lang": lang,
+        "source_repr": {
+            "causal_pattern": source_repr.causal_pattern_desc if source_repr else None,
+            "economic_principle": source_repr.economic_principle_desc if source_repr else None,
+        } if source_repr else None,
+        "analogies": analogies,
+    })
+    set_cached(cache_key, response.body.decode(), ttl=600)
+    return response
+
+
+@router.post("/events/{event_id}/analogies/analyze")
+async def trigger_analogy_analysis(event_id: str):
+    """触发历史类比分析"""
+    from scraper.pipeline.ai_analysis import DeepSeekClient
+    from scraper.pipeline.analogy import extract_event_representation, analyze_analogy, compute_structural_similarity
+    from models.event_representation import EventRepresentation, HistoricalAnalogy
+    
+    async with async_session() as session:
+        # 获取事件
+        result = await session.execute(
+            select(Event).where(Event.event_id == event_id)
+        )
+        event = result.scalar_one_or_none()
+        
+        if not event:
+            raise HTTPException(status_code=404, detail="事件未找到")
+        
+        # 获取相关文章
+        articles = []
+        if event.related_articles:
+            for article_ref in event.related_articles[:5]:
+                if isinstance(article_ref, dict):
+                    articles.append(article_ref)
+        
+        ai_client = DeepSeekClient()
+        event_data = {
+            "title": event.title,
+            "description": event.description,
+            "category": event.category,
+        }
+        
+        # 步骤1: 提取当前事件的表征
+        repr_result = await extract_event_representation(event_data, articles, ai_client)
+        if not repr_result:
+            raise HTTPException(status_code=500, detail="表征提取失败")
+        
+        # 保存表征
+        existing_repr = await session.execute(
+            select(EventRepresentation).where(EventRepresentation.event_id == event_id)
+        )
+        er = existing_repr.scalar_one_or_none()
+        
+        surface = repr_result.get('surface', {})
+        structural = repr_result.get('structural', {})
+        abstract = repr_result.get('abstract', {})
+        
+        if er:
+            er.surface_summary = surface.get('summary')
+            er.surface_entities = surface.get('entities')
+            er.surface_numbers = surface.get('numbers')
+            er.causal_pattern = structural.get('causal_pattern')
+            er.causal_pattern_desc = structural.get('causal_pattern_desc')
+            er.decision_logic = structural.get('decision_logic')
+            er.transmission_mechanism = structural.get('transmission_mechanism')
+            er.constraint_conditions = structural.get('constraint_conditions')
+            er.economic_principle = abstract.get('economic_principle')
+            er.economic_principle_desc = abstract.get('economic_principle_desc')
+            er.game_theory_structure = abstract.get('game_theory_structure')
+            er.institutional_context = abstract.get('institutional_context')
+            er.ai_model = repr_result.get('ai_model')
+            er.ai_confidence = repr_result.get('ai_confidence')
+        else:
+            er = EventRepresentation(
+                event_id=event_id,
+                surface_summary=surface.get('summary'),
+                surface_entities=surface.get('entities'),
+                surface_numbers=surface.get('numbers'),
+                causal_pattern=structural.get('causal_pattern'),
+                causal_pattern_desc=structural.get('causal_pattern_desc'),
+                decision_logic=structural.get('decision_logic'),
+                transmission_mechanism=structural.get('transmission_mechanism'),
+                constraint_conditions=structural.get('constraint_conditions'),
+                economic_principle=abstract.get('economic_principle'),
+                economic_principle_desc=abstract.get('economic_principle_desc'),
+                game_theory_structure=abstract.get('game_theory_structure'),
+                institutional_context=abstract.get('institutional_context'),
+                ai_model=repr_result.get('ai_model'),
+                ai_confidence=repr_result.get('ai_confidence'),
+            )
+            session.add(er)
+        
+        await session.flush()
+        
+        # 步骤2: 查找候选历史事件（基于规则的预筛选）
+        # 优先匹配相同因果模式或经济学原理的事件
+        candidates_query = (
+            select(EventRepresentation)
+            .where(EventRepresentation.event_id != event_id)
+            .where(
+                (EventRepresentation.causal_pattern == structural.get('causal_pattern')) |
+                (EventRepresentation.economic_principle == abstract.get('economic_principle'))
+            )
+            .limit(10)
+        )
+        candidates_result = await session.execute(candidates_query)
+        candidates = candidates_result.scalars().all()
+        
+        # 步骤3: 对每个候选进行详细的类比分析
+        analogies_created = 0
+        for candidate in candidates:
+            # 检查是否已存在
+            existing = await session.execute(
+                select(HistoricalAnalogy).where(
+                    HistoricalAnalogy.source_event_id == event_id,
+                    HistoricalAnalogy.target_event_id == candidate.event_id
+                )
+            )
+            if existing.scalar():
+                continue
+            
+            # 计算规则相似度
+            rule_scores = compute_structural_similarity(
+                repr_result,
+                {
+                    'structural': {
+                        'causal_pattern': candidate.causal_pattern,
+                        'constraint_conditions': candidate.constraint_conditions or [],
+                    },
+                    'abstract': {
+                        'economic_principle': candidate.economic_principle,
+                    }
+                }
+            )
+            
+            # 如果规则相似度太低，跳过AI分析
+            if rule_scores['overall'] < 0.3:
+                continue
+            
+            # 调用AI进行详细类比分析
+            source_data = {
+                'title': event.title,
+                'causal_pattern_desc': structural.get('causal_pattern_desc'),
+                'decision_logic': structural.get('decision_logic'),
+                'transmission_mechanism': structural.get('transmission_mechanism'),
+                'economic_principle_desc': abstract.get('economic_principle_desc'),
+            }
+            target_data = {
+                'title': candidate.surface_summary,
+                'causal_pattern_desc': candidate.causal_pattern_desc,
+                'decision_logic': candidate.decision_logic,
+                'transmission_mechanism': candidate.transmission_mechanism,
+                'economic_principle_desc': candidate.economic_principle_desc,
+            }
+            
+            analogy_result = await analyze_analogy(source_data, target_data, ai_client)
+            if not analogy_result:
+                continue
+            
+            # 保存类比
+            analogy = HistoricalAnalogy(
+                source_event_id=event_id,
+                target_event_id=candidate.event_id,
+                causal_similarity=analogy_result.get('causal_similarity'),
+                decision_similarity=analogy_result.get('decision_similarity'),
+                constraint_similarity=analogy_result.get('constraint_similarity'),
+                mechanism_similarity=analogy_result.get('mechanism_similarity'),
+                game_similarity=analogy_result.get('game_similarity'),
+                overall_similarity=analogy_result.get('overall_similarity'),
+                analogy_type=analogy_result.get('analogy_type'),
+                analogy_summary=analogy_result.get('analogy_summary'),
+                key_insight=analogy_result.get('key_insight'),
+                lessons_learned=analogy_result.get('lessons_learned'),
+                surface_differences=analogy_result.get('surface_differences'),
+                structural_differences=analogy_result.get('structural_differences'),
+                confidence=analogy_result.get('confidence'),
+                ai_model=analogy_result.get('ai_model'),
+            )
+            session.add(analogy)
+            analogies_created += 1
+        
+        await session.commit()
+        
+        # 清除缓存
+        from app.cache import invalidate_cache
+        invalidate_cache(f"api:events:analogies:{event_id}")
+        
+        return {
+            "status": "ok",
+            "event_id": event_id,
+            "representation_extracted": True,
+            "candidates_found": len(candidates),
+            "analogies_created": analogies_created,
+        }

@@ -1,0 +1,79 @@
+<!-- 历史类比空状态 -->
+<div class="analogy-empty">
+    <div class="empty-icon">📚</div>
+    <div class="empty-text">
+        {% if lang == "en" %}
+        <p>Historical analogy analysis not yet available for this event.</p>
+        <button class="btn-analyze" onclick="analyzeAnalogies('{{ event_id }}')">
+            Find Historical Analogies
+        </button>
+        {% else %}
+        <p>该事件的历史类比分析尚未生成</p>
+        <button class="btn-analyze" onclick="analyzeAnalogies('{{ event_id }}')">
+            检索历史类比
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.analogy-empty {
+    text-align: center;
+    padding: 2rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px dashed #cbd5e1;
+}
+
+.empty-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.empty-text p {
+    color: #64748b;
+    margin-bottom: 1rem;
+}
+
+.btn-analyze {
+    padding: 0.5rem 1.25rem;
+    background: #059669;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-analyze:hover {
+    background: #047857;
+}
+</style>
+
+<script>
+async function analyzeAnalogies(eventId) {
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = '{{ "Analyzing..." if lang == "en" else "分析中..." }}';
+    
+    try {
+        const response = await fetch(`/api/events/${eventId}/analogies/analyze`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            const error = await response.json();
+            alert(error.detail || '分析失败');
+            btn.disabled = false;
+            btn.textContent = '{{ "Retry" if lang == "en" else "重试" }}';
+        }
+    } catch (e) {
+        alert('网络错误');
+        btn.disabled = false;
+        btn.textContent = '{{ "Retry" if lang == "en" else "重试" }}';
+    }
+}
+</script>
