@@ -810,7 +810,12 @@ async def get_reports_list(period: str = "weekly", limit: int = 10):
     if cached:
         return cached
 
+    # 使用白名单验证表名，防止 SQL 注入
+    ALLOWED_TABLES = {"weekly_reports", "monthly_reports"}
     table_name = "weekly_reports" if period == "weekly" else "monthly_reports"
+    
+    if table_name not in ALLOWED_TABLES:
+        raise HTTPException(status_code=400, detail="无效的报告类型")
     
     async with async_session() as session:
         result = await session.execute(text(f"""

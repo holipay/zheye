@@ -9,7 +9,7 @@ import json
 import logging
 from datetime import datetime, date, timedelta
 from pathlib import Path
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func, desc, text
@@ -20,6 +20,8 @@ from models.source_health import SourceHealth
 from models.run_metrics import RunMetrics
 from models.event import Event
 from app.i18n import get_text, get_language_from_request, DEFAULT_LANGUAGE
+from app.auth import verify_admin_credentials, check_admin_enabled
+from app.csrf import generate_csrf_token, sign_token, csrf_protect
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -33,7 +35,11 @@ def _get_admin_context(request: Request, **kwargs):
     lang = get_language_from_request(request)
     def t(key: str, **fmt_kwargs) -> str:
         return get_text(lang, key, **fmt_kwargs)
-    return {"lang": lang, "t": t, "request": request, **kwargs}
+    
+    # 生成 CSRF token
+    csrf_token = sign_token(generate_csrf_token())
+    
+    return {"lang": lang, "t": t, "request": request, "csrf_token": csrf_token, **kwargs}
 
 
 def load_rss_config() -> dict:
@@ -63,11 +69,13 @@ def save_rss_config(config: dict) -> bool:
 
 @router.get("/admin", response_class=HTMLResponse)
 async def admin_root(request: Request):
+    """管理后台根路径，检查认证后重定向"""
+    check_admin_enabled()
     return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin")
 
 
 @router.get("/{lang}/admin", response_class=HTMLResponse)
-async def admin_index(request: Request, lang: str):
+async def admin_index(request: Request, lang: str, _: bool = Depends(verify_admin_credentials)):
     """管理后台首页"""
     if lang not in {"en", "zh"}:
         return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin")
@@ -76,7 +84,7 @@ async def admin_index(request: Request, lang: str):
 
 
 @router.get("/{lang}/admin/sources", response_class=HTMLResponse)
-async def admin_sources(request: Request, lang: str):
+async def admin_sources(request: Request, lang: str, _: bool = Depends(verify_admin_credentials)):
     """RSS 源管理页面"""
     if lang not in {"en", "zh"}:
         return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin/sources")
@@ -85,7 +93,7 @@ async def admin_sources(request: Request, lang: str):
 
 
 @router.get("/{lang}/admin/monitor", response_class=HTMLResponse)
-async def admin_monitor(request: Request, lang: str):
+async def admin_monitor(request: Request, lang: str, _: bool = Depends(verify_admin_credentials)):
     """数据监控页面"""
     if lang not in {"en", "zh"}:
         return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin/monitor")
@@ -94,7 +102,7 @@ async def admin_monitor(request: Request, lang: str):
 
 
 @router.get("/{lang}/admin/logs", response_class=HTMLResponse)
-async def admin_logs(request: Request, lang: str):
+async def admin_logs(request: Request, lang: str, _: bool = Depends(verify_admin_credentials)):
     """运行日志页面"""
     if lang not in {"en", "zh"}:
         return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin/logs")
@@ -107,7 +115,7 @@ async def admin_logs(request: Request, lang: str):
 # ============================================================
 
 @router.get("/admin/api/dashboard")
-async def get_dashboard():
+async def get_dashboard(_: bool = Depends(verify_admin_credentials)):
     """获取仪表盘数据"""
     async with async_session() as session:
         # 新闻统计
@@ -183,7 +191,7 @@ async def get_dashboard():
 
 
 @router.get("/admin/api/sources")
-async def get_sources():
+async def get_sources(_: bool = Depends(verify_admin_credentials)):
     """获取所有 RSS 源及其健康状态"""
     config = load_rss_config()
     sources = config.get("sources", [])
@@ -223,7 +231,7 @@ async def get_sources():
 
 
 @router.get("/admin/api/sources/{source_name}")
-async def get_source_detail(source_name: str):
+async def get_source_detail(source_name: str, _: bool = Depends(verify_admin_credentials)):
     """获取单个源详情"""
     config = load_rss_config()
     sources = config.get("sources", [])
@@ -278,7 +286,7 @@ async def get_source_detail(source_name: str):
 
 
 @router.post("/admin/api/sources/{source_name}/toggle")
-async def toggle_source(source_name: str):
+async def toggle_source(source_name: str, request: Request, _: bool = Depends(verify_admin_credentials), __: bool = Depends(csrf_protect)):
     """启用/禁用源"""
     config = load_rss_config()
     sources = config.get("sources", [])
@@ -300,7 +308,7 @@ async def toggle_source(source_name: str):
 
 
 @router.put("/admin/api/sources/{source_name}")
-async def update_source(source_name: str, request: Request):
+async def update_source(source_name: str, request: Request, _: bool = Depends(verify_admin_credentials), __: bool = Depends(csrf_protect)):
     """更新源配置"""
     data = await request.json()
     
@@ -332,7 +340,7 @@ async def update_source(source_name: str, request: Request):
 
 
 @router.get("/admin/api/run-history")
-async def get_run_history(limit: int = 20):
+async def get_run_history(limit: int = 20, _: bool = Depends(verify_admin_credentials)):
     """获取运行历史"""
     async with async_session() as session:
         result = await session.execute(
@@ -361,7 +369,7 @@ async def get_run_history(limit: int = 20):
 
 
 @router.get("/admin/api/source-stats")
-async def get_source_stats():
+async def get_source_stats(_: bool = Depends(verify_admin_credentials)):
     """获取源统计信息"""
     async with async_session() as session:
         # 按源统计新闻数量
@@ -378,7 +386,7 @@ async def get_source_stats():
 
 
 @router.get("/admin/api/system-info")
-async def get_system_info():
+async def get_system_info(_: bool = Depends(verify_admin_credentials)):
     """获取系统信息"""
     import platform
     import sys

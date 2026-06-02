@@ -18,6 +18,9 @@ class Settings:
     DEEPSEEK_API_BASE: str = os.getenv("DEEPSEEK_API_BASE", "https://api.deepseek.com")
     
     DEFAULT_LANGUAGE: str = os.getenv("DEFAULT_LANGUAGE", "en")
+    
+    ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "admin")
+    ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "")
 
 
 settings = Settings()
