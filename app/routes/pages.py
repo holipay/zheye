@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
+from datetime import date
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -26,6 +27,14 @@ async def news(request: Request, category: str = "all", article_type: str = "all
 @router.get("/articles")
 async def articles(request: Request):
     return templates.TemplateResponse(request=request, name="articles.html", context={"title": "文章"})
+
+
+@router.get("/analysis")
+async def analysis(request: Request):
+    return templates.TemplateResponse(request=request, name="analysis.html", context={
+        "title": "每日分析报告",
+        "report_date": date.today().isoformat(),
+    })
 
 
 @router.get("/news/{news_id}")

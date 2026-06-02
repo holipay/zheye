@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, BigInteger, String, Text, DateTime, Index, func
+from sqlalchemy import Column, BigInteger, String, Text, DateTime, Float, Index, func
 from sqlalchemy.dialects.postgresql import JSONB
 from models.base import Base
 
@@ -21,9 +21,20 @@ class News(Base):
     regions = Column(JSONB)
     date = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # AI 分析字段
+    ai_sentiment = Column(String(20))  # positive, negative, neutral
+    ai_sentiment_score = Column(Float)  # -1.0 到 1.0
+    ai_summary_zh = Column(Text)  # AI 生成的中文摘要
+    ai_key_points = Column(JSONB)  # 关键要点列表
+    ai_tags = Column(JSONB)  # AI 生成的标签
+    ai_importance = Column(Float)  # 重要性评分 0-1
+    ai_analyzed_at = Column(DateTime(timezone=True))  # 分析时间
 
     __table_args__ = (
         Index("idx_news_category_date", "category", "date"),
         Index("idx_news_source", "source"),
         Index("idx_news_created", "created_at"),
+        Index("idx_news_sentiment", "ai_sentiment"),
+        Index("idx_news_importance", "ai_importance"),
     )

@@ -2,7 +2,8 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
-from sqlalchemy import select, func, desc, case
+from datetime import date, datetime
+from sqlalchemy import select, func, desc, case, text
 from models.base import async_session
 from models.news import News
 from models.keyword import Keyword
@@ -472,3 +473,203 @@ async def get_news_by_entity(request: Request, entity_id: int, page: int = 1, pa
         "total_pages": total_pages,
         "total": total,
     })
+
+
+# ============================================================
+# AI 分析相关 API
+# ============================================================
+
+@router.get("/analysis/daily/{target_date}")
+async def get_daily_report(target_date: str):
+    """获取每日分析报告"""
+    try:
+        report_date = date.fromisoformat(target_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式无效，请使用 YYYY-MM-DD")
+    
+    async with async_session() as session:
+        # 查询每日报告
+        stmt = text("""
+            SELECT date, overview, hot_topics, market_sentiment, key_events, 
+                   trend_analysis, news_count, generated_at
+            FROM daily_reports
+            WHERE date = :report_date
+        """)
+        result = await session.execute(stmt, {"report_date": report_date})
+        report = result.mappings().first()
+        
+        if not report:
+            raise HTTPException(status_code=404, detail=f"未找到 {target_date} 的分析报告")
+        
+        return {
+            "date": str(report["date"]),
+            "overview": report["overview"],
+            "hot_topics": report["hot_topics"],
+            "market_sentiment": report["market_sentiment"],
+            "key_events": report["key_events"],
+            "trend_analysis": report["trend_analysis"],
+            "news_count": report["news_count"],
+            "generated_at": report["generated_at"].isoformat() if report["generated_at"] else None,
+        }
+
+
+@router.get("/analysis/latest")
+async def get_latest_report():
+    """获取最新的每日分析报告"""
+    async with async_session() as session:
+        stmt = text("""
+            SELECT date, overview, hot_topics, market_sentiment, key_events, 
+                   trend_analysis, news_count, generated_at
+            FROM daily_reports
+            ORDER BY date DESC
+            LIMIT 1
+        """)
+        result = await session.execute(stmt)
+        report = result.mappings().first()
+        
+        if not report:
+            return {"message": "暂无分析报告"}
+        
+        return {
+            "date": str(report["date"]),
+            "overview": report["overview"],
+            "hot_topics": report["hot_topics"],
+            "market_sentiment": report["market_sentiment"],
+            "key_events": report["key_events"],
+            "trend_analysis": report["trend_analysis"],
+            "news_count": report["news_count"],
+            "generated_at": report["generated_at"].isoformat() if report["generated_at"] else None,
+        }
+
+
+@router.get("/analysis/sentiment")
+async def get_sentiment_stats(target_date: str = None):
+    """获取情感分析统计"""
+    if target_date:
+        try:
+            report_date = date.fromisoformat(target_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="日期格式无效")
+    else:
+        report_date = date.today()
+    
+    async with async_session() as session:
+        # 统计情感分布
+        stmt = text("""
+            SELECT 
+                ai_sentiment,
+                COUNT(*) as count,
+                AVG(ai_sentiment_score) as avg_score,
+                AVG(ai_importance) as avg_importance
+            FROM news
+            WHERE DATE(date) = :report_date
+              AND ai_sentiment IS NOT NULL
+            GROUP BY ai_sentiment
+        """)
+        result = await session.execute(stmt, {"report_date": report_date})
+        sentiments = result.mappings().all()
+        
+        # 获取重要文章
+        stmt_important = text("""
+            SELECT id, title, translated_title, ai_sentiment, ai_sentiment_score, 
+                   ai_summary_zh, ai_importance, category
+            FROM news
+            WHERE DATE(date) = :report_date
+              AND ai_importance >= 0.7
+            ORDER BY ai_importance DESC
+            LIMIT 10
+        """)
+        result_important = await session.execute(stmt_important, {"report_date": report_date})
+        important_articles = result_important.mappings().all()
+        
+        return {
+            "date": str(report_date),
+            "sentiment_distribution": [
+                {
+                    "sentiment": row["ai_sentiment"],
+                    "count": row["count"],
+                    "avg_score": round(float(row["avg_score"]), 2) if row["avg_score"] else 0,
+                    "avg_importance": round(float(row["avg_importance"]), 2) if row["avg_importance"] else 0,
+                }
+                for row in sentiments
+            ],
+            "important_articles": [
+                {
+                    "id": row["id"],
+                    "title": row["title"],
+                    "translated_title": row["translated_title"],
+                    "sentiment": row["ai_sentiment"],
+                    "sentiment_score": round(float(row["ai_sentiment_score"]), 2) if row["ai_sentiment_score"] else 0,
+                    "summary_zh": row["ai_summary_zh"],
+                    "importance": round(float(row["ai_importance"]), 2) if row["ai_importance"] else 0,
+                    "category": row["category"],
+                }
+                for row in important_articles
+            ],
+        }
+
+
+@router.get("/analysis/trends")
+async def get_trends(target_date: str = None, keyword: str = None, limit: int = 20):
+    """获取趋势数据"""
+    if target_date:
+        try:
+            report_date = date.fromisoformat(target_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="日期格式无效")
+    else:
+        report_date = date.today()
+    
+    async with async_session() as session:
+        stmt = text("""
+            SELECT keyword, count, sentiment, trend, analysis, related_topics
+            FROM trends
+            WHERE date = :report_date
+            ORDER BY count DESC
+            LIMIT :limit
+        """)
+        result = await session.execute(stmt, {"report_date": report_date, "limit": limit})
+        trends = result.mappings().all()
+        
+        return {
+            "date": str(report_date),
+            "trends": [
+                {
+                    "keyword": row["keyword"],
+                    "count": row["count"],
+                    "sentiment": row["sentiment"],
+                    "trend": row["trend"],
+                    "analysis": row["analysis"],
+                    "related_topics": row["related_topics"],
+                }
+                for row in trends
+            ],
+        }
+
+
+@router.get("/analysis/status")
+async def get_analysis_status():
+    """获取 AI 分析功能状态"""
+    from scraper.pipeline.ai_analysis import is_ai_enabled
+    
+    async with async_session() as session:
+        # 统计已分析和未分析的文章数量
+        stmt_analyzed = text("""
+            SELECT COUNT(*) FROM news WHERE ai_analyzed_at IS NOT NULL
+        """)
+        stmt_total = text("SELECT COUNT(*) FROM news")
+        
+        analyzed = (await session.execute(stmt_analyzed)).scalar()
+        total = (await session.execute(stmt_total)).scalar()
+        
+        # 最近的报告日期
+        stmt_latest = text("SELECT MAX(date) FROM daily_reports")
+        latest_report = (await session.execute(stmt_latest)).scalar()
+        
+        return {
+            "ai_enabled": is_ai_enabled(),
+            "articles_analyzed": analyzed,
+            "articles_total": total,
+            "analysis_coverage": round(analyzed / total * 100, 1) if total > 0 else 0,
+            "latest_report_date": str(latest_report) if latest_report else None,
+        }

@@ -1,89 +1,132 @@
 sources:
-  # 英文源
+  # ============================================================
+  # 第一类：财经新闻媒体（RSS）
+  # ============================================================
+  
+  # 英文主流财经媒体
   - name: Reuters
     type: rss
     url: https://www.reutersagency.com/feed/?taxonomy=best-sectors&post_type=best
     lang: en
     weight: 2.0
+    category: news_media
 
   - name: Bloomberg
     type: rss
     url: https://feeds.bloomberg.com/markets/news.rss
     lang: en
     weight: 2.0
+    category: news_media
 
   - name: Financial Times
     type: rss
     url: https://www.ft.com/rss/home
     lang: en
     weight: 2.0
+    category: news_media
 
   - name: WSJ
     type: rss
     url: https://feeds.a.dj.com/rss/RSSMarketsMain.xml
     lang: en
     weight: 2.0
+    category: news_media
 
   - name: CNBC
     type: rss
     url: https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114
     lang: en
     weight: 1.8
+    category: news_media
 
+  # 综合新闻
   - name: BBC News
     type: rss
     url: http://feeds.bbci.co.uk/news/rss.xml
     lang: en
     weight: 1.5
+    category: news_media
 
   - name: CNN
     type: rss
     url: http://rss.cnn.com/rss/edition.rss
     lang: en
     weight: 1.5
-
-  - name: TechCrunch
-    type: rss
-    url: https://techcrunch.com/feed/
-    lang: en
-    weight: 1.5
-
-  - name: The Verge
-    type: rss
-    url: https://www.theverge.com/rss/index.xml
-    lang: en
-    weight: 1.5
-
-  - name: Hacker News
-    type: rss
-    url: https://hnrss.org/frontpage
-    lang: en
-    weight: 1.2
+    category: news_media
 
   - name: Al Jazeera
     type: rss
     url: https://www.aljazeera.com/xml/rss/all.xml
     lang: en
     weight: 1.3
+    category: news_media
 
+  # 科技媒体
+  - name: TechCrunch
+    type: rss
+    url: https://techcrunch.com/feed/
+    lang: en
+    weight: 1.5
+    category: news_media
+
+  - name: The Verge
+    type: rss
+    url: https://www.theverge.com/rss/index.xml
+    lang: en
+    weight: 1.5
+    category: news_media
+
+  - name: Hacker News
+    type: rss
+    url: https://hnrss.org/frontpage
+    lang: en
+    weight: 1.2
+    category: news_media
+
+  # 独立/另类财经媒体
+  - name: Dealbreaker
+    type: rss
+    url: https://dealbreaker.com/.rss/teaser/
+    lang: en
+    weight: 1.4
+    category: news_media
+
+  - name: ZeroHedge
+    type: rss
+    url: https://feeds.feedburner.com/zerohedge/feed
+    lang: en
+    weight: 1.3
+    category: news_media
+
+  - name: Wolf Street
+    type: rss
+    url: https://wolfstreet.com/feed/
+    lang: en
+    weight: 1.3
+    category: news_media
+
+  # 智库/研究机构
   - name: NBER
     type: rss
     url: https://www.nber.org/rss/new.xml
     lang: en
     weight: 1.5
     timeout: 30
+    category: research
 
   - name: The Conversation
     type: rss
     url: https://theconversation.com/articles.atom
     lang: en
     weight: 1.2
+    category: research
 
   - name: Pew Research
     type: rss
     url: https://www.pewresearch.org/feed/
     lang: en
     weight: 1.3
+    category: research
 
   - name: Brookings
     type: rss
@@ -91,6 +134,7 @@ sources:
     lang: en
     weight: 1.5
     timeout: 25
+    category: research
 
   - name: Foreign Affairs
     type: rss
@@ -98,12 +142,14 @@ sources:
     lang: en
     weight: 1.5
     timeout: 25
+    category: research
 
   - name: VoxEU
     type: rss
     url: https://cepr.org/rss/voxeu.xml
     lang: en
     weight: 1.5
+    category: research
 
   - name: Nature Human Behaviour
     type: rss
@@ -111,24 +157,7 @@ sources:
     lang: en
     weight: 1.3
     timeout: 25
-
-  - name: Dealbreaker
-    type: rss
-    url: https://dealbreaker.com/.rss/teaser/
-    lang: en
-    weight: 1.4
-
-  - name: ZeroHedge
-    type: rss
-    url: https://feeds.feedburner.com/zerohedge/feed
-    lang: en
-    weight: 1.3
-
-  - name: Wolf Street
-    type: rss
-    url: https://wolfstreet.com/feed/
-    lang: en
-    weight: 1.3
+    category: research
 
   # 中文源
   - name: 36氪
@@ -136,18 +165,213 @@ sources:
     url: https://36kr.com/feed
     lang: zh
     weight: 1.5
+    category: news_media
 
   - name: 财新网
     type: rss
     url: https://rsshub.rssforever.com/caixin/latest
     lang: zh
     weight: 1.5
+    category: news_media
 
   - name: 华尔街见闻
     type: rss
     url: https://rsshub.rssforever.com/wallstreetcn/news/global
     lang: zh
     weight: 1.5
+    category: news_media
+
+  # ============================================================
+  # 第二类：央行官方来源（RSS）
+  # ============================================================
+  
+  # 美联储
+  - name: Fed Press Releases
+    type: rss
+    url: https://www.federalreserve.gov/feeds/press_all.xml
+    lang: en
+    weight: 2.5
+    category: central_bank
+    tags: [fed, monetary_policy, usa]
+
+  - name: Fed Speeches
+    type: rss
+    url: https://www.federalreserve.gov/feeds/speeches.xml
+    lang: en
+    weight: 2.5
+    category: central_bank
+    tags: [fed, monetary_policy, usa]
+
+  # 欧央行
+  - name: ECB Press Releases
+    type: rss
+    url: https://www.ecb.europa.eu/rss/press.html
+    lang: en
+    weight: 2.5
+    category: central_bank
+    tags: [ecb, monetary_policy, eu]
+
+  - name: ECB Blog
+    type: rss
+    url: https://www.ecb.europa.eu/rss/blog.xml
+    lang: en
+    weight: 2.0
+    category: central_bank
+    tags: [ecb, analysis, eu]
+
+  # 英格兰银行
+  - name: Bank of England
+    type: rss
+    url: https://www.bankofengland.co.uk/rss/news
+    lang: en
+    weight: 2.0
+    category: central_bank
+    tags: [boe, monetary_policy, uk]
+
+  # BIS 央行官员演讲（聚合全球央行）
+  - name: BIS Central Bank Speeches
+    type: rss
+    url: https://www.bis.org/doclist/cbspeeches.rss
+    lang: en
+    weight: 2.5
+    category: central_bank
+    tags: [bis, global, speeches]
+    description: 聚合全球央行官员演讲，覆盖 BOJ、PBOC、RBI 等
+
+  - name: BIS Working Papers
+    type: rss
+    url: https://www.bis.org/doclist/wppubls.rss
+    lang: en
+    weight: 1.8
+    category: central_bank
+    tags: [bis, research, global]
+
+  # ============================================================
+  # 第三类：国际组织（RSS）
+  # ============================================================
+  
+  - name: IMF News
+    type: rss
+    url: https://www.imf.org/en/News/Rss
+    lang: en
+    weight: 2.0
+    category: international_org
+    tags: [imf, global, macro]
+
+  - name: IMF Blog
+    type: rss
+    url: https://blogs.imf.org/feed/
+    lang: en
+    weight: 1.8
+    category: international_org
+    tags: [imf, analysis, global]
+
+  - name: World Bank Blogs
+    type: rss
+    url: https://blogs.worldbank.org/rss.xml
+    lang: en
+    weight: 1.5
+    category: international_org
+    tags: [worldbank, development, global]
+
+  # ============================================================
+  # 第四类：地区媒体（扩展地理覆盖）
+  # ============================================================
+  
+  # 欧洲
+  - name: France 24
+    type: rss
+    url: https://www.france24.com/en/rss
+    lang: en
+    weight: 1.5
+    category: regional_media
+    region: europe
+
+  - name: DW News
+    type: rss
+    url: https://rss.dw.com/rdf/rss-en-all
+    lang: en
+    weight: 1.5
+    category: regional_media
+    region: europe
+
+  # 亚太
+  - name: Nikkei Asia
+    type: rss
+    url: https://asia.nikkei.com/rss
+    lang: en
+    weight: 1.8
+    category: regional_media
+    region: asia
+    timeout: 30
+
+  - name: Straits Times
+    type: rss
+    url: https://www.straitstimes.com/news/world/rss.xml
+    lang: en
+    weight: 1.5
+    category: regional_media
+    region: asia
+
+  - name: South China Morning Post
+    type: rss
+    url: https://www.scmp.com/rss/91/feed
+    lang: en
+    weight: 1.5
+    category: regional_media
+    region: asia
+
+  - name: Times of India
+    type: rss
+    url: https://timesofindia.indiatimes.com/rssfeedstopstories.cms
+    lang: en
+    weight: 1.3
+    category: regional_media
+    region: asia
+
+  # 中东
+  - name: Arab News
+    type: rss
+    url: https://www.arabnews.com/rss.xml
+    lang: en
+    weight: 1.3
+    category: regional_media
+    region: middle_east
+
+  - name: Gulf News
+    type: rss
+    url: https://gulfnews.com/rss
+    lang: en
+    weight: 1.3
+    category: regional_media
+    region: middle_east
+
+  # 拉美
+  - name: Buenos Aires Times
+    type: rss
+    url: https://www.batimes.com.ar/feed
+    lang: en
+    weight: 1.2
+    category: regional_media
+    region: latin_america
+
+  # 非洲
+  - name: Business Day (South Africa)
+    type: rss
+    url: https://www.businesslive.co.za/rss/?publication=bd
+    lang: en
+    weight: 1.2
+    category: regional_media
+    region: africa
+
+  # 日本（英文）
+  - name: Japan Times
+    type: rss
+    url: https://www.japantimes.co.jp/feed/
+    lang: en
+    weight: 1.5
+    category: regional_media
+    region: asia
 
 settings:
   fetch_timeout: 20
@@ -155,6 +379,47 @@ settings:
   dedup_threshold: 0.75
   retention_days: 30
   max_items_per_category: 200
+
+# ============================================================
+# API 数据源配置（需要 API Key）
+# ============================================================
+api_sources:
+  # 汇率数据
+  - name: ExchangeRate-API
+    type: api
+    provider: exchangerate
+    url: https://v6.exchangerate-api.com/v6
+    free_tier:
+      requests_per_month: 1500
+      update_frequency: daily
+    description: 165 种货币汇率，免费计划每天更新
+    env_key: EXCHANGE_RATE_API_KEY
+
+  # 股票/商品/外汇
+  - name: Alpha Vantage
+    type: api
+    provider: alphavantage
+    url: https://www.alphavantage.co/query
+    free_tier:
+      requests_per_day: 25
+      requests_per_minute: 5
+    description: 股票、外汇、商品、加密货币数据
+    env_key: ALPHA_VANTAGE_API_KEY
+    endpoints:
+      - forex
+      - commodities
+      - stocks
+      - crypto
+
+  # 经济日历
+  - name: Trading Economics
+    type: api
+    provider: tradingeconomics
+    url: https://api.tradingeconomics.com
+    free_tier:
+      requests_per_month: 500
+    description: 经济日历、宏观数据、央行决策
+    env_key: TRADING_ECONOMICS_KEY
 
 categories:
   股市与市场:
@@ -217,6 +482,11 @@ categories:
       - 债券
       - 收益率
       - yield
+      - FOMC
+      - 量化宽松
+      - QE
+      - 量化紧缩
+      - QT
 
   宏观经济:
     keywords:
