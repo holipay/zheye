@@ -1,0 +1,193 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<!-- 统计卡片 -->
+<div class="stats-grid" id="stats-grid">
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <span class="stat-card-icon">📰</span>
+            <span class="stat-card-title">新闻总量</span>
+        </div>
+        <div class="stat-card-value" id="stat-total">-</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <span class="stat-card-icon">📅</span>
+            <span class="stat-card-title">今日新闻</span>
+        </div>
+        <div class="stat-card-value" id="stat-today">-</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <span class="stat-card-icon">📊</span>
+            <span class="stat-card-title">本周新闻</span>
+        </div>
+        <div class="stat-card-value" id="stat-week">-</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <span class="stat-card-icon">📡</span>
+            <span class="stat-card-title">信息源</span>
+        </div>
+        <div class="stat-card-value" id="stat-sources">-</div>
+        <div class="stat-card-change positive" id="stat-healthy">-</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <span class="stat-card-icon">⚡</span>
+            <span class="stat-card-title">活跃事件</span>
+        </div>
+        <div class="stat-card-value" id="stat-events">-</div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <!-- 最近运行 -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">最近运行</h3>
+            <a href="/admin/logs" class="btn btn-sm btn-primary">查看全部</a>
+        </div>
+        <div class="card-body" id="last-run">
+            <div class="loading">加载中...</div>
+        </div>
+    </div>
+
+    <!-- 分类统计 -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">分类分布</h3>
+        </div>
+        <div class="card-body">
+            <div id="category-stats">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 每日趋势 -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">近7天新闻趋势</h3>
+    </div>
+    <div class="card-body">
+        <div id="daily-trend" class="chart-container">
+            <div class="loading">加载中...</div>
+        </div>
+    </div>
+</div>
+
+<!-- 源健康状态 -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">源健康状态</h3>
+        <a href="/admin/sources" class="btn btn-sm btn-primary">管理源</a>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>源名称</th>
+                        <th>状态</th>
+                        <th>成功率</th>
+                        <th>最后检查</th>
+                        <th>最近抓取</th>
+                    </tr>
+                </thead>
+                <tbody id="source-health-table">
+                    <tr>
+                        <td colspan="5" class="loading">加载中...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboard();
+});
+
+async function loadDashboard() {
+    try {
+        const response = await fetch('/admin/api/dashboard');
+        const data = await response.json();
+        
+        // 更新统计卡片
+        const overview = data.overview;
+        document.getElementById('stat-total').textContent = overview.total_news;
+        document.getElementById('stat-today').textContent = overview.today_news;
+        document.getElementById('stat-week').textContent = overview.week_news;
+        document.getElementById('stat-sources').textContent = overview.source_count;
+        document.getElementById('stat-healthy').textContent = `${overview.healthy_sources} 个健康`;
+        document.getElementById('stat-events').textContent = overview.active_events;
+        
+        // 更新最近运行
+        if (data.last_run) {
+            const run = data.last_run;
+            const duration = run.duration ? `${Math.floor(run.duration / 60)}分${run.duration % 60}秒` : '-';
+            document.getElementById('last-run').innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                    <div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">运行类型</div>
+                        <div style="font-weight: 600;">${run.run_type || '-'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">开始时间</div>
+                        <div style="font-weight: 600;">${run.started_at ? new Date(run.started_at).toLocaleString('zh-CN') : '-'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">耗时</div>
+                        <div style="font-weight: 600;">${duration}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">抓取/保存</div>
+                        <div style="font-weight: 600;">${run.items_fetched} / ${run.items_saved}</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            document.getElementById('last-run').innerHTML = '<div style="color: var(--text-secondary);">暂无运行记录</div>';
+        }
+        
+        // 更新分类统计
+        if (data.category_stats && data.category_stats.length > 0) {
+            const maxCount = Math.max(...data.category_stats.map(c => c.count));
+            document.getElementById('category-stats').innerHTML = data.category_stats.map(cat => `
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                    <div style="width: 100px; font-size: 13px;">${cat.name}</div>
+                    <div style="flex: 1;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${(cat.count / maxCount * 100)}%"></div>
+                        </div>
+                    </div>
+                    <div style="width: 50px; text-align: right; font-weight: 600;">${cat.count}</div>
+                </div>
+            `).join('');
+        }
+        
+        // 更新每日趋势
+        if (data.daily_stats && data.daily_stats.length > 0) {
+            const maxDaily = Math.max(...data.daily_stats.map(d => d.count));
+            document.getElementById('daily-trend').innerHTML = `
+                <div style="display: flex; align-items: flex-end; gap: 8px; height: 250px; padding: 20px; width: 100%;">
+                    ${data.daily_stats.map(day => `
+                        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                            <div style="font-size: 12px; font-weight: 600;">${day.count}</div>
+                            <div style="width: 100%; height: ${maxDaily > 0 ? (day.count / maxDaily * 200) : 0}px; background: var(--admin-accent); border-radius: 4px 4px 0 0;"></div>
+                            <div style="font-size: 11px; color: var(--text-secondary);">${day.date.slice(5)}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        
+    } catch (error) {
+        console.error('加载仪表盘失败:', error);
+    }
+}
+</script>
+{% endblock %}

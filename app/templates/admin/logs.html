@@ -1,0 +1,98 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">运行历史</h3>
+        <button class="btn btn-primary" onclick="loadRunHistory()">刷新</button>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>运行类型</th>
+                        <th>开始时间</th>
+                        <th>耗时</th>
+                        <th>源数量</th>
+                        <th>成功/失败</th>
+                        <th>抓取数量</th>
+                        <th>保存数量</th>
+                    </tr>
+                </thead>
+                <tbody id="runs-table">
+                    <tr>
+                        <td colspan="8" class="loading">加载中...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadRunHistory();
+});
+
+async function loadRunHistory() {
+    try {
+        const response = await fetch('/admin/api/run-history?limit=50');
+        const data = await response.json();
+        
+        const tbody = document.getElementById('runs-table');
+        
+        if (data.runs && data.runs.length > 0) {
+            tbody.innerHTML = data.runs.map(run => {
+                const duration = run.duration ? formatDuration(run.duration) : '-';
+                const startTime = run.started_at ? new Date(run.started_at).toLocaleString('zh-CN') : '-';
+                const successRate = run.sources_attempted > 0 
+                    ? Math.round(run.sources_succeeded / run.sources_attempted * 100) 
+                    : 0;
+                
+                let statusBadge = '<span class="badge badge-success">成功</span>';
+                if (successRate < 50) {
+                    statusBadge = '<span class="badge badge-danger">失败</span>';
+                } else if (successRate < 80) {
+                    statusBadge = '<span class="badge badge-warning">部分成功</span>';
+                }
+                
+                return `
+                    <tr>
+                        <td>${run.id}</td>
+                        <td><span class="badge badge-info">${run.run_type || '-'}</span></td>
+                        <td style="font-size: 13px;">${startTime}</td>
+                        <td>${duration}</td>
+                        <td>${run.sources_attempted || 0}</td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="color: var(--admin-success);">${run.sources_succeeded || 0}</span>
+                                <span>/</span>
+                                <span style="color: var(--admin-danger);">${run.sources_failed || 0}</span>
+                                ${statusBadge}
+                            </div>
+                        </td>
+                        <td>${run.items_fetched || 0}</td>
+                        <td>${run.items_final || 0}</td>
+                    </tr>
+                `;
+            }).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">暂无运行记录</td></tr>';
+        }
+    } catch (error) {
+        console.error('加载运行历史失败:', error);
+    }
+}
+
+function formatDuration(seconds) {
+    if (seconds < 60) {
+        return `${seconds}秒`;
+    }
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}分${remainingSeconds}秒`;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,140 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="grid-2">
+    <!-- 源统计 -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">源新闻数量统计</h3>
+        </div>
+        <div class="card-body">
+            <div id="source-stats">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 系统信息 -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">系统信息</h3>
+        </div>
+        <div class="card-body">
+            <div id="system-info">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 数据库统计 -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">数据库统计</h3>
+    </div>
+    <div class="card-body">
+        <div id="db-stats" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+            <div class="loading">加载中...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadSourceStats();
+    loadSystemInfo();
+    loadDbStats();
+});
+
+async function loadSourceStats() {
+    try {
+        const response = await fetch('/admin/api/source-stats');
+        const data = await response.json();
+        
+        const container = document.getElementById('source-stats');
+        if (data.stats && data.stats.length > 0) {
+            const maxCount = Math.max(...data.stats.map(s => s.count));
+            container.innerHTML = data.stats.slice(0, 15).map(stat => `
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+                    <div style="width: 120px; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${stat.source}</div>
+                    <div style="flex: 1;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${(stat.count / maxCount * 100)}%"></div>
+                        </div>
+                    </div>
+                    <div style="width: 50px; text-align: right; font-weight: 600;">${stat.count}</div>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = '<div style="color: var(--text-secondary);">暂无数据</div>';
+        }
+    } catch (error) {
+        console.error('加载源统计失败:', error);
+    }
+}
+
+async function loadSystemInfo() {
+    try {
+        const response = await fetch('/admin/api/system-info');
+        const data = await response.json();
+        
+        document.getElementById('system-info').innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">操作系统</div>
+                    <div style="font-size: 14px;">${data.platform}</div>
+                </div>
+                <div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Python 版本</div>
+                    <div style="font-size: 14px;">${data.python_version}</div>
+                </div>
+                <div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">数据库</div>
+                    <div style="font-size: 14px;">${data.database_url}</div>
+                </div>
+                <div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">AI 功能</div>
+                    <div style="font-size: 14px;">${data.ai_enabled ? '✅ 已启用' : '❌ 未启用'}</div>
+                </div>
+                <div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">配置文件</div>
+                    <div style="font-size: 12px; word-break: break-all;">${data.config_path}</div>
+                    <div style="font-size: 12px; color: ${data.config_exists ? 'var(--admin-success)' : 'var(--admin-danger)'};">${data.config_exists ? '✓ 存在' : '✗ 不存在'}</div>
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('加载系统信息失败:', error);
+    }
+}
+
+async function loadDbStats() {
+    try {
+        const response = await fetch('/admin/api/dashboard');
+        const data = await response.json();
+        
+        const overview = data.overview;
+        document.getElementById('db-stats').innerHTML = `
+            <div style="text-align: center; padding: 20px; background: var(--bg-secondary); border-radius: 8px;">
+                <div style="font-size: 32px; font-weight: 700; color: var(--admin-accent);">${overview.total_news}</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">新闻总数</div>
+            </div>
+            <div style="text-align: center; padding: 20px; background: var(--bg-secondary); border-radius: 8px;">
+                <div style="font-size: 32px; font-weight: 700; color: var(--admin-success);">${overview.source_count}</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">信息源数</div>
+            </div>
+            <div style="text-align: center; padding: 20px; background: var(--bg-secondary); border-radius: 8px;">
+                <div style="font-size: 32px; font-weight: 700; color: var(--admin-warning);">${overview.active_events}</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">活跃事件</div>
+            </div>
+            <div style="text-align: center; padding: 20px; background: var(--bg-secondary); border-radius: 8px;">
+                <div style="font-size: 32px; font-weight: 700; color: var(--admin-highlight);">${overview.today_news}</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">今日新闻</div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('加载数据库统计失败:', error);
+    }
+}
+</script>
+{% endblock %}

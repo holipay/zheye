@@ -1,0 +1,273 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">RSS 源列表</h3>
+        <div style="display: flex; gap: 12px;">
+            <input type="text" id="search-input" class="form-input" placeholder="搜索源..." style="width: 200px;"
+                   oninput="filterSources()">
+            <select id="category-filter" class="form-select" style="width: 150px;" onchange="filterSources()">
+                <option value="">全部分类</option>
+            </select>
+            <select id="status-filter" class="form-select" style="width: 120px;" onchange="filterSources()">
+                <option value="">全部状态</option>
+                <option value="healthy">健康</option>
+                <option value="warning">警告</option>
+                <option value="error">异常</option>
+            </select>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>源名称</th>
+                        <th>分类</th>
+                        <th>语言</th>
+                        <th>权重</th>
+                        <th>状态</th>
+                        <th>成功率</th>
+                        <th>最后抓取</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="sources-table">
+                    <tr>
+                        <td colspan="8" class="loading">加载中...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 源详情模态框 -->
+<div id="source-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 8px; width: 600px; max-height: 80vh; overflow-y: auto;">
+        <div style="padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <h3 id="modal-title">源详情</h3>
+            <button onclick="closeModal()" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+        </div>
+        <div id="modal-content" style="padding: 20px;">
+            <!-- 动态填充 -->
+        </div>
+    </div>
+</div>
+
+<script>
+let allSources = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadSources();
+});
+
+async function loadSources() {
+    try {
+        const response = await fetch('/admin/api/sources');
+        const data = await response.json();
+        allSources = data.sources;
+        
+        // 填充分类筛选器
+        const categories = [...new Set(allSources.map(s => s.category))].filter(Boolean);
+        const categoryFilter = document.getElementById('category-filter');
+        categories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            categoryFilter.appendChild(option);
+        });
+        
+        renderSources(allSources);
+    } catch (error) {
+        console.error('加载源失败:', error);
+    }
+}
+
+function filterSources() {
+    const search = document.getElementById('search-input').value.toLowerCase();
+    const category = document.getElementById('category-filter').value;
+    const status = document.getElementById('status-filter').value;
+    
+    let filtered = allSources;
+    
+    if (search) {
+        filtered = filtered.filter(s => s.name.toLowerCase().includes(search));
+    }
+    
+    if (category) {
+        filtered = filtered.filter(s => s.category === category);
+    }
+    
+    if (status) {
+        if (status === 'healthy') {
+            filtered = filtered.filter(s => !s.health || s.health.consecutive_failures < 3);
+        } else if (status === 'warning') {
+            filtered = filtered.filter(s => s.health && s.health.consecutive_failures >= 3 && s.health.consecutive_failures < 5);
+        } else if (status === 'error') {
+            filtered = filtered.filter(s => s.health && s.health.consecutive_failures >= 5);
+        }
+    }
+    
+    renderSources(filtered);
+}
+
+function renderSources(sources) {
+    const tbody = document.getElementById('sources-table');
+    
+    if (sources.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">暂无数据</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = sources.map(src => {
+        const health = src.health || {};
+        const successRate = health.success_rate || 0;
+        const consecutiveFailures = health.consecutive_failures || 0;
+        
+        let statusBadge = '<span class="badge badge-success">健康</span>';
+        if (consecutiveFailures >= 5) {
+            statusBadge = '<span class="badge badge-danger">异常</span>';
+        } else if (consecutiveFailures >= 3) {
+            statusBadge = '<span class="badge badge-warning">警告</span>';
+        }
+        
+        const lastCheck = health.last_check ? new Date(health.last_check).toLocaleString('zh-CN') : '-';
+        const lastItems = health.last_items || 0;
+        
+        return `
+            <tr>
+                <td>
+                    <div style="font-weight: 500;">${src.name}</div>
+                    <div style="font-size: 11px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">${src.url}</div>
+                </td>
+                <td><span class="badge badge-info">${src.category || '-'}</span></td>
+                <td>${src.lang}</td>
+                <td>${src.weight}</td>
+                <td>${statusBadge}</td>
+                <td>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div class="progress-bar" style="width: 60px;">
+                            <div class="progress-fill ${successRate < 50 ? 'background: var(--admin-danger)' : ''}" style="width: ${successRate}%"></div>
+                        </div>
+                        <span style="font-size: 12px;">${successRate}%</span>
+                    </div>
+                </td>
+                <td style="font-size: 12px;">${lastCheck}</td>
+                <td>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-sm btn-primary" onclick="viewSource('${src.name}')">详情</button>
+                        <button class="btn btn-sm ${src.enabled !== false ? 'btn-success' : 'btn-danger'}" onclick="toggleSource('${src.name}')">
+                            ${src.enabled !== false ? '启用' : '禁用'}
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+async function toggleSource(name) {
+    try {
+        const response = await fetch(`/admin/api/sources/${encodeURIComponent(name)}/toggle`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            loadSources();
+        } else {
+            alert('操作失败: ' + (data.message || '未知错误'));
+        }
+    } catch (error) {
+        alert('操作失败: ' + error.message);
+    }
+}
+
+async function viewSource(name) {
+    try {
+        const response = await fetch(`/admin/api/sources/${encodeURIComponent(name)}`);
+        const data = await response.json();
+        
+        const source = data.source;
+        const health = data.health;
+        const recentNews = data.recent_news || [];
+        
+        document.getElementById('modal-title').textContent = source.name;
+        document.getElementById('modal-content').innerHTML = `
+            <div style="margin-bottom: 20px;">
+                <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--text-secondary);">基本信息</h4>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                    <div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">URL</div>
+                        <div style="word-break: break-all;">${source.url}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">分类</div>
+                        <div>${source.category || '-'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">语言</div>
+                        <div>${source.lang}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">权重</div>
+                        <div>${source.weight}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--text-secondary);">健康状态</h4>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                    <div style="text-align: center; padding: 12px; background: var(--bg-secondary); border-radius: 6px;">
+                        <div style="font-size: 24px; font-weight: 700; color: var(--admin-success);">${health.success_rate}%</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">成功率</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px; background: var(--bg-secondary); border-radius: 6px;">
+                        <div style="font-size: 24px; font-weight: 700;">${health.total_checks}</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">总检查</div>
+                    </div>
+                    <div style="text-align: center; padding: 12px; background: var(--bg-secondary); border-radius: 6px;">
+                        <div style="font-size: 24px; font-weight: 700; color: ${health.consecutive_failures >= 3 ? 'var(--admin-danger)' : 'var(--admin-success)'};">${health.consecutive_failures}</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">连续失败</div>
+                    </div>
+                </div>
+            </div>
+            
+            ${health.last_error ? `
+            <div style="margin-bottom: 20px;">
+                <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--text-secondary);">最后错误</h4>
+                <div style="padding: 12px; background: #fff5f5; border-radius: 6px; color: var(--admin-danger); font-size: 13px;">
+                    ${health.last_error}
+                </div>
+            </div>
+            ` : ''}
+            
+            <div>
+                <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--text-secondary);">最近抓取的新闻</h4>
+                ${recentNews.length > 0 ? `
+                <div style="max-height: 200px; overflow-y: auto;">
+                    ${recentNews.map(n => `
+                        <div style="padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                            <div style="font-size: 13px; font-weight: 500;">${n.title}</div>
+                            <div style="font-size: 11px; color: var(--text-secondary);">${n.date || '-'}</div>
+                        </div>
+                    `).join('')}
+                </div>
+                ` : '<div style="color: var(--text-secondary);">暂无新闻</div>'}
+            </div>
+        `;
+        
+        document.getElementById('source-modal').style.display = 'flex';
+    } catch (error) {
+        console.error('加载源详情失败:', error);
+    }
+}
+
+function closeModal() {
+    document.getElementById('source-modal').style.display = 'none';
+}
+</script>
+{% endblock %}
