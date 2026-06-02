@@ -1099,3 +1099,179 @@ async def get_event_categories():
         data = {"categories": categories}
         set_cached(cache_key, data, ttl=300)
         return data
+
+
+# ============================================================
+# 知识模型 API (P0)
+# ============================================================
+
+@router.get("/events/{event_id}/knowledge", response_class=HTMLResponse)
+async def get_event_knowledge(request: Request, event_id: str, lang: str = "zh"):
+    """获取事件的知识框架（背景、缺口、因果链）"""
+    cache_key = f"api:events:knowledge:{event_id}:{lang}"
+    cached = get_cached(cache_key)
+    if cached:
+        return HTMLResponse(content=cached)
+
+    async with async_session() as session:
+        # 获取事件知识框架
+        from models.knowledge import EventKnowledge, EventKnowledgeAtom, KnowledgeAtom
+        
+        result = await session.execute(
+            select(EventKnowledge).where(EventKnowledge.event_id == event_id)
+        )
+        knowledge = result.scalar_one_or_none()
+        
+        if not knowledge:
+            return templates.TemplateResponse(request=request, name="partials/knowledge_empty.html", context={
+                "event_id": event_id,
+                "lang": lang,
+            })
+        
+        # 获取关联的知识原子
+        atoms_query = (
+            select(KnowledgeAtom, EventKnowledgeAtom.relevance, EventKnowledgeAtom.position, EventKnowledgeAtom.is_required)
+            .join(EventKnowledgeAtom, EventKnowledgeAtom.atom_id == KnowledgeAtom.id)
+            .where(EventKnowledgeAtom.event_id == event_id)
+            .where(KnowledgeAtom.lang == lang)
+            .order_by(EventKnowledgeAtom.position)
+        )
+        atoms_result = await session.execute(atoms_query)
+        atoms = []
+        for atom, relevance, position, is_required in atoms_result.all():
+            atoms.append({
+                "id": atom.id,
+                "type": atom.atom_type,
+                "title": atom.title,
+                "content": atom.content,
+                "entities": atom.entities or [],
+                "keywords": atom.keywords or [],
+                "relevance": relevance,
+                "is_required": is_required,
+            })
+
+    response = templates.TemplateResponse(request=request, name="partials/event_knowledge.html", context={
+        "event_id": event_id,
+        "lang": lang,
+        "background_summary": knowledge.background_summary,
+        "knowledge_gaps": knowledge.knowledge_gaps or [],
+        "causal_chain": knowledge.causal_chain or [],
+        "key_concepts": knowledge.key_concepts or [],
+        "atoms": atoms,
+    })
+    set_cached(cache_key, response.body.decode(), ttl=600)
+    return response
+
+
+@router.post("/events/{event_id}/knowledge/analyze")
+async def trigger_knowledge_analysis(event_id: str):
+    """触发事件知识分析（手动或自动）"""
+    from scraper.pipeline.ai_analysis import DeepSeekClient
+    from scraper.pipeline.knowledge import analyze_event_knowledge
+    from models.knowledge import EventKnowledge, EventKnowledgeAtom, KnowledgeAtom
+    
+    async with async_session() as session:
+        # 获取事件
+        result = await session.execute(
+            select(Event).where(Event.event_id == event_id)
+        )
+        event = result.scalar_one_or_none()
+        
+        if not event:
+            raise HTTPException(status_code=404, detail="事件未找到")
+        
+        # 获取相关文章
+        articles = []
+        if event.related_articles:
+            for article_ref in event.related_articles[:5]:
+                if isinstance(article_ref, dict):
+                    articles.append(article_ref)
+        
+        # 调用AI分析
+        ai_client = DeepSeekClient()
+        event_data = {
+            "title": event.title,
+            "description": event.description,
+            "category": event.category,
+        }
+        
+        analysis = await analyze_event_knowledge(event_data, articles, ai_client)
+        
+        if not analysis:
+            raise HTTPException(status_code=500, detail="知识分析失败")
+        
+        # 保存知识框架
+        existing = await session.execute(
+            select(EventKnowledge).where(EventKnowledge.event_id == event_id)
+        )
+        ek = existing.scalar_one_or_none()
+        
+        if ek:
+            # 更新
+            ek.background_summary = analysis.get('background_summary')
+            ek.knowledge_gaps = analysis.get('knowledge_gaps')
+            ek.causal_chain = analysis.get('causal_chain')
+            ek.key_concepts = analysis.get('key_concepts')
+            ek.ai_model = analysis.get('ai_model')
+            ek.ai_confidence = analysis.get('ai_confidence')
+            ek.analysis_version += 1
+        else:
+            # 新建
+            ek = EventKnowledge(
+                event_id=event_id,
+                background_summary=analysis.get('background_summary'),
+                knowledge_gaps=analysis.get('knowledge_gaps'),
+                causal_chain=analysis.get('causal_chain'),
+                key_concepts=analysis.get('key_concepts'),
+                ai_model=analysis.get('ai_model'),
+                ai_confidence=analysis.get('ai_confidence'),
+            )
+            session.add(ek)
+        
+        # 保存知识原子
+        for atom_data in analysis.get('knowledge_atoms', []):
+            # 查找或创建知识原子
+            existing_atom = await session.execute(
+                select(KnowledgeAtom).where(
+                    KnowledgeAtom.title == atom_data['title'],
+                    KnowledgeAtom.lang == 'zh'
+                )
+            )
+            atom = existing_atom.scalar_one_or_none()
+            
+            if not atom:
+                atom = KnowledgeAtom(
+                    atom_type=atom_data['atom_type'],
+                    title=atom_data['title'],
+                    content=atom_data['content'],
+                    category=event.category,
+                    entities=atom_data.get('entities'),
+                    keywords=atom_data.get('keywords'),
+                    lang='zh',
+                )
+                session.add(atom)
+                await session.flush()  # 获取ID
+            
+            # 关联
+            existing_link = await session.execute(
+                select(EventKnowledgeAtom).where(
+                    EventKnowledgeAtom.event_id == event_id,
+                    EventKnowledgeAtom.atom_id == atom.id
+                )
+            )
+            if not existing_link.scalar():
+                link = EventKnowledgeAtom(
+                    event_id=event_id,
+                    atom_id=atom.id,
+                    relevance=1.0,
+                    position=len(analysis.get('knowledge_atoms', [])),
+                )
+                session.add(link)
+        
+        await session.commit()
+        
+        # 清除缓存
+        from app.cache import invalidate_cache
+        invalidate_cache(f"api:events:knowledge:{event_id}")
+        
+        return {"status": "ok", "event_id": event_id, "version": ek.analysis_version}

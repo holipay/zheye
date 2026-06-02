@@ -16,32 +16,51 @@
 
     <div class="event-info-grid">
         <div class="event-info-card">
-            <div class="info-label">First Seen</div>
+            <div class="info-label">{{ "First Seen" if lang == "en" else "首次出现" }}</div>
             <div class="info-value">{{ event.first_seen }}</div>
         </div>
         <div class="event-info-card">
-            <div class="info-label">Last Updated</div>
+            <div class="info-label">{{ "Last Updated" if lang == "en" else "最近更新" }}</div>
             <div class="info-value">{{ event.last_updated }}</div>
         </div>
         <div class="event-info-card">
-            <div class="info-label">Updates</div>
+            <div class="info-label">{{ "Updates" if lang == "en" else "更新次数" }}</div>
             <div class="info-value">{{ event.update_count }}</div>
         </div>
         <div class="event-info-card">
-            <div class="info-label">Articles</div>
+            <div class="info-label">{{ "Articles" if lang == "en" else "相关文章" }}</div>
             <div class="info-value">{{ event.timeline|length }}</div>
         </div>
     </div>
 
     {% if event.description %}
     <div class="event-description">
-        <h3>Event Overview</h3>
+        <h3>{{ "Event Overview" if lang == "en" else "事件概述" }}</h3>
         <p>{{ event.description }}</p>
     </div>
     {% endif %}
 
-    <div class="event-timeline-section">
-        <h3>Event Timeline</h3>
+    <!-- Tab 切换 -->
+    <div class="event-tabs">
+        <button class="tab-btn active" onclick="switchTab('knowledge')">
+            {{ "Knowledge" if lang == "en" else "知识框架" }}
+        </button>
+        <button class="tab-btn" onclick="switchTab('timeline')">
+            {{ "Timeline" if lang == "en" else "事件时间线" }}
+        </button>
+    </div>
+
+    <!-- 知识框架 Tab -->
+    <div id="tab-knowledge" class="tab-content active">
+        <div hx-get="/api/events/{{ event.event_id }}/knowledge?lang={{ lang }}" 
+             hx-trigger="load" 
+             hx-target="#tab-knowledge">
+            <div class="loading">{{ "Loading..." if lang == "en" else "加载中..." }}</div>
+        </div>
+    </div>
+
+    <!-- 时间线 Tab -->
+    <div id="tab-timeline" class="tab-content">
         {% if event.timeline %}
         <div class="article-timeline">
             {% for article in event.timeline %}
@@ -57,13 +76,13 @@
             {% endfor %}
         </div>
         {% else %}
-        <p class="no-data">No related articles</p>
+        <p class="no-data">{{ "No related articles" if lang == "en" else "暂无相关文章" }}</p>
         {% endif %}
     </div>
 
     {% if event.related_events %}
     <div class="related-events-section">
-        <h3>Related Events</h3>
+        <h3>{{ "Related Events" if lang == "en" else "相关事件" }}</h3>
         <div class="related-events-list">
             {% for related in event.related_events %}
             <div class="related-event-item">
@@ -77,7 +96,7 @@
                     </a>
                 </h4>
                 <div class="related-meta">
-                    <span>{{ related.update_count }} updates</span>
+                    <span>{{ related.update_count }} {{ "updates" if lang == "en" else "次更新" }}</span>
                 </div>
             </div>
             {% endfor %}
@@ -354,4 +373,64 @@
     color: #64748b;
     padding: 2rem;
 }
+
+/* Tab 样式 */
+.event-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.tab-btn {
+    padding: 0.75rem 1.5rem;
+    background: none;
+    border: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #64748b;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    color: #3b82f6;
+}
+
+.tab-btn.active {
+    color: #3b82f6;
+    border-bottom-color: #3b82f6;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: #64748b;
+}
 </style>
+
+<script>
+function switchTab(tabName) {
+    // 切换 tab 按钮状态
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // 切换 tab 内容
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    document.getElementById('tab-' + tabName).classList.add('active');
+}
+</script>

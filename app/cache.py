@@ -21,3 +21,10 @@ def set_cached(key: str, value: Any, ttl: int = None):
 
 def clear_cache():
     _cache.clear()
+
+
+def invalidate_cache(key_prefix: str):
+    """清除匹配前缀的缓存"""
+    keys_to_delete = [k for k in _cache.keys() if k.startswith(key_prefix)]
+    for key in keys_to_delete:
+        del _cache[key]
