@@ -3,17 +3,17 @@
 {% block content %}
 <div class="container">
     <div class="page-header">
-        <h1>事件追踪</h1>
-        <p class="subtitle">自动识别和追踪重要财经事件的发展脉络</p>
+        <h1>{{ t("events.title") }}</h1>
+        <p class="subtitle">{{ t("events.subtitle") }}</p>
     </div>
 
     <div class="events-container">
         <div id="events-timeline">
             <!-- 通过 HTMX 加载事件时间线 -->
-            <div hx-get="/api/events/timeline?days={{ days }}{% if category %}&category={{ category }}{% endif %}" 
+            <div hx-get="/api/events/timeline?days={{ days }}{% if category %}&category={{ category }}{% endif %}&lang={{ lang }}" 
                  hx-trigger="load" 
                  hx-target="#events-timeline">
-                <div class="loading">加载中...</div>
+                <div class="loading">{{ t("events.loading") }}</div>
             </div>
         </div>
     </div>

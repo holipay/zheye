@@ -3,8 +3,8 @@
 {% block content %}
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title">运行历史</h3>
-        <button class="btn btn-primary" onclick="loadRunHistory()">刷新</button>
+        <h3 class="card-title">Run History</h3>
+        <button class="btn btn-primary" onclick="loadRunHistory()">Refresh</button>
     </div>
     <div class="card-body">
         <div class="table-container">
@@ -12,18 +12,18 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>运行类型</th>
-                        <th>开始时间</th>
-                        <th>耗时</th>
-                        <th>源数量</th>
-                        <th>成功/失败</th>
-                        <th>抓取数量</th>
-                        <th>保存数量</th>
+                        <th>Run Type</th>
+                        <th>Started</th>
+                        <th>Duration</th>
+                        <th>Sources</th>
+                        <th>Success/Fail</th>
+                        <th>Fetched</th>
+                        <th>Saved</th>
                     </tr>
                 </thead>
                 <tbody id="runs-table">
                     <tr>
-                        <td colspan="8" class="loading">加载中...</td>
+                        <td colspan="8" class="loading">{{ t("common.loading") }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -42,20 +42,21 @@ async function loadRunHistory() {
         const data = await response.json();
         
         const tbody = document.getElementById('runs-table');
+        const locale = '{{ lang }}' === 'zh' ? 'zh-CN' : 'en-US';
         
         if (data.runs && data.runs.length > 0) {
             tbody.innerHTML = data.runs.map(run => {
                 const duration = run.duration ? formatDuration(run.duration) : '-';
-                const startTime = run.started_at ? new Date(run.started_at).toLocaleString('zh-CN') : '-';
+                const startTime = run.started_at ? new Date(run.started_at).toLocaleString(locale) : '-';
                 const successRate = run.sources_attempted > 0 
                     ? Math.round(run.sources_succeeded / run.sources_attempted * 100) 
                     : 0;
                 
-                let statusBadge = '<span class="badge badge-success">成功</span>';
+                let statusBadge = '<span class="badge badge-success">Success</span>';
                 if (successRate < 50) {
-                    statusBadge = '<span class="badge badge-danger">失败</span>';
+                    statusBadge = '<span class="badge badge-danger">Failed</span>';
                 } else if (successRate < 80) {
-                    statusBadge = '<span class="badge badge-warning">部分成功</span>';
+                    statusBadge = '<span class="badge badge-warning">Partial</span>';
                 }
                 
                 return `
@@ -79,20 +80,20 @@ async function loadRunHistory() {
                 `;
             }).join('');
         } else {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">暂无运行记录</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">No run history</td></tr>';
         }
     } catch (error) {
-        console.error('加载运行历史失败:', error);
+        console.error('Error loading run history:', error);
     }
 }
 
 function formatDuration(seconds) {
     if (seconds < 60) {
-        return `${seconds}秒`;
+        return `${seconds}s`;
     }
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
-    return `${minutes}分${remainingSeconds}秒`;
+    return `${minutes}m ${remainingSeconds}s`;
 }
 </script>
 {% endblock %}

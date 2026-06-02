@@ -3,27 +3,27 @@
 {% block content %}
 <div class="page-header" style="margin-bottom: var(--spacing-lg);">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
-        <h1 style="font-family: var(--font-serif); font-size: 28px; font-weight: 700;">新闻</h1>
+        <h1 style="font-family: var(--font-serif); font-size: 28px; font-weight: 700;">{{ t("news.title") }}</h1>
         <div class="sort-toggle">
-            <a href="/news?sort=date" class="sort-btn {% if sort != 'weight' %}active{% endif %}"
-               hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort=date"
-               hx-target="#news-list" hx-swap="innerHTML">最新</a>
-            <a href="/news?sort=weight" class="sort-btn {% if sort == 'weight' %}active{% endif %}"
-               hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort=weight"
-               hx-target="#news-list" hx-swap="innerHTML">重要</a>
+            <a href="/{{ lang }}/news?sort=date" class="sort-btn {% if sort != 'weight' %}active{% endif %}"
+               hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort=date&lang={{ lang }}"
+               hx-target="#news-list" hx-swap="innerHTML">{{ t("news.sort_latest") }}</a>
+            <a href="/{{ lang }}/news?sort=weight" class="sort-btn {% if sort == 'weight' %}active{% endif %}"
+               hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort=weight&lang={{ lang }}"
+               hx-target="#news-list" hx-swap="innerHTML">{{ t("news.sort_important") }}</a>
         </div>
     </div>
     
     <!-- 分类筛选 -->
     <div class="category-tabs" id="category-tabs"
-         hx-get="/api/categories" hx-trigger="load" hx-target="#category-tabs" hx-swap="innerHTML">
-        <a href="/news?category=all" class="tab {% if category == 'all' %}active{% endif %}">全部</a>
+         hx-get="/api/categories?lang={{ lang }}" hx-trigger="load" hx-target="#category-tabs" hx-swap="innerHTML">
+        <a href="/{{ lang }}/news?category=all" class="tab {% if category == 'all' %}active{% endif %}">{{ t("category.all") }}</a>
     </div>
     
     <!-- 类型筛选 -->
     <div class="type-tabs" style="margin-top: var(--spacing-sm);" id="type-tabs"
-         hx-get="/api/article-types" hx-trigger="load" hx-target="#type-tabs" hx-swap="innerHTML">
-        <a href="/news?category={{ category or 'all' }}&article_type=all" class="tab {% if article_type == 'all' %}active{% endif %}">全部类型</a>
+         hx-get="/api/article-types?lang={{ lang }}" hx-trigger="load" hx-target="#type-tabs" hx-swap="innerHTML">
+        <a href="/{{ lang }}/news?category={{ category or 'all' }}&article_type=all" class="tab {% if article_type == 'all' %}active{% endif %}">{{ t("category.all_types") }}</a>
     </div>
 </div>
 
@@ -32,11 +32,11 @@
     <main>
         <div class="card">
             <div id="news-list" 
-                 hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page or 1 }}" 
+                 hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page or 1 }}&lang={{ lang }}" 
                  hx-trigger="load"
                  hx-target="#news-list"
                  hx-swap="innerHTML">
-                <div class="loading">加载中...</div>
+                <div class="loading">{{ t("common.loading") }}</div>
             </div>
         </div>
     </main>
@@ -45,22 +45,22 @@
     <aside class="sidebar">
         <!-- 热门关键词 -->
         <div class="sidebar-widget">
-            <div class="widget-header">热门关键词</div>
+            <div class="widget-header">{{ t("home.hot_keywords") }}</div>
             <div class="widget-content">
                 <div id="keyword-nav"
-                     hx-get="/api/keywords/popular?limit=20" hx-trigger="load" hx-target="#keyword-nav" hx-swap="innerHTML">
-                    <div class="loading">加载中...</div>
+                     hx-get="/api/keywords/popular?limit=20&lang={{ lang }}" hx-trigger="load" hx-target="#keyword-nav" hx-swap="innerHTML">
+                    <div class="loading">{{ t("common.loading") }}</div>
                 </div>
             </div>
         </div>
 
         <!-- 热门实体 -->
         <div class="sidebar-widget">
-            <div class="widget-header">热门实体</div>
+            <div class="widget-header">{{ t("home.focus_entities") }}</div>
             <div class="widget-content">
                 <div id="entity-nav"
-                     hx-get="/api/entities/popular?limit=10" hx-trigger="load" hx-target="#entity-nav" hx-swap="innerHTML">
-                    <div class="loading">加载中...</div>
+                     hx-get="/api/entities/popular?limit=10&lang={{ lang }}" hx-trigger="load" hx-target="#entity-nav" hx-swap="innerHTML">
+                    <div class="loading">{{ t("common.loading") }}</div>
                 </div>
             </div>
         </div>

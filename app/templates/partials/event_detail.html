@@ -2,46 +2,46 @@
 <div class="event-detail">
     <div class="event-detail-header">
         <div class="event-breadcrumb">
-            <a href="/events" hx-get="/api/events" hx-target="#main-content" hx-push-url="true">事件追踪</a>
+            <a href="/{{ lang }}/events" hx-get="/api/events?lang={{ lang }}" hx-target="#main-content" hx-push-url="true">{{ t("events.title") }}</a>
             <span class="separator">/</span>
             <span>{{ event.category }}</span>
         </div>
         <h2 class="event-title">{{ event.title }}</h2>
         <div class="event-meta">
             <span class="event-category badge">{{ event.category }}</span>
-            <span class="event-type">{{ event.event_type or '未分类' }}</span>
+            <span class="event-type">{{ event.event_type or 'Uncategorized' }}</span>
             <span class="event-status status-{{ event.status }}">{{ event.status }}</span>
         </div>
     </div>
 
     <div class="event-info-grid">
         <div class="event-info-card">
-            <div class="info-label">首次出现</div>
+            <div class="info-label">First Seen</div>
             <div class="info-value">{{ event.first_seen }}</div>
         </div>
         <div class="event-info-card">
-            <div class="info-label">最后更新</div>
+            <div class="info-label">Last Updated</div>
             <div class="info-value">{{ event.last_updated }}</div>
         </div>
         <div class="event-info-card">
-            <div class="info-label">更新次数</div>
+            <div class="info-label">Updates</div>
             <div class="info-value">{{ event.update_count }}</div>
         </div>
         <div class="event-info-card">
-            <div class="info-label">相关文章</div>
+            <div class="info-label">Articles</div>
             <div class="info-value">{{ event.timeline|length }}</div>
         </div>
     </div>
 
     {% if event.description %}
     <div class="event-description">
-        <h3>事件概述</h3>
+        <h3>Event Overview</h3>
         <p>{{ event.description }}</p>
     </div>
     {% endif %}
 
     <div class="event-timeline-section">
-        <h3>事件时间线</h3>
+        <h3>Event Timeline</h3>
         {% if event.timeline %}
         <div class="article-timeline">
             {% for article in event.timeline %}
@@ -57,13 +57,13 @@
             {% endfor %}
         </div>
         {% else %}
-        <p class="no-data">暂无相关文章</p>
+        <p class="no-data">No related articles</p>
         {% endif %}
     </div>
 
     {% if event.related_events %}
     <div class="related-events-section">
-        <h3>相关事件</h3>
+        <h3>Related Events</h3>
         <div class="related-events-list">
             {% for related in event.related_events %}
             <div class="related-event-item">
@@ -72,12 +72,12 @@
                     <span class="related-date">{{ related.last_updated }}</span>
                 </div>
                 <h4>
-                    <a href="/events/{{ related.event_id }}" hx-get="/api/events/{{ related.event_id }}" hx-target="#main-content" hx-push-url="true">
+                    <a href="/{{ lang }}/events/{{ related.event_id }}" hx-get="/api/events/{{ related.event_id }}?lang={{ lang }}" hx-target="#main-content" hx-push-url="true">
                         {{ related.title }}
                     </a>
                 </h4>
                 <div class="related-meta">
-                    <span>{{ related.update_count }} 次更新</span>
+                    <span>{{ related.update_count }} updates</span>
                 </div>
             </div>
             {% endfor %}

@@ -2,12 +2,12 @@
 
 {% block content %}
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-lg);">
-    <h1 style="font-family: var(--font-serif); font-size: 28px; font-weight: 700;">分析报告</h1>
+    <h1 style="font-family: var(--font-serif); font-size: 28px; font-weight: 700;">{{ t("analysis.title") }}</h1>
     <div style="display: flex; align-items: center; gap: var(--spacing-md);">
         <input type="date" id="report-date" 
                style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 13px;"
                value="{{ report_date or '' }}">
-        <button onclick="loadReport()" class="btn btn-accent">加载报告</button>
+        <button onclick="loadReport()" class="btn btn-accent">{{ t("analysis.load_report") }}</button>
     </div>
 </div>
 
@@ -16,22 +16,22 @@
     <!-- 关键词趋势 -->
     <div class="card">
         <div class="card-header">
-            <h2 class="card-title">关键词趋势</h2>
-            <span style="font-size: 12px; color: var(--text-muted);">Top 10 关键词</span>
+            <h2 class="card-title">{{ t("analysis.keyword_trend") }}</h2>
+            <span style="font-size: 12px; color: var(--text-muted);">{{ t("analysis.top_10_keywords") }}</span>
         </div>
         <div class="card-body" style="height: 300px;">
-            <div id="keyword-trend-chart" class="loading">加载中...</div>
+            <div id="keyword-trend-chart" class="loading">{{ t("common.loading") }}</div>
         </div>
     </div>
 
     <!-- 情感趋势 -->
     <div class="card">
         <div class="card-header">
-            <h2 class="card-title">情感趋势</h2>
-            <span style="font-size: 12px; color: var(--text-muted);">近30天</span>
+            <h2 class="card-title">{{ t("analysis.sentiment_trend") }}</h2>
+            <span style="font-size: 12px; color: var(--text-muted);">{{ t("analysis.last_30_days") }}</span>
         </div>
         <div class="card-body" style="height: 300px;">
-            <div id="sentiment-trend-chart" class="loading">加载中...</div>
+            <div id="sentiment-trend-chart" class="loading">{{ t("common.loading") }}</div>
         </div>
     </div>
 </div>
@@ -40,20 +40,20 @@
     <!-- 来源分布 -->
     <div class="card">
         <div class="card-header">
-            <h2 class="card-title">来源分布</h2>
+            <h2 class="card-title">{{ t("analysis.source_dist") }}</h2>
         </div>
         <div class="card-body" style="height: 300px;">
-            <div id="source-chart" class="loading">加载中...</div>
+            <div id="source-chart" class="loading">{{ t("common.loading") }}</div>
         </div>
     </div>
 
     <!-- 重要性分布 -->
     <div class="card">
         <div class="card-header">
-            <h2 class="card-title">重要性分布</h2>
+            <h2 class="card-title">{{ t("analysis.importance_dist") }}</h2>
         </div>
         <div class="card-body" style="height: 300px;">
-            <div id="importance-chart" class="loading">加载中...</div>
+            <div id="importance-chart" class="loading">{{ t("common.loading") }}</div>
         </div>
     </div>
 </div>
@@ -61,38 +61,38 @@
 <!-- 报告类型选项卡 -->
 <div class="report-tabs">
     <button onclick="switchTab('weekly')" id="tab-weekly" class="report-tab active">
-        周报
+        {{ t("analysis.weekly_report") }}
     </button>
     <button onclick="switchTab('monthly')" id="tab-monthly" class="report-tab">
-        月报
+        {{ t("analysis.monthly_report") }}
     </button>
     <button onclick="switchTab('daily')" id="tab-daily" class="report-tab">
-        每日快报
+        {{ t("analysis.daily_report") }}
     </button>
 </div>
 
 <!-- 分析状态 -->
 <div class="card" style="margin-bottom: var(--spacing-lg);">
     <div class="card-header">
-        <h2 class="card-title">分析状态</h2>
+        <h2 class="card-title">{{ t("analysis.analysis_status") }}</h2>
     </div>
     <div class="card-body">
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--spacing-lg); text-align: center;">
             <div>
                 <div style="font-size: 24px; font-weight: 700; color: var(--color-up);" id="status-ai-enabled">-</div>
-                <div style="font-size: 12px; color: var(--text-muted);">AI 功能</div>
+                <div style="font-size: 12px; color: var(--text-muted);">{{ t("analysis.ai_function") }}</div>
             </div>
             <div>
                 <div style="font-size: 24px; font-weight: 700; color: var(--color-primary);" id="status-analyzed">-</div>
-                <div style="font-size: 12px; color: var(--text-muted);">已分析</div>
+                <div style="font-size: 12px; color: var(--text-muted);">{{ t("analysis.analyzed") }}</div>
             </div>
             <div>
                 <div style="font-size: 24px; font-weight: 700;" id="status-total">-</div>
-                <div style="font-size: 12px; color: var(--text-muted);">总文章数</div>
+                <div style="font-size: 12px; color: var(--text-muted);">{{ t("analysis.total_articles") }}</div>
             </div>
             <div>
                 <div style="font-size: 24px; font-weight: 700; color: var(--color-accent);" id="status-coverage">-</div>
-                <div style="font-size: 12px; color: var(--text-muted);">覆盖率</div>
+                <div style="font-size: 12px; color: var(--text-muted);">{{ t("analysis.coverage_rate") }}</div>
             </div>
         </div>
     </div>
@@ -103,10 +103,10 @@
         <!-- 历史报告列表 -->
         <div class="card">
             <div class="card-header">
-                <h2 class="card-title">历史报告</h2>
+                <h2 class="card-title">{{ t("analysis.historical_reports") }}</h2>
             </div>
             <div id="reports-list" class="news-list">
-                <div class="loading">加载中...</div>
+                <div class="loading">{{ t("common.loading") }}</div>
             </div>
         </div>
 
@@ -115,24 +115,24 @@
             <!-- 概述 -->
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">概述</h2>
+                    <h2 class="card-title">{{ t("analysis.overview") }}</h2>
                     <span id="report-period" style="font-size: 13px; color: var(--text-muted);">-</span>
                 </div>
                 <div class="card-body">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
                         <div style="font-size: 20px; font-weight: 700;" id="market-sentiment">-</div>
                         <div style="font-size: 13px; color: var(--text-muted);">
-                            分析了 <span id="news-count" style="font-weight: 600;">0</span> 篇文章
+                            {{ t("analysis.articles_analyzed") }} <span id="news-count" style="font-weight: 600;">0</span>
                         </div>
                     </div>
-                    <div class="report-overview" id="overview">加载中...</div>
+                    <div class="report-overview" id="overview">{{ t("common.loading") }}</div>
                 </div>
             </div>
 
             <!-- 热门话题 -->
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">热门话题</h2>
+                    <h2 class="card-title">{{ t("analysis.hot_topics") }}</h2>
                 </div>
                 <div class="card-body">
                     <div id="hot-topics" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-md);">
@@ -144,7 +144,7 @@
             <!-- 关键事件 -->
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">关键事件</h2>
+                    <h2 class="card-title">{{ t("analysis.key_events") }}</h2>
                 </div>
                 <div id="key-events" class="news-list">
                     <!-- 动态填充 -->
@@ -154,10 +154,10 @@
             <!-- 趋势分析 -->
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">趋势分析</h2>
+                    <h2 class="card-title">{{ t("analysis.trend_analysis") }}</h2>
                 </div>
                 <div class="card-body">
-                    <div class="report-overview" id="trend-analysis">加载中...</div>
+                    <div class="report-overview" id="trend-analysis">{{ t("common.loading") }}</div>
                 </div>
             </div>
         </div>
@@ -166,9 +166,9 @@
         <div id="no-report" class="hidden card">
             <div class="card-body" style="text-align: center; padding: 60px;">
                 <div style="font-size: 48px; margin-bottom: var(--spacing-md);">📭</div>
-                <h3 style="font-size: 18px; margin-bottom: var(--spacing-sm);">暂无分析报告</h3>
-                <p style="color: var(--text-muted);">该时段的分析报告尚未生成</p>
-                <p style="color: var(--text-muted); font-size: 13px; margin-top: var(--spacing-sm);">周报每周一生成，月报每月1日生成</p>
+                <h3 style="font-size: 18px; margin-bottom: var(--spacing-sm);">{{ t("analysis.no_report") }}</h3>
+                <p style="color: var(--text-muted);">{{ t("analysis.no_report_desc") }}</p>
+                <p style="color: var(--text-muted); font-size: 13px; margin-top: var(--spacing-sm);">{{ t("analysis.report_schedule") }}</p>
             </div>
         </div>
     </div>
@@ -177,20 +177,20 @@
     <aside class="sidebar">
         <!-- 分类统计 -->
         <div class="sidebar-widget">
-            <div class="widget-header">分类统计</div>
+            <div class="widget-header">{{ t("analysis.category_stats") }}</div>
             <div class="widget-content">
                 <div id="category-stats" class="entity-list">
-                    <div class="loading">加载中...</div>
+                    <div class="loading">{{ t("common.loading") }}</div>
                 </div>
             </div>
         </div>
 
         <!-- 情感分布 -->
         <div class="sidebar-widget">
-            <div class="widget-header">情感分布</div>
+            <div class="widget-header">{{ t("analysis.sentiment_dist") }}</div>
             <div class="widget-content">
                 <div id="sentiment-stats">
-                    <div class="loading">加载中...</div>
+                    <div class="loading">{{ t("common.loading") }}</div>
                 </div>
             </div>
         </div>
@@ -201,6 +201,14 @@
 <script src="/static/js/charts.js"></script>
 <script>
 let currentTab = 'weekly';
+const lang = '{{ lang }}';
+
+const sentimentMap = {
+    'bullish': '{{ t("sentiment.bullish") }}',
+    'bearish': '{{ t("sentiment.bearish") }}',
+    'neutral': '{{ t("sentiment.neutral") }}',
+    'mixed': '{{ t("sentiment.mixed") }}'
+};
 
 document.addEventListener('DOMContentLoaded', function() {
     loadStatus();
@@ -254,9 +262,9 @@ async function loadCharts() {
     ChartUtils.loadAndCreate(
         '/api/charts/sentiment-trend?days=30',
         (ctx, data) => ChartUtils.createAreaChart(ctx, data.labels, [
-            { label: '积极', data: data.positive, borderColor: '#00c853' },
-            { label: '中性', data: data.neutral, borderColor: '#78909c' },
-            { label: '消极', data: data.negative, borderColor: '#ff1744' }
+            { label: '{{ t("sentiment.bullish") }}', data: data.positive, borderColor: '#00c853' },
+            { label: '{{ t("sentiment.neutral") }}', data: data.neutral, borderColor: '#78909c' },
+            { label: '{{ t("sentiment.bearish") }}', data: data.negative, borderColor: '#ff1744' }
         ]),
         'sentiment-trend-chart'
     );
@@ -281,12 +289,12 @@ async function loadStatus() {
         const response = await fetch('/api/analysis/status');
         const data = await response.json();
         
-        document.getElementById('status-ai-enabled').textContent = data.ai_enabled ? '✓ 启用' : '✗ 禁用';
+        document.getElementById('status-ai-enabled').textContent = data.ai_enabled ? '✓ {{ t("analysis.enabled") }}' : '✗ {{ t("analysis.disabled") }}';
         document.getElementById('status-analyzed').textContent = data.articles_analyzed;
         document.getElementById('status-total').textContent = data.articles_total;
         document.getElementById('status-coverage').textContent = data.analysis_coverage + '%';
     } catch (error) {
-        console.error('获取状态失败:', error);
+        console.error('Error loading status:', error);
     }
 }
 
@@ -301,10 +309,10 @@ async function loadReportsList() {
                 <div class="news-item" onclick="loadReportByDate('${report.period_start}')">
                     <div class="news-item-header">
                         <span class="news-source">${report.period_start} ~ ${report.period_end}</span>
-                        <span class="news-time">${report.news_count || 0} 篇</span>
+                        <span class="news-time">${report.news_count || 0} {{ t("news.articles") }}</span>
                     </div>
                     <div class="news-title">
-                        <a href="#">${report.overview ? report.overview.substring(0, 80) + '...' : '暂无概述'}</a>
+                        <a href="#">${report.overview ? report.overview.substring(0, 80) + '...' : '{{ t("analysis.no_overview") }}'}</a>
                     </div>
                     <div class="news-meta">
                         <span class="badge ${
@@ -316,10 +324,10 @@ async function loadReportsList() {
                 </div>
             `).join('');
         } else {
-            container.innerHTML = '<div class="empty-state">暂无历史报告</div>';
+            container.innerHTML = '<div class="empty-state">{{ t("analysis.no_historical_reports") }}</div>';
         }
     } catch (error) {
-        console.error('获取报告列表失败:', error);
+        console.error('Error loading reports list:', error);
     }
 }
 
@@ -351,7 +359,7 @@ async function loadReport() {
             showNoReport();
         }
     } catch (error) {
-        console.error('加载报告失败:', error);
+        console.error('Error loading report:', error);
         showNoReport();
     }
 }
@@ -363,16 +371,10 @@ function displayReport(report) {
     document.getElementById('report-period').textContent = 
         report.period_start && report.period_end ? `${report.period_start} ~ ${report.period_end}` : report.date || '-';
     
-    const sentimentMap = {
-        'bullish': '📈 看涨',
-        'bearish': '📉 看跌',
-        'neutral': '➡️ 中性',
-        'mixed': '🔀 混合'
-    };
     document.getElementById('market-sentiment').textContent = sentimentMap[report.market_sentiment] || report.market_sentiment || '-';
     document.getElementById('news-count').textContent = report.news_count || 0;
-    document.getElementById('overview').textContent = report.overview || '暂无概述';
-    document.getElementById('trend-analysis').textContent = report.trend_analysis || '暂无趋势分析';
+    document.getElementById('overview').textContent = report.overview || '{{ t("analysis.no_overview") }}';
+    document.getElementById('trend-analysis').textContent = report.trend_analysis || '{{ t("analysis.no_trend_analysis") }}';
     
     // 热门话题
     const hotTopicsContainer = document.getElementById('hot-topics');
@@ -384,7 +386,7 @@ function displayReport(report) {
             </div>
         `).join('');
     } else {
-        hotTopicsContainer.innerHTML = '<div style="color: var(--text-muted);">暂无热门话题</div>';
+        hotTopicsContainer.innerHTML = '<div style="color: var(--text-muted);">{{ t("analysis.no_hot_topics") }}</div>';
     }
     
     // 关键事件
@@ -400,7 +402,7 @@ function displayReport(report) {
             </div>
         `).join('');
     } else {
-        keyEventsContainer.innerHTML = '<div class="empty-state">暂无关键事件</div>';
+        keyEventsContainer.innerHTML = '<div class="empty-state">{{ t("analysis.no_key_events") }}</div>';
     }
 }
 

@@ -1,32 +1,32 @@
 <div class="entity-nav">
-    <h4 class="entity-nav-title">实体导航</h4>
+    <h4 class="entity-nav-title">{{ t("home.focus_entities") }}</h4>
     <div class="entity-type-btns">
         <button class="entity-type-btn active"
-                hx-get="/api/entities/popular?limit=15"
+                hx-get="/api/entities/popular?limit=15&lang={{ lang }}"
                 hx-target="#entity-list"
-                hx-swap="innerHTML">全部</button>
+                hx-swap="innerHTML">{{ t("category.all") }}</button>
         <button class="entity-type-btn"
-                hx-get="/api/entities/popular?entity_type=company&limit=15"
+                hx-get="/api/entities/popular?entity_type=company&limit=15&lang={{ lang }}"
                 hx-target="#entity-list"
-                hx-swap="innerHTML">公司</button>
+                hx-swap="innerHTML">Company</button>
         <button class="entity-type-btn"
-                hx-get="/api/entities/popular?entity_type=indicator&limit=15"
+                hx-get="/api/entities/popular?entity_type=indicator&limit=15&lang={{ lang }}"
                 hx-target="#entity-list"
-                hx-swap="innerHTML">指标</button>
+                hx-swap="innerHTML">Indicator</button>
         <button class="entity-type-btn"
-                hx-get="/api/entities/popular?entity_type=organization&limit=15"
+                hx-get="/api/entities/popular?entity_type=organization&limit=15&lang={{ lang }}"
                 hx-target="#entity-list"
-                hx-swap="innerHTML">组织</button>
+                hx-swap="innerHTML">Organization</button>
         <button class="entity-type-btn"
-                hx-get="/api/entities/popular?entity_type=country&limit=15"
+                hx-get="/api/entities/popular?entity_type=country&limit=15&lang={{ lang }}"
                 hx-target="#entity-list"
-                hx-swap="innerHTML">国家</button>
+                hx-swap="innerHTML">Country</button>
     </div>
     <div id="entity-list"
-         hx-get="/api/entities/popular?limit=15"
+         hx-get="/api/entities/popular?limit=15&lang={{ lang }}"
          hx-trigger="load"
          hx-target="#entity-list"
          hx-swap="innerHTML">
-        <span class="loading">加载实体...</span>
+        <span class="loading">{{ t("common.loading") }}</span>
     </div>
 </div>

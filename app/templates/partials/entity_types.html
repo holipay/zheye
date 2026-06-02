@@ -1,11 +1,11 @@
 <div class="entity-type-btns">
     <button class="entity-type-btn active"
-            hx-get="/api/entities/popular?limit=15"
+            hx-get="/api/entities/popular?limit=15&lang={{ lang }}"
             hx-target="#entity-list"
-            hx-swap="innerHTML">全部</button>
+            hx-swap="innerHTML">{{ t("category.all") }}</button>
     {% for type_name, count in types %}
     <button class="entity-type-btn"
-            hx-get="/api/entities/popular?entity_type={{ type_name }}&limit=15"
+            hx-get="/api/entities/popular?entity_type={{ type_name }}&limit=15&lang={{ lang }}"
             hx-target="#entity-list"
             hx-swap="innerHTML">{{ type_name }}</button>
     {% endfor %}

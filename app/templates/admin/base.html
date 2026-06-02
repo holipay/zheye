@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="{{ lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }} - 者也管理后台</title>
+    <title>{{ title }} - {{ t("site.name") }} Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -15,33 +15,33 @@
         <!-- 侧边栏 -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <a href="/admin" class="sidebar-logo">
-                    <span class="logo-icon">者也</span>
-                    <span class="logo-text">管理后台</span>
+                <a href="/{{ lang }}/admin" class="sidebar-logo">
+                    <span class="logo-icon">{{ t("site.name") }}</span>
+                    <span class="logo-text">Admin</span>
                 </a>
             </div>
             <nav class="sidebar-nav">
-                <a href="/admin" class="nav-item {% if title == '管理后台' %}active{% endif %}">
+                <a href="/{{ lang }}/admin" class="nav-item {% if title == 'Dashboard' %}active{% endif %}">
                     <span class="nav-icon">📊</span>
-                    <span class="nav-text">仪表盘</span>
+                    <span class="nav-text">Dashboard</span>
                 </a>
-                <a href="/admin/sources" class="nav-item {% if title == 'RSS源管理' %}active{% endif %}">
+                <a href="/{{ lang }}/admin/sources" class="nav-item {% if title == 'RSS Sources' %}active{% endif %}">
                     <span class="nav-icon">📡</span>
-                    <span class="nav-text">RSS源管理</span>
+                    <span class="nav-text">RSS Sources</span>
                 </a>
-                <a href="/admin/monitor" class="nav-item {% if title == '数据监控' %}active{% endif %}">
+                <a href="/{{ lang }}/admin/monitor" class="nav-item {% if title == 'Data Monitor' %}active{% endif %}">
                     <span class="nav-icon">📈</span>
-                    <span class="nav-text">数据监控</span>
+                    <span class="nav-text">Data Monitor</span>
                 </a>
-                <a href="/admin/logs" class="nav-item {% if title == '运行日志' %}active{% endif %}">
+                <a href="/{{ lang }}/admin/logs" class="nav-item {% if title == 'Logs' %}active{% endif %}">
                     <span class="nav-icon">📝</span>
-                    <span class="nav-text">运行日志</span>
+                    <span class="nav-text">Logs</span>
                 </a>
             </nav>
             <div class="sidebar-footer">
-                <a href="/" class="nav-item">
+                <a href="/{{ lang }}" class="nav-item">
                     <span class="nav-icon">🌐</span>
-                    <span class="nav-text">返回前台</span>
+                    <span class="nav-text">Back to Site</span>
                 </a>
             </div>
         </aside>
@@ -68,7 +68,8 @@
     <script>
         function updateTime() {
             const now = new Date();
-            document.getElementById('system-time').textContent = now.toLocaleString('zh-CN');
+            const locale = '{{ lang }}' === 'zh' ? 'zh-CN' : 'en-US';
+            document.getElementById('system-time').textContent = now.toLocaleString(locale);
         }
         updateTime();
         setInterval(updateTime, 1000);

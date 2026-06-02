@@ -2,14 +2,14 @@
 
 {% block content %}
 <div class="page-header">
-    <a href="/news" class="back-link">&larr; 返回新闻列表</a>
+    <a href="/{{ lang }}/news" class="back-link">&larr; {{ t("nav.news") }}</a>
 </div>
 
 <div id="news-detail"
-     hx-get="/api/news/{{ news_id }}"
+     hx-get="/api/news/{{ news_id }}?lang={{ lang }}"
      hx-trigger="load"
      hx-target="#news-detail"
      hx-swap="innerHTML">
-    <div class="loading">加载中...</div>
+    <div class="loading">{{ t("common.loading") }}</div>
 </div>
 {% endblock %}

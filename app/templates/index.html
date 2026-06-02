@@ -4,20 +4,20 @@
 <!-- 英雄区域 -->
 <div class="hero-section">
     <div class="hero-content">
-        <h1 class="hero-title">全球财经资讯 · AI 智能洞察</h1>
-        <p class="hero-subtitle">聚合 44+ 权威信源，AI 深度分析，助您把握财经脉搏</p>
+        <h1 class="hero-title">{{ t("home.hero_title") }}</h1>
+        <p class="hero-subtitle">{{ t("home.hero_subtitle") }}</p>
         <div class="hero-stats">
             <div class="hero-stat">
                 <div class="hero-stat-value" id="stat-total">-</div>
-                <div class="hero-stat-label">新闻总量</div>
+                <div class="hero-stat-label">{{ t("home.stat_total") }}</div>
             </div>
             <div class="hero-stat">
                 <div class="hero-stat-value" id="stat-sources">44+</div>
-                <div class="hero-stat-label">信息源</div>
+                <div class="hero-stat-label">{{ t("home.stat_sources") }}</div>
             </div>
             <div class="hero-stat">
                 <div class="hero-stat-value" id="stat-categories">13</div>
-                <div class="hero-stat-label">分类</div>
+                <div class="hero-stat-label">{{ t("home.stat_categories") }}</div>
             </div>
         </div>
     </div>
@@ -28,22 +28,22 @@
     <!-- 每日趋势 -->
     <div class="card">
         <div class="card-header">
-            <h2 class="card-title">每日新闻趋势</h2>
-            <span style="font-size: 12px; color: var(--text-muted);">近30天</span>
+            <h2 class="card-title">{{ t("home.daily_trend") }}</h2>
+            <span style="font-size: 12px; color: var(--text-muted);">{{ t("home.last_30_days") }}</span>
         </div>
         <div class="card-body" style="height: 250px;">
-            <div id="daily-trend-chart" class="loading">加载中...</div>
+            <div id="daily-trend-chart" class="loading">{{ t("home.loading") }}</div>
         </div>
     </div>
 
     <!-- 情感分布 -->
     <div class="card">
         <div class="card-header">
-            <h2 class="card-title">情感分布</h2>
-            <span style="font-size: 12px; color: var(--text-muted);">近7天</span>
+            <h2 class="card-title">{{ t("home.sentiment_dist") }}</h2>
+            <span style="font-size: 12px; color: var(--text-muted);">{{ t("home.last_7_days") }}</span>
         </div>
         <div class="card-body" style="height: 250px;">
-            <div id="sentiment-chart" class="loading">加载中...</div>
+            <div id="sentiment-chart" class="loading">{{ t("home.loading") }}</div>
         </div>
     </div>
 </div>
@@ -55,45 +55,45 @@
         <!-- 分类统计 -->
         <div class="card" style="margin-bottom: var(--spacing-md);">
             <div class="card-header">
-                <h2 class="card-title">分类热度</h2>
+                <h2 class="card-title">{{ t("home.category_heat") }}</h2>
             </div>
             <div class="card-body" style="height: 200px;">
-                <div id="category-chart" class="loading">加载中...</div>
+                <div id="category-chart" class="loading">{{ t("home.loading") }}</div>
             </div>
         </div>
 
         <!-- 头条新闻 -->
         <div class="card">
             <div class="card-header">
-                <h2 class="card-title">今日头条</h2>
-                <a href="/news" class="card-link">查看更多 →</a>
+                <h2 class="card-title">{{ t("home.today_headlines") }}</h2>
+                <a href="/{{ lang }}/news" class="card-link">{{ t("home.view_more") }}</a>
             </div>
             <div id="featured-news" 
-                 hx-get="/api/latest?limit=5" 
+                 hx-get="/api/latest?limit=5&lang={{ lang }}" 
                  hx-trigger="load"
                  hx-target="#featured-news"
                  hx-swap="innerHTML">
-                <div class="loading">加载中...</div>
+                <div class="loading">{{ t("home.loading") }}</div>
             </div>
         </div>
 
         <!-- 最新新闻 -->
         <div class="card" style="margin-top: var(--spacing-md);">
             <div class="card-header">
-                <h2 class="card-title">最新资讯</h2>
+                <h2 class="card-title">{{ t("home.latest_news") }}</h2>
                 <div class="sort-toggle">
-                    <a href="/" class="sort-btn active" 
-                       hx-get="/api/latest?limit=10" hx-target="#news-feed" hx-swap="innerHTML">最新</a>
-                    <a href="/" class="sort-btn"
-                       hx-get="/api/news?sort=weight&limit=10" hx-target="#news-feed" hx-swap="innerHTML">重要</a>
+                    <a href="/{{ lang }}" class="sort-btn active" 
+                       hx-get="/api/latest?limit=10&lang={{ lang }}" hx-target="#news-feed" hx-swap="innerHTML">{{ t("home.latest") }}</a>
+                    <a href="/{{ lang }}" class="sort-btn"
+                       hx-get="/api/news?sort=weight&limit=10&lang={{ lang }}" hx-target="#news-feed" hx-swap="innerHTML">{{ t("home.important") }}</a>
                 </div>
             </div>
             <div class="news-list" id="news-feed"
-                 hx-get="/api/latest?limit=10" 
+                 hx-get="/api/latest?limit=10&lang={{ lang }}" 
                  hx-trigger="load"
                  hx-target="#news-feed"
                  hx-swap="innerHTML">
-                <div class="loading">加载中...</div>
+                <div class="loading">{{ t("home.loading") }}</div>
             </div>
         </div>
     </div>
@@ -102,31 +102,31 @@
     <aside class="sidebar">
         <!-- 热门关键词 -->
         <div class="sidebar-widget">
-            <div class="widget-header">热门关键词</div>
+            <div class="widget-header">{{ t("home.hot_keywords") }}</div>
             <div class="widget-content">
                 <div class="keyword-list" id="keywords"
-                     hx-get="/api/keywords/popular?limit=15" hx-trigger="load" hx-target="#keywords" hx-swap="innerHTML">
-                    <div class="loading">加载中...</div>
+                     hx-get="/api/keywords/popular?limit=15&lang={{ lang }}" hx-trigger="load" hx-target="#keywords" hx-swap="innerHTML">
+                    <div class="loading">{{ t("home.loading") }}</div>
                 </div>
             </div>
         </div>
 
         <!-- 热门实体 -->
         <div class="sidebar-widget">
-            <div class="widget-header">关注实体</div>
+            <div class="widget-header">{{ t("home.focus_entities") }}</div>
             <div class="widget-content">
                 <div class="entity-list" id="entities"
-                     hx-get="/api/entities/popular?limit=8" hx-trigger="load" hx-target="#entities" hx-swap="innerHTML">
-                    <div class="loading">加载中...</div>
+                     hx-get="/api/entities/popular?limit=8&lang={{ lang }}" hx-trigger="load" hx-target="#entities" hx-swap="innerHTML">
+                    <div class="loading">{{ t("home.loading") }}</div>
                 </div>
             </div>
         </div>
 
         <!-- 地域分布 -->
         <div class="sidebar-widget">
-            <div class="widget-header">地域分布</div>
+            <div class="widget-header">{{ t("home.region_dist") }}</div>
             <div class="widget-content" style="height: 200px;">
-                <div id="region-chart" class="loading">加载中...</div>
+                <div id="region-chart" class="loading">{{ t("home.loading") }}</div>
             </div>
         </div>
     </aside>
@@ -152,7 +152,7 @@ async function loadCharts() {
     ChartUtils.loadAndCreate(
         '/api/charts/daily-trend?days=30',
         (ctx, data) => ChartUtils.createLineChart(ctx, data.labels, [{
-            label: '新闻数量',
+            label: '{{ t("news.articles") }}',
             data: data.values,
             borderColor: ChartUtils.colors.accent,
             backgroundColor: ChartUtils.colors.accent + '20',

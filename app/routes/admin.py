@@ -10,7 +10,7 @@ import logging
 from datetime import datetime, date, timedelta
 from pathlib import Path
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func, desc, text
 
@@ -19,13 +19,21 @@ from models.news import News
 from models.source_health import SourceHealth
 from models.run_metrics import RunMetrics
 from models.event import Event
+from app.i18n import get_text, get_language_from_request, DEFAULT_LANGUAGE
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/admin")
+router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
 
 # RSS 源配置文件路径
 CONFIG_PATH = Path(__file__).parent.parent.parent / "scraper" / "sources" / "config.yaml"
+
+
+def _get_admin_context(request: Request, **kwargs):
+    lang = get_language_from_request(request)
+    def t(key: str, **fmt_kwargs) -> str:
+        return get_text(lang, key, **fmt_kwargs)
+    return {"lang": lang, "t": t, "request": request, **kwargs}
 
 
 def load_rss_config() -> dict:
@@ -53,43 +61,52 @@ def save_rss_config(config: dict) -> bool:
 # 管理后台页面
 # ============================================================
 
-@router.get("/", response_class=HTMLResponse)
-async def admin_index(request: Request):
+@router.get("/admin", response_class=HTMLResponse)
+async def admin_root(request: Request):
+    return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin")
+
+
+@router.get("/{lang}/admin", response_class=HTMLResponse)
+async def admin_index(request: Request, lang: str):
     """管理后台首页"""
-    return templates.TemplateResponse(request=request, name="admin/index.html", context={
-        "title": "管理后台",
-    })
+    if lang not in {"en", "zh"}:
+        return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin")
+    ctx = _get_admin_context(request, title="Dashboard")
+    return templates.TemplateResponse(request=request, name="admin/index.html", context=ctx)
 
 
-@router.get("/sources", response_class=HTMLResponse)
-async def admin_sources(request: Request):
+@router.get("/{lang}/admin/sources", response_class=HTMLResponse)
+async def admin_sources(request: Request, lang: str):
     """RSS 源管理页面"""
-    return templates.TemplateResponse(request=request, name="admin/sources.html", context={
-        "title": "RSS源管理",
-    })
+    if lang not in {"en", "zh"}:
+        return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin/sources")
+    ctx = _get_admin_context(request, title="RSS Sources")
+    return templates.TemplateResponse(request=request, name="admin/sources.html", context=ctx)
 
 
-@router.get("/monitor", response_class=HTMLResponse)
-async def admin_monitor(request: Request):
+@router.get("/{lang}/admin/monitor", response_class=HTMLResponse)
+async def admin_monitor(request: Request, lang: str):
     """数据监控页面"""
-    return templates.TemplateResponse(request=request, name="admin/monitor.html", context={
-        "title": "数据监控",
-    })
+    if lang not in {"en", "zh"}:
+        return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin/monitor")
+    ctx = _get_admin_context(request, title="Data Monitor")
+    return templates.TemplateResponse(request=request, name="admin/monitor.html", context=ctx)
 
 
-@router.get("/logs", response_class=HTMLResponse)
-async def admin_logs(request: Request):
+@router.get("/{lang}/admin/logs", response_class=HTMLResponse)
+async def admin_logs(request: Request, lang: str):
     """运行日志页面"""
-    return templates.TemplateResponse(request=request, name="admin/logs.html", context={
-        "title": "运行日志",
-    })
+    if lang not in {"en", "zh"}:
+        return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin/logs")
+    ctx = _get_admin_context(request, title="Logs")
+    return templates.TemplateResponse(request=request, name="admin/logs.html", context=ctx)
 
 
 # ============================================================
 # API 端点
 # ============================================================
 
-@router.get("/api/dashboard")
+@router.get("/admin/api/dashboard")
 async def get_dashboard():
     """获取仪表盘数据"""
     async with async_session() as session:
@@ -165,7 +182,7 @@ async def get_dashboard():
         }
 
 
-@router.get("/api/sources")
+@router.get("/admin/api/sources")
 async def get_sources():
     """获取所有 RSS 源及其健康状态"""
     config = load_rss_config()
@@ -205,7 +222,7 @@ async def get_sources():
         return {"sources": source_list, "total": len(source_list)}
 
 
-@router.get("/api/sources/{source_name}")
+@router.get("/admin/api/sources/{source_name}")
 async def get_source_detail(source_name: str):
     """获取单个源详情"""
     config = load_rss_config()
@@ -260,7 +277,7 @@ async def get_source_detail(source_name: str):
         }
 
 
-@router.post("/api/sources/{source_name}/toggle")
+@router.post("/admin/api/sources/{source_name}/toggle")
 async def toggle_source(source_name: str):
     """启用/禁用源"""
     config = load_rss_config()
@@ -282,7 +299,7 @@ async def toggle_source(source_name: str):
         raise HTTPException(status_code=500, detail="保存配置失败")
 
 
-@router.put("/api/sources/{source_name}")
+@router.put("/admin/api/sources/{source_name}")
 async def update_source(source_name: str, request: Request):
     """更新源配置"""
     data = await request.json()
@@ -314,7 +331,7 @@ async def update_source(source_name: str, request: Request):
         raise HTTPException(status_code=500, detail="保存配置失败")
 
 
-@router.get("/api/run-history")
+@router.get("/admin/api/run-history")
 async def get_run_history(limit: int = 20):
     """获取运行历史"""
     async with async_session() as session:
@@ -343,7 +360,7 @@ async def get_run_history(limit: int = 20):
         return {"runs": runs, "total": len(runs)}
 
 
-@router.get("/api/source-stats")
+@router.get("/admin/api/source-stats")
 async def get_source_stats():
     """获取源统计信息"""
     async with async_session() as session:
@@ -360,7 +377,7 @@ async def get_source_stats():
         return {"stats": stats}
 
 
-@router.get("/api/system-info")
+@router.get("/admin/api/system-info")
 async def get_system_info():
     """获取系统信息"""
     import platform

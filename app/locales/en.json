@@ -1,0 +1,126 @@
+{
+  "site": {
+    "name": "ZHEYE",
+    "title": "Global Financial News",
+    "description": "Global Financial News Aggregation & AI Analysis Platform"
+  },
+  "nav": {
+    "home": "Home",
+    "news": "News",
+    "analysis": "Analysis",
+    "events": "Events",
+    "deep_analysis": "Deep Analysis",
+    "event_tracking": "Event Tracking"
+  },
+  "top_bar": {
+    "realtime": "Real-time News"
+  },
+  "search": {
+    "placeholder": "Search news..."
+  },
+  "category": {
+    "all": "All",
+    "all_types": "All Types"
+  },
+  "home": {
+    "hero_title": "Global Financial News · AI Insights",
+    "hero_subtitle": "Aggregating 44+ authoritative sources with AI deep analysis to help you grasp financial trends",
+    "stat_total": "Total News",
+    "stat_sources": "Sources",
+    "stat_categories": "Categories",
+    "daily_trend": "Daily News Trend",
+    "last_30_days": "Last 30 days",
+    "sentiment_dist": "Sentiment Distribution",
+    "last_7_days": "Last 7 days",
+    "category_heat": "Category Heat",
+    "today_headlines": "Today's Headlines",
+    "view_more": "View more →",
+    "latest_news": "Latest News",
+    "latest": "Latest",
+    "important": "Important",
+    "hot_keywords": "Hot Keywords",
+    "focus_entities": "Focus Entities",
+    "region_dist": "Region Distribution",
+    "loading": "Loading..."
+  },
+  "news": {
+    "title": "News",
+    "sort_latest": "Latest",
+    "sort_important": "Important",
+    "read_more": "Read more →",
+    "prev_page": "‹ Prev",
+    "next_page": "Next ›",
+    "page_info": "Page {page} / {total_pages}",
+    "no_news": "No news data",
+    "articles": "articles"
+  },
+  "analysis": {
+    "title": "Analysis Reports",
+    "load_report": "Load Report",
+    "keyword_trend": "Keyword Trend",
+    "top_10_keywords": "Top 10 Keywords",
+    "sentiment_trend": "Sentiment Trend",
+    "last_30_days": "Last 30 days",
+    "source_dist": "Source Distribution",
+    "importance_dist": "Importance Distribution",
+    "weekly_report": "Weekly",
+    "monthly_report": "Monthly",
+    "daily_report": "Daily Brief",
+    "analysis_status": "Analysis Status",
+    "ai_function": "AI Function",
+    "analyzed": "Analyzed",
+    "total_articles": "Total Articles",
+    "coverage_rate": "Coverage",
+    "historical_reports": "Historical Reports",
+    "overview": "Overview",
+    "articles_analyzed": "articles analyzed",
+    "hot_topics": "Hot Topics",
+    "key_events": "Key Events",
+    "trend_analysis": "Trend Analysis",
+    "no_report": "No Analysis Report",
+    "no_report_desc": "The analysis report for this period has not been generated yet",
+    "report_schedule": "Weekly reports are generated on Mondays, monthly reports on the 1st of each month",
+    "category_stats": "Category Statistics",
+    "sentiment_dist": "Sentiment Distribution",
+    "no_hot_topics": "No hot topics",
+    "no_key_events": "No key events",
+    "no_overview": "No overview",
+    "no_trend_analysis": "No trend analysis",
+    "no_historical_reports": "No historical reports",
+    "enabled": "Enabled",
+    "disabled": "Disabled"
+  },
+  "events": {
+    "title": "Event Tracking",
+    "subtitle": "Automatically identify and track the development of important financial events",
+    "loading": "Loading..."
+  },
+  "footer": {
+    "about": "About ZHEYE",
+    "about_desc": "Global financial news aggregation and AI intelligent analysis platform, providing professional financial news and deep insights.",
+    "data_sources": "Data Sources",
+    "analysis_features": "Analysis Features",
+    "weekly_report": "Weekly Report",
+    "monthly_report": "Monthly Report",
+    "event_tracking": "Event Tracking",
+    "trend_analysis": "Trend Analysis",
+    "central_bank": "Central Bank Official",
+    "copyright": "© 2026 ZHEYE. Global Financial News Platform"
+  },
+  "common": {
+    "loading": "Loading...",
+    "no_data": "No data",
+    "error": "Error",
+    "success": "Success"
+  },
+  "language": {
+    "en": "English",
+    "zh": "中文"
+  },
+  "sentiment": {
+    "bullish": "📈 Bullish",
+    "bearish": "📉 Bearish",
+    "neutral": "➡️ Neutral",
+    "mixed": "🔀 Mixed"
+  }
+}

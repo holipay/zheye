@@ -5,11 +5,11 @@
     <!-- 源统计 -->
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title">源新闻数量统计</h3>
+            <h3 class="card-title">Source News Statistics</h3>
         </div>
         <div class="card-body">
             <div id="source-stats">
-                <div class="loading">加载中...</div>
+                <div class="loading">{{ t("common.loading") }}</div>
             </div>
         </div>
     </div>
@@ -17,11 +17,11 @@
     <!-- 系统信息 -->
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title">系统信息</h3>
+            <h3 class="card-title">System Info</h3>
         </div>
         <div class="card-body">
             <div id="system-info">
-                <div class="loading">加载中...</div>
+                <div class="loading">{{ t("common.loading") }}</div>
             </div>
         </div>
     </div>
@@ -30,11 +30,11 @@
 <!-- 数据库统计 -->
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title">数据库统计</h3>
+        <h3 class="card-title">Database Statistics</h3>
     </div>
     <div class="card-body">
         <div id="db-stats" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
-            <div class="loading">加载中...</div>
+            <div class="loading">{{ t("common.loading") }}</div>
         </div>
     </div>
 </div>
@@ -66,10 +66,10 @@ async function loadSourceStats() {
                 </div>
             `).join('');
         } else {
-            container.innerHTML = '<div style="color: var(--text-secondary);">暂无数据</div>';
+            container.innerHTML = '<div style="color: var(--text-secondary);">No data</div>';
         }
     } catch (error) {
-        console.error('加载源统计失败:', error);
+        console.error('Error loading source stats:', error);
     }
 }
 
@@ -81,30 +81,30 @@ async function loadSystemInfo() {
         document.getElementById('system-info').innerHTML = `
             <div style="display: flex; flex-direction: column; gap: 16px;">
                 <div>
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">操作系统</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">OS</div>
                     <div style="font-size: 14px;">${data.platform}</div>
                 </div>
                 <div>
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Python 版本</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Python Version</div>
                     <div style="font-size: 14px;">${data.python_version}</div>
                 </div>
                 <div>
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">数据库</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Database</div>
                     <div style="font-size: 14px;">${data.database_url}</div>
                 </div>
                 <div>
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">AI 功能</div>
-                    <div style="font-size: 14px;">${data.ai_enabled ? '✅ 已启用' : '❌ 未启用'}</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">AI Function</div>
+                    <div style="font-size: 14px;">${data.ai_enabled ? '✅ Enabled' : '❌ Disabled'}</div>
                 </div>
                 <div>
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">配置文件</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Config File</div>
                     <div style="font-size: 12px; word-break: break-all;">${data.config_path}</div>
-                    <div style="font-size: 12px; color: ${data.config_exists ? 'var(--admin-success)' : 'var(--admin-danger)'};">${data.config_exists ? '✓ 存在' : '✗ 不存在'}</div>
+                    <div style="font-size: 12px; color: ${data.config_exists ? 'var(--admin-success)' : 'var(--admin-danger)'};">${data.config_exists ? '✓ Exists' : '✗ Not Found'}</div>
                 </div>
             </div>
         `;
     } catch (error) {
-        console.error('加载系统信息失败:', error);
+        console.error('Error loading system info:', error);
     }
 }
 
@@ -117,23 +117,23 @@ async function loadDbStats() {
         document.getElementById('db-stats').innerHTML = `
             <div style="text-align: center; padding: 20px; background: var(--bg-secondary); border-radius: 8px;">
                 <div style="font-size: 32px; font-weight: 700; color: var(--admin-accent);">${overview.total_news}</div>
-                <div style="font-size: 13px; color: var(--text-secondary);">新闻总数</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">Total News</div>
             </div>
             <div style="text-align: center; padding: 20px; background: var(--bg-secondary); border-radius: 8px;">
                 <div style="font-size: 32px; font-weight: 700; color: var(--admin-success);">${overview.source_count}</div>
-                <div style="font-size: 13px; color: var(--text-secondary);">信息源数</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">Sources</div>
             </div>
             <div style="text-align: center; padding: 20px; background: var(--bg-secondary); border-radius: 8px;">
                 <div style="font-size: 32px; font-weight: 700; color: var(--admin-warning);">${overview.active_events}</div>
-                <div style="font-size: 13px; color: var(--text-secondary);">活跃事件</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">Active Events</div>
             </div>
             <div style="text-align: center; padding: 20px; background: var(--bg-secondary); border-radius: 8px;">
                 <div style="font-size: 32px; font-weight: 700; color: var(--admin-highlight);">${overview.today_news}</div>
-                <div style="font-size: 13px; color: var(--text-secondary);">今日新闻</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">Today's News</div>
             </div>
         `;
     } catch (error) {
-        console.error('加载数据库统计失败:', error);
+        console.error('Error loading database stats:', error);
     }
 }
 </script>

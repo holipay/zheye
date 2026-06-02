@@ -1,19 +1,19 @@
 <div class="entity-nav">
-    <h4 class="entity-nav-title">实体导航</h4>
+    <h4 class="entity-nav-title">{{ t("home.focus_entities") }}</h4>
     <div class="entity-type-tabs"
-         hx-get="/api/entities/types"
+         hx-get="/api/entities/types?lang={{ lang }}"
          hx-trigger="load"
          hx-target="#entity-type-tabs"
          hx-swap="innerHTML">
         <div id="entity-type-tabs">
-            <span class="loading">加载类型...</span>
+            <span class="loading">{{ t("common.loading") }}</span>
         </div>
     </div>
     <div id="entity-list"
-         hx-get="/api/entities/popular?limit=15"
+         hx-get="/api/entities/popular?limit=15&lang={{ lang }}"
          hx-trigger="load"
          hx-target="#entity-list"
          hx-swap="innerHTML">
-        <span class="loading">加载实体...</span>
+        <span class="loading">{{ t("common.loading") }}</span>
     </div>
 </div>

@@ -1,0 +1,126 @@
+{
+  "site": {
+    "name": "者也",
+    "title": "全球财经资讯",
+    "description": "全球财经新闻聚合与 AI 分析平台"
+  },
+  "nav": {
+    "home": "首页",
+    "news": "新闻",
+    "analysis": "分析",
+    "events": "事件",
+    "deep_analysis": "深度分析",
+    "event_tracking": "事件追踪"
+  },
+  "top_bar": {
+    "realtime": "实时资讯"
+  },
+  "search": {
+    "placeholder": "搜索新闻..."
+  },
+  "category": {
+    "all": "全部",
+    "all_types": "全部类型"
+  },
+  "home": {
+    "hero_title": "全球财经资讯 · AI 智能洞察",
+    "hero_subtitle": "聚合 44+ 权威信源，AI 深度分析，助您把握财经脉搏",
+    "stat_total": "新闻总量",
+    "stat_sources": "信息源",
+    "stat_categories": "分类",
+    "daily_trend": "每日新闻趋势",
+    "last_30_days": "近30天",
+    "sentiment_dist": "情感分布",
+    "last_7_days": "近7天",
+    "category_heat": "分类热度",
+    "today_headlines": "今日头条",
+    "view_more": "查看更多 →",
+    "latest_news": "最新资讯",
+    "latest": "最新",
+    "important": "重要",
+    "hot_keywords": "热门关键词",
+    "focus_entities": "关注实体",
+    "region_dist": "地域分布",
+    "loading": "加载中..."
+  },
+  "news": {
+    "title": "新闻",
+    "sort_latest": "最新",
+    "sort_important": "重要",
+    "read_more": "阅读全文 →",
+    "prev_page": "‹ 上一页",
+    "next_page": "下一页 ›",
+    "page_info": "第 {page} / {total_pages} 页",
+    "no_news": "暂无新闻数据",
+    "articles": "篇"
+  },
+  "analysis": {
+    "title": "分析报告",
+    "load_report": "加载报告",
+    "keyword_trend": "关键词趋势",
+    "top_10_keywords": "Top 10 关键词",
+    "sentiment_trend": "情感趋势",
+    "last_30_days": "近30天",
+    "source_dist": "来源分布",
+    "importance_dist": "重要性分布",
+    "weekly_report": "周报",
+    "monthly_report": "月报",
+    "daily_report": "每日快报",
+    "analysis_status": "分析状态",
+    "ai_function": "AI 功能",
+    "analyzed": "已分析",
+    "total_articles": "总文章数",
+    "coverage_rate": "覆盖率",
+    "historical_reports": "历史报告",
+    "overview": "概述",
+    "articles_analyzed": "篇文章",
+    "hot_topics": "热门话题",
+    "key_events": "关键事件",
+    "trend_analysis": "趋势分析",
+    "no_report": "暂无分析报告",
+    "no_report_desc": "该时段的分析报告尚未生成",
+    "report_schedule": "周报每周一生成，月报每月1日生成",
+    "category_stats": "分类统计",
+    "sentiment_dist": "情感分布",
+    "no_hot_topics": "暂无热门话题",
+    "no_key_events": "暂无关键事件",
+    "no_overview": "暂无概述",
+    "no_trend_analysis": "暂无趋势分析",
+    "no_historical_reports": "暂无历史报告",
+    "enabled": "启用",
+    "disabled": "禁用"
+  },
+  "events": {
+    "title": "事件追踪",
+    "subtitle": "自动识别和追踪重要财经事件的发展脉络",
+    "loading": "加载中..."
+  },
+  "footer": {
+    "about": "关于者也",
+    "about_desc": "全球财经新闻聚合与 AI 智能分析平台，为您提供专业的财经资讯和深度洞察。",
+    "data_sources": "数据来源",
+    "analysis_features": "分析功能",
+    "weekly_report": "周度报告",
+    "monthly_report": "月度报告",
+    "event_tracking": "事件追踪",
+    "trend_analysis": "趋势分析",
+    "central_bank": "央行官方",
+    "copyright": "© 2026 者也 ZHEYE. 全球财经资讯平台"
+  },
+  "common": {
+    "loading": "加载中...",
+    "no_data": "暂无数据",
+    "error": "错误",
+    "success": "成功"
+  },
+  "language": {
+    "en": "English",
+    "zh": "中文"
+  },
+  "sentiment": {
+    "bullish": "📈 看涨",
+    "bearish": "📉 看跌",
+    "neutral": "➡️ 中性",
+    "mixed": "🔀 混合"
+  }
+}

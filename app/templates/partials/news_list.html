@@ -1,6 +1,6 @@
 {% if news_items %}
     {% for item in news_items %}
-    <div class="news-item" onclick="window.location='/news/{{ item.id }}'">
+    <div class="news-item" onclick="window.location='/{{ lang }}/news/{{ item.id }}'">
         <div class="news-item-header">
             <span class="news-source">{{ item.source }}</span>
             <span class="news-category-tag">{{ item.category }}</span>
@@ -21,7 +21,7 @@
             {% if item._weight is defined and item._weight %}
             <span class="news-weight">★ {{ "%.1f"|format(item._weight) }}</span>
             {% endif %}
-            <a href="/news/{{ item.id }}" class="card-link" onclick="event.stopPropagation()">阅读全文 →</a>
+            <a href="/{{ lang }}/news/{{ item.id }}" class="card-link" onclick="event.stopPropagation()">{{ t("news.read_more") }}</a>
         </div>
     </div>
     {% endfor %}
@@ -29,27 +29,27 @@
     {% if total_pages > 1 %}
     <div class="pagination">
         {% if page > 1 %}
-        <a href="/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page - 1 }}" 
+        <a href="/{{ lang }}/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page - 1 }}" 
            class="page-btn"
-           hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page - 1 }}"
+           hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page - 1 }}&lang={{ lang }}"
            hx-target="#news-list"
-           hx-swap="innerHTML">‹ 上一页</a>
+           hx-swap="innerHTML">{{ t("news.prev_page") }}</a>
         {% endif %}
         
-        <span class="page-info">第 {{ page }} / {{ total_pages }} 页</span>
+        <span class="page-info">{{ t("news.page_info", page=page, total_pages=total_pages) }}</span>
         
         {% if page < total_pages %}
-        <a href="/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page + 1 }}" 
+        <a href="/{{ lang }}/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page + 1 }}" 
            class="page-btn"
-           hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page + 1 }}"
+           hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page + 1 }}&lang={{ lang }}"
            hx-target="#news-list"
-           hx-swap="innerHTML">下一页 ›</a>
+           hx-swap="innerHTML">{{ t("news.next_page") }}</a>
         {% endif %}
     </div>
     {% endif %}
 {% else %}
     <div class="empty-state">
         <div class="empty-state-icon">📰</div>
-        <p>暂无新闻数据</p>
+        <p>{{ t("news.no_news") }}</p>
     </div>
 {% endif %}

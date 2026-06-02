@@ -1,10 +1,10 @@
 <!-- 事件时间线模板 -->
 <div class="events-timeline">
     <div class="timeline-header">
-        <h3>事件追踪</h3>
+        <h3>{{ t("events.title") }}</h3>
         <div class="timeline-filters">
-            <select id="event-category-filter" hx-get="/api/events/timeline" hx-target="#events-timeline-content" hx-include="[name='days']">
-                <option value="">全部分类</option>
+            <select id="event-category-filter" hx-get="/api/events/timeline?lang={{ lang }}" hx-target="#events-timeline-content" hx-include="[name='days']">
+                <option value="">{{ t("category.all") }}</option>
                 <option value="央行与利率" {% if category == '央行与利率' %}selected{% endif %}>央行与利率</option>
                 <option value="股市与市场" {% if category == '股市与市场' %}selected{% endif %}>股市与市场</option>
                 <option value="宏观经济" {% if category == '宏观经济' %}selected{% endif %}>宏观经济</option>
@@ -12,11 +12,11 @@
                 <option value="科技与企业" {% if category == '科技与企业' %}selected{% endif %}>科技与企业</option>
                 <option value="大宗商品与能源" {% if category == '大宗商品与能源' %}selected{% endif %}>大宗商品与能源</option>
             </select>
-            <select name="days" hx-get="/api/events/timeline" hx-target="#events-timeline-content" hx-include="#event-category-filter">
-                <option value="1" {% if days == 1 %}selected{% endif %}>今天</option>
-                <option value="3" {% if days == 3 %}selected{% endif %}>近3天</option>
-                <option value="7" {% if days == 7 %}selected{% endif %}>近7天</option>
-                <option value="30" {% if days == 30 %}selected{% endif %}>近30天</option>
+            <select name="days" hx-get="/api/events/timeline?lang={{ lang }}" hx-target="#events-timeline-content" hx-include="#event-category-filter">
+                <option value="1" {% if days == 1 %}selected{% endif %}>Today</option>
+                <option value="3" {% if days == 3 %}selected{% endif %}>Last 3 days</option>
+                <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
+                <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
             </select>
         </div>
     </div>
@@ -33,16 +33,16 @@
                         <span class="event-date">{{ event.last_updated }}</span>
                     </div>
                     <h4 class="event-title">
-                        <a href="/events/{{ event.event_id }}" hx-get="/api/events/{{ event.event_id }}" hx-target="#main-content" hx-push-url="true">
+                        <a href="/{{ lang }}/events/{{ event.event_id }}" hx-get="/api/events/{{ event.event_id }}?lang={{ lang }}" hx-target="#main-content" hx-push-url="true">
                             {{ event.title }}
                         </a>
                     </h4>
                     <div class="event-meta">
                         <span class="event-updates">
-                            <i class="icon-update"></i> {{ event.update_count }} 次更新
+                            <i class="icon-update"></i> {{ event.update_count }} updates
                         </span>
                         <span class="event-articles">
-                            <i class="icon-article"></i> {{ event.article_count }} 篇文章
+                            <i class="icon-article"></i> {{ event.article_count }} articles
                         </span>
                         <span class="event-status status-{{ event.status }}">
                             {{ event.status }}
@@ -54,7 +54,7 @@
         </div>
         {% else %}
         <div class="empty-state">
-            <p>暂无事件数据</p>
+            <p>{{ t("common.no_data") }}</p>
         </div>
         {% endif %}
     </div>
