@@ -1,12 +1,15 @@
-<div class="entity-list">
-    {% for ent in entities %}
-    <a href="/news?entity_id={{ ent.id }}" 
-       class="entity-tag"
-       hx-get="/api/news/by-entity/{{ ent.id }}"
-       hx-target="#news-list"
-       hx-swap="innerHTML">
-        <span class="entity-tag-name">{{ ent.name }}</span>
-        <span class="entity-tag-count">{{ ent.article_count }}</span>
-    </a>
-    {% endfor %}
+{% for ent in entities %}
+<div class="entity-item">
+    <div class="entity-info">
+        <div class="entity-type-indicator type-{{ ent.entity_type or 'company' }}"></div>
+        <div>
+            <a href="/news/by-entity/{{ ent.id }}" class="entity-name"
+               hx-get="/api/news/by-entity/{{ ent.id }}"
+               hx-target="#news-list"
+               hx-swap="innerHTML">{{ ent.name }}</a>
+            <div style="font-size: 11px; color: var(--text-muted);">{{ ent.entity_type or '' }}</div>
+        </div>
+    </div>
+    <span class="entity-count">{{ ent.article_count }}</span>
 </div>
+{% endfor %}

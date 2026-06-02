@@ -1,39 +1,137 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="page-header">
-    <h2>🤖 AI 每日分析</h2>
-    <p>基于全球新闻的智能分析与洞察</p>
-</div>
-
-<div class="analysis-container">
-    <div class="analysis-card">
-        <div class="analysis-date">今日分析</div>
-        <div class="analysis-content" 
-             hx-get="/api/latest?limit=20" 
-             hx-trigger="load"
-             hx-target="#news-feed"
-             hx-swap="innerHTML">
-            <div class="loading">加载中...</div>
-        </div>
-    </div>
-    
-    <div class="sidebar">
-        <div class="sidebar-section">
-            <h3>📊 分类统计</h3>
-            <div id="categories" 
-                 hx-get="/api/categories" 
-                 hx-trigger="load"
-                 hx-target="#categories"
-                 hx-swap="innerHTML">
-                <div class="loading">加载中...</div>
+<!-- 英雄区域 -->
+<div class="hero-section">
+    <div class="hero-content">
+        <h1 class="hero-title">全球财经资讯 · AI 智能洞察</h1>
+        <p class="hero-subtitle">聚合 44+ 权威信源，AI 深度分析，助您把握财经脉搏</p>
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <div class="hero-stat-value" id="stat-total">-</div>
+                <div class="hero-stat-label">新闻总量</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-value" id="stat-sources">44+</div>
+                <div class="hero-stat-label">信息源</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-value" id="stat-categories">13</div>
+                <div class="hero-stat-label">分类</div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="news-section">
-    <h3>📰 最新新闻</h3>
-    <div id="news-feed"></div>
+<!-- 主内容网格 -->
+<div class="home-grid">
+    <!-- 左侧：新闻流 -->
+    <div>
+        <!-- 头条新闻 -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">今日头条</h2>
+                <a href="/news" class="card-link">查看更多 →</a>
+            </div>
+            <div id="featured-news" 
+                 hx-get="/api/latest?limit=5" 
+                 hx-trigger="load"
+                 hx-target="#featured-news"
+                 hx-swap="innerHTML">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+
+        <!-- 最新新闻 -->
+        <div class="card" style="margin-top: var(--spacing-md);">
+            <div class="card-header">
+                <h2 class="card-title">最新资讯</h2>
+                <div class="sort-toggle">
+                    <a href="/" class="sort-btn active" 
+                       hx-get="/api/latest?limit=10" hx-target="#news-feed" hx-swap="innerHTML">最新</a>
+                    <a href="/" class="sort-btn"
+                       hx-get="/api/news?sort=weight&limit=10" hx-target="#news-feed" hx-swap="innerHTML">重要</a>
+                </div>
+            </div>
+            <div class="news-list" id="news-feed"
+                 hx-get="/api/latest?limit=10" 
+                 hx-trigger="load"
+                 hx-target="#news-feed"
+                 hx-swap="innerHTML">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧：侧边栏 -->
+    <aside class="sidebar">
+        <!-- 市场情绪 -->
+        <div class="sidebar-widget">
+            <div class="widget-header">市场情绪</div>
+            <div class="widget-content">
+                <div id="sentiment-bar" class="sentiment-bar">
+                    <div class="sentiment-positive" style="width: 40%"></div>
+                    <div class="sentiment-neutral" style="width: 30%"></div>
+                    <div class="sentiment-negative" style="width: 30%"></div>
+                </div>
+                <div class="sentiment-labels">
+                    <span class="sentiment-label">
+                        <span class="sentiment-dot" style="background: var(--color-up)"></span>
+                        积极 <span id="sentiment-pos">-</span>
+                    </span>
+                    <span class="sentiment-label">
+                        <span class="sentiment-dot" style="background: var(--color-neutral)"></span>
+                        中性 <span id="sentiment-neu">-</span>
+                    </span>
+                    <span class="sentiment-label">
+                        <span class="sentiment-dot" style="background: var(--color-down)"></span>
+                        消极 <span id="sentiment-neg">-</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 热门关键词 -->
+        <div class="sidebar-widget">
+            <div class="widget-header">热门关键词</div>
+            <div class="widget-content">
+                <div class="keyword-list" id="keywords"
+                     hx-get="/api/keywords/popular?limit=15" hx-trigger="load" hx-target="#keywords" hx-swap="innerHTML">
+                    <div class="loading">加载中...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 热门实体 -->
+        <div class="sidebar-widget">
+            <div class="widget-header">关注实体</div>
+            <div class="widget-content">
+                <div class="entity-list" id="entities"
+                     hx-get="/api/entities/popular?limit=8" hx-trigger="load" hx-target="#entities" hx-swap="innerHTML">
+                    <div class="loading">加载中...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分类统计 -->
+        <div class="sidebar-widget">
+            <div class="widget-header">分类分布</div>
+            <div class="widget-content" id="categories"
+                 hx-get="/api/categories" hx-trigger="load" hx-target="#categories" hx-swap="innerHTML">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+    </aside>
 </div>
+
+<script>
+// 加载统计数据
+document.addEventListener('DOMContentLoaded', function() {
+    fetch('/api/meta')
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('stat-total').textContent = data.total || 0;
+        });
+});
+</script>
 {% endblock %}

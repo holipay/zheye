@@ -1,54 +1,55 @@
-<div class="news-list">
-    {% if news_items %}
-        {% for item in news_items %}
-        <article class="news-item">
-            <div class="news-meta">
-                <span class="news-source">{{ item.source }}</span>
-                <span class="news-category">{{ item.category }}</span>
-                {% if item.article_type and item.article_type != 'news' %}
-                <span class="news-type type-{{ item.article_type }}">{{ item.article_type }}</span>
-                {% endif %}
-                <span class="news-date">{{ item.date.strftime('%Y-%m-%d') if item.date else '' }}</span>
-                {% if item._weight is defined and item._weight %}
-                <span class="news-weight">权重: {{ "%.1f"|format(item._weight) }}</span>
-                {% endif %}
-                <a href="/news/{{ item.id }}" class="news-detail-link">详情</a>
-            </div>
-            <h3 class="news-title">
-                <a href="{{ item.link }}" target="_blank" rel="noopener">
-                    {{ item.title }}
-                </a>
-            </h3>
-            {% if item.summary %}
-            <p class="news-summary">{{ item.summary[:200] }}{% if item.summary|length > 200 %}...{% endif %}</p>
+{% if news_items %}
+    {% for item in news_items %}
+    <div class="news-item" onclick="window.location='/news/{{ item.id }}'">
+        <div class="news-item-header">
+            <span class="news-source">{{ item.source }}</span>
+            <span class="news-category-tag">{{ item.category }}</span>
+            {% if item.article_type and item.article_type != 'news' %}
+            <span class="badge {% if item.article_type == 'opinion' %}badge-neutral{% elif item.article_type == 'analysis' %}badge-positive{% else %}badge-neutral{% endif %}">{{ item.article_type }}</span>
             {% endif %}
-        </article>
-        {% endfor %}
-        
-        {% if total_pages > 1 %}
-        <div class="pagination">
-            {% if page > 1 %}
-            <a href="/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page - 1 }}" 
-               class="page-btn"
-               hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page - 1 }}"
-               hx-target="#news-list"
-               hx-swap="innerHTML">上一页</a>
-            {% endif %}
-            
-            <span class="page-info">第 {{ page }} / {{ total_pages }} 页 (共 {{ total }} 条)</span>
-            
-            {% if page < total_pages %}
-            <a href="/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page + 1 }}" 
-               class="page-btn"
-               hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page + 1 }}"
-               hx-target="#news-list"
-               hx-swap="innerHTML">下一页</a>
-            {% endif %}
+            <span class="news-time">{{ item.date.strftime('%m-%d %H:%M') if item.date else '' }}</span>
         </div>
+        <h3 class="news-title">
+            <a href="{{ item.link }}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+                {{ item.title }}
+            </a>
+        </h3>
+        {% if item.summary %}
+        <p class="news-summary">{{ item.summary[:200] }}{% if item.summary|length > 200 %}...{% endif %}</p>
         {% endif %}
-    {% else %}
-        <div class="empty-state">
-            <p>暂无新闻数据</p>
+        <div class="news-meta">
+            {% if item._weight is defined and item._weight %}
+            <span class="news-weight">★ {{ "%.1f"|format(item._weight) }}</span>
+            {% endif %}
+            <a href="/news/{{ item.id }}" class="card-link" onclick="event.stopPropagation()">阅读全文 →</a>
         </div>
+    </div>
+    {% endfor %}
+    
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page - 1 }}" 
+           class="page-btn"
+           hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page - 1 }}"
+           hx-target="#news-list"
+           hx-swap="innerHTML">‹ 上一页</a>
+        {% endif %}
+        
+        <span class="page-info">第 {{ page }} / {{ total_pages }} 页</span>
+        
+        {% if page < total_pages %}
+        <a href="/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page + 1 }}" 
+           class="page-btn"
+           hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page + 1 }}"
+           hx-target="#news-list"
+           hx-swap="innerHTML">下一页 ›</a>
+        {% endif %}
+    </div>
     {% endif %}
-</div>
+{% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">📰</div>
+        <p>暂无新闻数据</p>
+    </div>
+{% endif %}

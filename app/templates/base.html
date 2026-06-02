@@ -3,32 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }} - zheye 全球资讯</title>
+    <title>{{ title }} - 者也 | 全球财经资讯</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+SC:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
     <script src="/static/js/htmx.min.js"></script>
 </head>
 <body>
+    <!-- 顶部信息栏 -->
+    <div class="top-bar">
+        <div class="container">
+            <div class="top-bar-left">
+                <span class="market-tag">实时资讯</span>
+                <span class="divider">|</span>
+                <span id="current-time"></span>
+            </div>
+            <div class="top-bar-right">
+                <a href="/analysis">深度分析</a>
+                <a href="/events">事件追踪</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主导航 -->
     <header class="header">
         <div class="container">
-            <h1 class="logo"><a href="/">📰 zheye</a></h1>
-            <nav class="nav">
-                <a href="/" class="nav-link {% if title == 'AI 分析' %}active{% endif %}">AI 分析</a>
+            <div class="header-left">
+                <a href="/" class="logo">
+                    <span class="logo-text">者也</span>
+                    <span class="logo-sub">ZHEYE</span>
+                </a>
+            </div>
+            <nav class="main-nav">
+                <a href="/" class="nav-link {% if title == 'AI 分析' %}active{% endif %}">首页</a>
                 <a href="/news" class="nav-link {% if title == '新闻' %}active{% endif %}">新闻</a>
-                <a href="/articles" class="nav-link {% if title == '文章' %}active{% endif %}">文章</a>
+                <a href="/analysis" class="nav-link {% if title == '分析报告' %}active{% endif %}">分析</a>
+                <a href="/events" class="nav-link {% if title == '事件追踪' %}active{% endif %}">事件</a>
             </nav>
+            <div class="header-right">
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="搜索新闻..." 
+                           hx-get="/api/search" hx-trigger="keyup changed delay:500ms" hx-target="#search-results">
+                    <button class="search-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <path d="m21 21-4.35-4.35"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
         </div>
     </header>
 
+    <!-- 分类导航 -->
+    <nav class="category-nav">
+        <div class="container">
+            <div class="category-links" hx-get="/api/categories" hx-trigger="load" hx-swap="innerHTML">
+                <a href="/news?category=all" class="cat-link active">全部</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
     <main class="main">
         <div class="container">
             {% block content %}{% endblock %}
         </div>
     </main>
 
+    <!-- 页脚 -->
     <footer class="footer">
         <div class="container">
-            <p>zheye - 全球新闻聚合与 AI 分析平台</p>
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <h4>关于者也</h4>
+                    <p>全球财经新闻聚合与 AI 智能分析平台，为您提供专业的财经资讯和深度洞察。</p>
+                </div>
+                <div class="footer-col">
+                    <h4>数据来源</h4>
+                    <ul>
+                        <li>Reuters</li>
+                        <li>Bloomberg</li>
+                        <li>Financial Times</li>
+                        <li>央行官方</li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>分析功能</h4>
+                    <ul>
+                        <li>周度报告</li>
+                        <li>月度报告</li>
+                        <li>事件追踪</li>
+                        <li>趋势分析</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 者也 ZHEYE. 全球财经资讯平台</p>
+            </div>
         </div>
     </footer>
+
+    <script>
+        // 更新时间
+        function updateTime() {
+            const now = new Date();
+            const options = { 
+                year: 'numeric', 
+                month: '2-digit', 
+                day: '2-digit',
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false 
+            };
+            document.getElementById('current-time').textContent = now.toLocaleString('zh-CN', options);
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+    </script>
 </body>
 </html>
