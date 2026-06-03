@@ -10,7 +10,6 @@ P1 功能：
 3. 因果链构建 - 多层次因果分析
 """
 
-import json
 import logging
 from datetime import datetime
 from typing import Optional, List

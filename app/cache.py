@@ -1,4 +1,3 @@
-import time
 import threading
 from typing import Any, Optional
 from cachetools import TTLCache
@@ -18,16 +17,15 @@ def get_cached(key: str) -> Optional[Any]:
 
 
 def set_cached(key: str, value: Any, ttl: int = None):
-    """设置缓存（线程安全）"""
+    """
+    设置缓存（线程安全）
+    
+    注意：cachetools.TTLCache 不支持 per-item TTL，
+    自定义 ttl 参数当前会被忽略，使用全局 TTL。
+    如需 per-item TTL，可考虑使用 Redis 或其他缓存方案。
+    """
     with _lock:
-        if ttl:
-            # 使用 cachetools 的 TTLCache 来处理自定义 TTL
-            # 创建临时缓存来计算过期时间
-            temp_cache = TTLCache(maxsize=1, ttl=ttl)
-            temp_cache[key] = value
-            _cache[key] = temp_cache[key]
-        else:
-            _cache[key] = value
+        _cache[key] = value
 
 
 def clear_cache():
