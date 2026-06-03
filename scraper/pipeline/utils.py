@@ -14,6 +14,33 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================
+# 文本处理
+# ============================================================
+
+def smart_truncate(text: str, max_len: int = 3000, threshold: float = 0.6) -> str:
+    """
+    在句子边界智能截断文本
+    
+    Args:
+        text: 要截断的文本
+        max_len: 最大长度
+        threshold: 最小保留比例（相对于 max_len）
+    
+    Returns:
+        截断后的文本
+    """
+    if len(text) <= max_len:
+        return text
+    truncated = text[:max_len]
+    # 在句子边界截断
+    for sep in ['。', '.\n', '.', '；', '\n']:
+        last_sep = truncated.rfind(sep)
+        if last_sep > max_len * threshold:
+            return truncated[:last_sep + len(sep)]
+    return truncated
+
+
+# ============================================================
 # AI 响应解析
 # ============================================================
 

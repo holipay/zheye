@@ -17,24 +17,11 @@ from datetime import datetime, date
 from typing import Optional
 from dataclasses import dataclass
 
-from scraper.pipeline.utils import parse_ai_response
+from scraper.pipeline.utils import parse_ai_response, smart_truncate
 from app.ai_metrics import get_ai_metrics
 from models.schemas import ArticleAnalysisSchema, DailyReportSchema, TrendSchema
 
 logger = logging.getLogger(__name__)
-
-
-def _smart_truncate(text: str, max_len: int = 3000) -> str:
-    """在句子边界智能截断文本"""
-    if len(text) <= max_len:
-        return text
-    truncated = text[:max_len]
-    # 在句子边界截断
-    for sep in ['。', '.\n', '.', '；', '\n']:
-        last_sep = truncated.rfind(sep)
-        if last_sep > max_len * 0.6:
-            return truncated[:last_sep + len(sep)]
-    return truncated
 
 
 @dataclass
@@ -202,7 +189,7 @@ class DeepSeekClient:
             text += f"摘要: {summary}\n"
         if content:
             # 使用智能截断，在句子边界断开
-            text += f"正文: {_smart_truncate(content, 3000)}\n"
+            text += f"正文: {smart_truncate(content, 3000)}\n"
         if category:
             text += f"分类: {category}\n"
         

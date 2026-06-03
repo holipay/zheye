@@ -11,6 +11,47 @@ from app.routes.api_common import router
 REPORT_TABLES = {"weekly_reports", "monthly_reports"}
 
 
+def parse_date(target_date: str) -> date:
+    """
+    解析日期字符串
+    
+    Args:
+        target_date: 日期字符串 (YYYY-MM-DD)
+    
+    Returns:
+        date 对象
+    
+    Raises:
+        HTTPException: 日期格式无效
+    """
+    try:
+        return date.fromisoformat(target_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="日期格式无效，请使用 YYYY-MM-DD")
+
+
+def serialize_daily_report(report: DailyReport) -> dict:
+    """
+    序列化每日报告
+    
+    Args:
+        report: DailyReport 对象
+    
+    Returns:
+        序列化后的字典
+    """
+    return {
+        "date": str(report.date),
+        "overview": report.overview,
+        "hot_topics": report.hot_topics,
+        "market_sentiment": report.market_sentiment,
+        "key_events": report.key_events,
+        "trend_analysis": report.trend_analysis,
+        "news_count": report.news_count,
+        "generated_at": report.generated_at.isoformat() if report.generated_at else None,
+    }
+
+
 @router.get("/analysis/daily/{target_date}")
 async def get_daily_report(
     target_date: str,
@@ -22,10 +63,7 @@ async def get_daily_report(
     if cached:
         return cached
 
-    try:
-        report_date = date.fromisoformat(target_date)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="日期格式无效，请使用 YYYY-MM-DD")
+    report_date = parse_date(target_date)
     
     result = await session.execute(
         select(DailyReport).where(DailyReport.date == report_date)
@@ -35,16 +73,7 @@ async def get_daily_report(
     if not report:
         raise HTTPException(status_code=404, detail=f"未找到 {target_date} 的分析报告")
     
-    data = {
-        "date": str(report.date),
-        "overview": report.overview,
-        "hot_topics": report.hot_topics,
-        "market_sentiment": report.market_sentiment,
-        "key_events": report.key_events,
-        "trend_analysis": report.trend_analysis,
-        "news_count": report.news_count,
-        "generated_at": report.generated_at.isoformat() if report.generated_at else None,
-    }
+    data = serialize_daily_report(report)
     set_cached(cache_key, data, ttl=600)
     return data
 
@@ -65,16 +94,7 @@ async def get_latest_report(session: AsyncSession = Depends(get_session)):
     if not report:
         return {"message": "暂无分析报告"}
     
-    data = {
-        "date": str(report.date),
-        "overview": report.overview,
-        "hot_topics": report.hot_topics,
-        "market_sentiment": report.market_sentiment,
-        "key_events": report.key_events,
-        "trend_analysis": report.trend_analysis,
-        "news_count": report.news_count,
-        "generated_at": report.generated_at.isoformat() if report.generated_at else None,
-    }
+    data = serialize_daily_report(report)
     set_cached(cache_key, data, ttl=300)
     return data
 
@@ -85,13 +105,7 @@ async def get_sentiment_stats(
     target_date: str = None,
 ):
     """获取情感分析统计"""
-    if target_date:
-        try:
-            report_date = date.fromisoformat(target_date)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="日期格式无效")
-    else:
-        report_date = date.today()
+    report_date = parse_date(target_date) if target_date else date.today()
     
     # 统计情感分布
     stmt = text("""
@@ -161,13 +175,7 @@ async def get_trends(
     if cached:
         return cached
 
-    if target_date:
-        try:
-            report_date = date.fromisoformat(target_date)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="日期格式无效")
-    else:
-        report_date = date.today()
+    report_date = parse_date(target_date) if target_date else date.today()
     
     query = select(Trend).where(Trend.date == report_date)
     if keyword:
@@ -229,10 +237,7 @@ async def get_weekly_report(
     if cached:
         return cached
 
-    try:
-        report_date = date.fromisoformat(target_date)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="日期格式无效，请使用 YYYY-MM-DD")
+    report_date = parse_date(target_date)
     
     # 计算周范围
     from datetime import timedelta
@@ -278,10 +283,7 @@ async def get_monthly_report(
     if cached:
         return cached
 
-    try:
-        report_date = date.fromisoformat(target_date)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="日期格式无效，请使用 YYYY-MM-DD")
+    report_date = parse_date(target_date)
     
     # 计算月范围
     start_date = report_date.replace(day=1)

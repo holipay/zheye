@@ -4,6 +4,8 @@ import os
 from typing import Optional
 import httpx
 
+from scraper.pipeline.utils import smart_truncate
+
 logger = logging.getLogger(__name__)
 
 MYMEMORY_URL = "https://api.mymemory.translated.net/get"
@@ -82,7 +84,7 @@ async def translate_text(text: str, source_lang: str = "en", target_lang: str = 
         client = await get_http_client()
         
         # 智能截断：在句子边界截断
-        truncated_text = _smart_truncate(text, 500)
+        truncated_text = smart_truncate(text, 500, threshold=0.5)
         
         response = await client.get(MYMEMORY_URL, params={
             "q": truncated_text,
@@ -102,19 +104,6 @@ async def translate_text(text: str, source_lang: str = "en", target_lang: str = 
         logger.error(f"Translation error: {e}")
     
     return None
-
-
-def _smart_truncate(text: str, max_len: int) -> str:
-    """在句子边界智能截断文本"""
-    if len(text) <= max_len:
-        return text
-    truncated = text[:max_len]
-    # 在句子边界截断
-    for sep in ['。', '.\n', '.', '；', ',', '，', '\n']:
-        last_sep = truncated.rfind(sep)
-        if last_sep > max_len * 0.5:
-            return truncated[:last_sep + len(sep)]
-    return truncated
 
 
 def get_text_hash(text: str) -> str:
