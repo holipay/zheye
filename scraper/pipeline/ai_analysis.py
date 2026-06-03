@@ -18,6 +18,7 @@ from typing import Optional
 from dataclasses import dataclass
 
 from scraper.pipeline.utils import parse_ai_response
+from app.ai_metrics import get_ai_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -97,14 +98,16 @@ class DeepSeekClient:
             self.enabled = False
             self.client = None
     
-    def _call_api(self, messages: list[dict], temperature: float = 0.7, max_tokens: int = 2000) -> Optional[str]:
+    def _call_api(self, messages: list[dict], temperature: float = 0.7, 
+                  max_tokens: int = 2000, function_name: str = "unknown") -> Optional[str]:
         """
-        调用 API（带重试机制）
+        调用 API（带重试机制和指标监控）
         
         Args:
             messages: 消息列表
             temperature: 温度参数
             max_tokens: 最大 token 数
+            function_name: 调用函数名（用于指标统计）
         
         Returns:
             API 响应内容或 None
@@ -112,7 +115,9 @@ class DeepSeekClient:
         if not self.enabled or not self.client:
             return None
         
+        metrics = get_ai_metrics()
         last_error = None
+        
         for attempt in range(self.max_retries):
             try:
                 response = self.client.chat.completions.create(
@@ -126,6 +131,11 @@ class DeepSeekClient:
                 # 记录 token 使用量
                 if hasattr(response, 'usage') and response.usage:
                     usage = response.usage
+                    metrics.record_usage(
+                        prompt_tokens=usage.prompt_tokens,
+                        completion_tokens=usage.completion_tokens,
+                        function_name=function_name
+                    )
                     logger.debug(f"API 调用: prompt={usage.prompt_tokens}, "
                                f"completion={usage.completion_tokens}, "
                                f"total={usage.total_tokens}")
@@ -146,14 +156,16 @@ class DeepSeekClient:
                 else:
                     # 不可重试错误，直接失败
                     logger.error(f"API 调用异常 ({error_type}): {e}")
+                    metrics.record_error(function_name)
                     return None
         
         # 所有重试都失败
         logger.error(f"API 调用失败，已重试{self.max_retries}次: {last_error}")
+        metrics.record_error(function_name)
         return None
     
     def chat(self, messages: list[dict], temperature: float = 0.7, 
-             max_tokens: int = 2000) -> Optional[str]:
+             max_tokens: int = 2000, function_name: str = "chat") -> Optional[str]:
         """
         公共 API 调用接口
         
@@ -161,11 +173,12 @@ class DeepSeekClient:
             messages: 消息列表
             temperature: 温度参数
             max_tokens: 最大 token 数
+            function_name: 调用函数名（用于指标统计）
         
         Returns:
             API 响应内容或 None
         """
-        return self._call_api(messages, temperature, max_tokens)
+        return self._call_api(messages, temperature, max_tokens, function_name)
     
     def analyze_article(self, title: str, content: str = None, summary: str = None, 
                        category: str = None, lang: str = "en") -> Optional[ArticleAnalysis]:

@@ -275,10 +275,30 @@ def update_event_with_article(event: dict, title: str, pub_date: date = None,
 
 
 class EventTracker:
-    """事件追踪器"""
+    """
+    事件追踪器（带 LRU 缓存）
     
-    def __init__(self):
-        self._events_cache: dict[str, dict] = {}
+    使用 OrderedDict 实现 LRU 缓存，自动淘汰最久未使用的事件。
+    """
+    
+    def __init__(self, max_size: int = 1000):
+        """
+        Args:
+            max_size: 缓存最大容量
+        """
+        from collections import OrderedDict
+        self._events_cache: OrderedDict[str, dict] = OrderedDict()
+        self._max_size = max_size
+    
+    def _evict_if_needed(self):
+        """如果超过容量，淘汰最久未使用的事件"""
+        while len(self._events_cache) >= self._max_size:
+            self._events_cache.popitem(last=False)  # 移除最旧的
+    
+    def _touch(self, event_id: str):
+        """更新事件的访问顺序"""
+        if event_id in self._events_cache:
+            self._events_cache.move_to_end(event_id)
     
     def process_article(self, title: str, summary: str = None, content: str = None,
                        category: str = "其他", pub_date: date = None) -> Optional[dict]:
@@ -308,14 +328,17 @@ class EventTracker:
             self._events_cache[event_id] = update_event_with_article(
                 self._events_cache[event_id], title, pub_date, summary
             )
+            self._touch(event_id)
             return self._events_cache[event_id]
         else:
-            # 新建事件
+            # 新建事件（检查容量）
+            self._evict_if_needed()
             self._events_cache[event_id] = event_info
             return event_info
     
     def get_event(self, event_id: str) -> Optional[dict]:
         """获取事件"""
+        self._touch(event_id)
         return self._events_cache.get(event_id)
     
     def get_all_events(self, category: str = None, status: str = None, 
@@ -332,6 +355,16 @@ class EventTracker:
         events.sort(key=lambda x: x.get("last_updated", ""), reverse=True)
         
         return events[:limit]
+    
+    @property
+    def size(self) -> int:
+        """当前缓存大小"""
+        return len(self._events_cache)
+    
+    @property
+    def capacity(self) -> int:
+        """缓存容量"""
+        return self._max_size
     
     def clear_cache(self):
         """清空缓存"""
