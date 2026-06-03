@@ -9,6 +9,7 @@ import json
 import logging
 from datetime import datetime, date, timedelta
 from pathlib import Path
+from typing import Any
 from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -33,7 +34,7 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templa
 CONFIG_PATH = Path(__file__).parent.parent.parent / "scraper" / "sources" / "config.yaml"
 
 
-def load_rss_config() -> dict:
+def load_rss_config() -> dict[str, Any]:
     """加载 RSS 源配置"""
     try:
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
@@ -43,7 +44,7 @@ def load_rss_config() -> dict:
         return {"sources": [], "settings": {}}
 
 
-def save_rss_config(config: dict) -> bool:
+def save_rss_config(config: dict[str, Any]) -> bool:
     """保存 RSS 源配置"""
     try:
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:

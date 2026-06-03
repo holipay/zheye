@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, date, timezone
 from typing import Optional
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from models.base import async_session
 from models.news import News
@@ -16,7 +17,7 @@ from app.cache import invalidate_cache
 logger = logging.getLogger(__name__)
 
 
-async def save_news(items: list[dict]) -> int:
+async def save_news(items: list[dict[str, any]]) -> int:
     if not items:
         return 0
 
@@ -126,7 +127,7 @@ def _invalidate_events_cache():
         invalidate_cache(prefix)
 
 
-async def process_article_event(session, item: dict) -> Optional[dict]:
+async def process_article_event(session: AsyncSession, item: dict[str, any]) -> Optional[dict[str, any]]:
     """
     处理文章的事件检测和关联
     
@@ -234,10 +235,11 @@ async def update_source_health(
     source_name: str,
     success: bool,
     items_count: int = 0,
-    error: str = None,
-    etag: str = None,
-    last_modified: str = None,
-):
+    error: Optional[str] = None,
+    etag: Optional[str] = None,
+    last_modified: Optional[str] = None,
+) -> None:
+    """更新源健康状态"""
     async with async_session() as session:
         result = await session.execute(select(SourceHealth).where(SourceHealth.source_name == source_name))
         health = result.scalar_one_or_none()
