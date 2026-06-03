@@ -13,8 +13,9 @@ from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func, desc, text
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from models.base import async_session
+from models.base import get_session
 from models.news import News
 from models.source_health import SourceHealth
 from models.run_metrics import RunMetrics
@@ -105,137 +106,145 @@ async def admin_logs(request: Request, lang: str, _: bool = Depends(verify_admin
 # ============================================================
 
 @router.get("/admin/api/dashboard")
-async def get_dashboard(_: bool = Depends(verify_admin_credentials)):
+async def get_dashboard(
+    _: bool = Depends(verify_admin_credentials),
+    session: AsyncSession = Depends(get_session),
+):
     """获取仪表盘数据"""
-    async with async_session() as session:
-        today = date.today()
-        week_ago = today - timedelta(days=7)
-        
-        # 使用单条 SQL 获取新闻统计（total, today, week）
-        news_stats_result = await session.execute(
-            select(
-                func.count(News.id).label("total"),
-                func.count(News.id).filter(func.date(News.created_at) == today).label("today"),
-                func.count(News.id).filter(News.created_at >= week_ago).label("week")
-            )
+    today = date.today()
+    week_ago = today - timedelta(days=7)
+    
+    # 使用单条 SQL 获取新闻统计（total, today, week）
+    news_stats_result = await session.execute(
+        select(
+            func.count(News.id).label("total"),
+            func.count(News.id).filter(func.date(News.created_at) == today).label("today"),
+            func.count(News.id).filter(News.created_at >= week_ago).label("week")
         )
-        news_stats = news_stats_result.one()
-        total_news = news_stats.total
-        today_news = news_stats.today
-        week_news = news_stats.week
-        
-        # 使用单条 SQL 获取源统计（total, healthy）
-        source_stats_result = await session.execute(
-            select(
-                func.count(SourceHealth.id).label("total"),
-                func.count(SourceHealth.id).filter(SourceHealth.consecutive_failures < 3).label("healthy")
-            )
+    )
+    news_stats = news_stats_result.one()
+    total_news = news_stats.total
+    today_news = news_stats.today
+    week_news = news_stats.week
+    
+    # 使用单条 SQL 获取源统计（total, healthy）
+    source_stats_result = await session.execute(
+        select(
+            func.count(SourceHealth.id).label("total"),
+            func.count(SourceHealth.id).filter(SourceHealth.consecutive_failures < 3).label("healthy")
         )
-        source_stats = source_stats_result.one()
-        source_count = source_stats.total
-        healthy_sources = source_stats.healthy
-        
-        # 事件统计
-        active_events = (await session.execute(
-            select(func.count(Event.id)).where(Event.status == "active")
-        )).scalar()
-        
-        # 最近运行记录
-        last_run_result = await session.execute(
-            select(RunMetrics).order_by(desc(RunMetrics.started_at)).limit(1)
+    )
+    source_stats = source_stats_result.one()
+    source_count = source_stats.total
+    healthy_sources = source_stats.healthy
+    
+    # 事件统计
+    active_events = (await session.execute(
+        select(func.count(Event.id)).where(Event.status == "active")
+    )).scalar()
+    
+    # 最近运行记录
+    last_run_result = await session.execute(
+        select(RunMetrics).order_by(desc(RunMetrics.started_at)).limit(1)
+    )
+    last_run = last_run_result.scalar_one_or_none()
+    
+    # 分类统计
+    category_stats_result = await session.execute(
+        select(News.category, func.count(News.id))
+        .group_by(News.category)
+        .order_by(desc(func.count(News.id)))
+    )
+    category_stats = [{"name": row[0], "count": row[1]} for row in category_stats_result.all()]
+    
+    # 最近7天每日新闻数量 - 使用单条 SQL 按日期分组
+    daily_stats_result = await session.execute(
+        select(
+            func.date(News.date).label("day"),
+            func.count(News.id).label("count")
         )
-        last_run = last_run_result.scalar_one_or_none()
-        
-        # 分类统计
-        category_stats_result = await session.execute(
-            select(News.category, func.count(News.id))
-            .group_by(News.category)
-            .order_by(desc(func.count(News.id)))
-        )
-        category_stats = [{"name": row[0], "count": row[1]} for row in category_stats_result.all()]
-        
-        # 最近7天每日新闻数量 - 使用单条 SQL 按日期分组
-        daily_stats_result = await session.execute(
-            select(
-                func.date(News.date).label("day"),
-                func.count(News.id).label("count")
-            )
-            .where(News.date >= today - timedelta(days=6))
-            .group_by(func.date(News.date))
-            .order_by(func.date(News.date))
-        )
-        daily_counts = {str(row.day): row.count for row in daily_stats_result.all()}
-        
-        # 填充缺失的日期
-        daily_stats = []
-        for i in range(6, -1, -1):
-            day = today - timedelta(days=i)
-            day_str = str(day)
-            daily_stats.append({"date": day_str, "count": daily_counts.get(day_str, 0)})
-        
-        return {
-            "overview": {
-                "total_news": total_news,
-                "today_news": today_news,
-                "week_news": week_news,
-                "source_count": source_count,
-                "healthy_sources": healthy_sources,
-                "active_events": active_events,
-            },
-            "last_run": {
-                "run_type": last_run.run_type if last_run else None,
-                "started_at": last_run.started_at.isoformat() if last_run and last_run.started_at else None,
-                "duration": last_run.duration_seconds if last_run else None,
-                "items_fetched": last_run.items_fetched if last_run else 0,
-                "items_saved": last_run.items_final if last_run else 0,
-            } if last_run else None,
-            "category_stats": category_stats,
-            "daily_stats": daily_stats,
-        }
+        .where(News.date >= today - timedelta(days=6))
+        .group_by(func.date(News.date))
+        .order_by(func.date(News.date))
+    )
+    daily_counts = {str(row.day): row.count for row in daily_stats_result.all()}
+    
+    # 填充缺失的日期
+    daily_stats = []
+    for i in range(6, -1, -1):
+        day = today - timedelta(days=i)
+        day_str = str(day)
+        daily_stats.append({"date": day_str, "count": daily_counts.get(day_str, 0)})
+    
+    return {
+        "overview": {
+            "total_news": total_news,
+            "today_news": today_news,
+            "week_news": week_news,
+            "source_count": source_count,
+            "healthy_sources": healthy_sources,
+            "active_events": active_events,
+        },
+        "last_run": {
+            "run_type": last_run.run_type if last_run else None,
+            "started_at": last_run.started_at.isoformat() if last_run and last_run.started_at else None,
+            "duration": last_run.duration_seconds if last_run else None,
+            "items_fetched": last_run.items_fetched if last_run else 0,
+            "items_saved": last_run.items_final if last_run else 0,
+        } if last_run else None,
+        "category_stats": category_stats,
+        "daily_stats": daily_stats,
+    }
 
 
 @router.get("/admin/api/sources")
-async def get_sources(_: bool = Depends(verify_admin_credentials)):
+async def get_sources(
+    _: bool = Depends(verify_admin_credentials),
+    session: AsyncSession = Depends(get_session),
+):
     """获取所有 RSS 源及其健康状态"""
     config = load_rss_config()
     sources = config.get("sources", [])
     
-    async with async_session() as session:
-        # 获取源健康状态
-        health_result = await session.execute(select(SourceHealth))
-        health_map = {}
-        for h in health_result.scalars():
-            health_map[h.source_name] = {
-                "total_checks": h.total_checks,
-                "total_success": h.total_success,
-                "total_failure": h.total_failure,
-                "consecutive_failures": h.consecutive_failures,
-                "last_check": h.last_check.isoformat() if h.last_check else None,
-                "last_success": h.last_success.isoformat() if h.last_success else None,
-                "last_error": h.last_error,
-                "last_items": h.last_items,
-                "success_rate": h.success_rate,
-            }
-        
-        # 合并配置和健康状态
-        source_list = []
-        for src in sources:
-            name = src.get("name", "")
-            source_list.append({
-                "name": name,
-                "url": src.get("url", ""),
-                "lang": src.get("lang", "en"),
-                "category": src.get("category", ""),
-                "weight": src.get("weight", 1.0),
-                "enabled": src.get("enabled", True),
-                "health": health_map.get(name),
-            })
-        
-        return {"sources": source_list, "total": len(source_list)}
+    # 获取源健康状态
+    health_result = await session.execute(select(SourceHealth))
+    health_map = {}
+    for h in health_result.scalars():
+        health_map[h.source_name] = {
+            "total_checks": h.total_checks,
+            "total_success": h.total_success,
+            "total_failure": h.total_failure,
+            "consecutive_failures": h.consecutive_failures,
+            "last_check": h.last_check.isoformat() if h.last_check else None,
+            "last_success": h.last_success.isoformat() if h.last_success else None,
+            "last_error": h.last_error,
+            "last_items": h.last_items,
+            "success_rate": h.success_rate,
+        }
+    
+    # 合并配置和健康状态
+    source_list = []
+    for src in sources:
+        name = src.get("name", "")
+        source_list.append({
+            "name": name,
+            "url": src.get("url", ""),
+            "lang": src.get("lang", "en"),
+            "category": src.get("category", ""),
+            "weight": src.get("weight", 1.0),
+            "enabled": src.get("enabled", True),
+            "health": health_map.get(name),
+        })
+    
+    return {"sources": source_list, "total": len(source_list)}
 
 
 @router.get("/admin/api/sources/{source_name}")
-async def get_source_detail(source_name: str, _: bool = Depends(verify_admin_credentials)):
+async def get_source_detail(
+    source_name: str,
+    _: bool = Depends(verify_admin_credentials),
+    session: AsyncSession = Depends(get_session),
+):
     """获取单个源详情"""
     config = load_rss_config()
     sources = config.get("sources", [])
@@ -249,44 +258,43 @@ async def get_source_detail(source_name: str, _: bool = Depends(verify_admin_cre
     if not source:
         raise HTTPException(status_code=404, detail="源未找到")
     
-    async with async_session() as session:
-        # 获取健康状态
-        health_result = await session.execute(
-            select(SourceHealth).where(SourceHealth.source_name == source_name)
-        )
-        health = health_result.scalar_one_or_none()
-        
-        # 获取最近抓取的新闻
-        news_result = await session.execute(
-            select(News)
-            .where(News.source == source_name)
-            .order_by(desc(News.created_at))
-            .limit(10)
-        )
-        recent_news = []
-        for n in news_result.scalars():
-            recent_news.append({
-                "id": n.id,
-                "title": n.title,
-                "date": n.date.isoformat() if n.date else None,
-                "created_at": n.created_at.isoformat() if n.created_at else None,
-            })
-        
-        return {
-            "source": source,
-            "health": {
-                "total_checks": health.total_checks if health else 0,
-                "total_success": health.total_success if health else 0,
-                "total_failure": health.total_failure if health else 0,
-                "consecutive_failures": health.consecutive_failures if health else 0,
-                "last_check": health.last_check.isoformat() if health and health.last_check else None,
-                "last_success": health.last_success.isoformat() if health and health.last_success else None,
-                "last_error": health.last_error if health else None,
-                "last_items": health.last_items if health else 0,
-                "success_rate": health.success_rate if health else 0,
-            },
-            "recent_news": recent_news,
-        }
+    # 获取健康状态
+    health_result = await session.execute(
+        select(SourceHealth).where(SourceHealth.source_name == source_name)
+    )
+    health = health_result.scalar_one_or_none()
+    
+    # 获取最近抓取的新闻
+    news_result = await session.execute(
+        select(News)
+        .where(News.source == source_name)
+        .order_by(desc(News.created_at))
+        .limit(10)
+    )
+    recent_news = []
+    for n in news_result.scalars():
+        recent_news.append({
+            "id": n.id,
+            "title": n.title,
+            "date": n.date.isoformat() if n.date else None,
+            "created_at": n.created_at.isoformat() if n.created_at else None,
+        })
+    
+    return {
+        "source": source,
+        "health": {
+            "total_checks": health.total_checks if health else 0,
+            "total_success": health.total_success if health else 0,
+            "total_failure": health.total_failure if health else 0,
+            "consecutive_failures": health.consecutive_failures if health else 0,
+            "last_check": health.last_check.isoformat() if health and health.last_check else None,
+            "last_success": health.last_success.isoformat() if health and health.last_success else None,
+            "last_error": health.last_error if health else None,
+            "last_items": health.last_items if health else 0,
+            "success_rate": health.success_rate if health else 0,
+        },
+        "recent_news": recent_news,
+    }
 
 
 @router.post("/admin/api/sources/{source_name}/toggle")
@@ -344,49 +352,54 @@ async def update_source(source_name: str, request: Request, _: bool = Depends(ve
 
 
 @router.get("/admin/api/run-history")
-async def get_run_history(limit: int = 20, _: bool = Depends(verify_admin_credentials)):
+async def get_run_history(
+    limit: int = 20,
+    _: bool = Depends(verify_admin_credentials),
+    session: AsyncSession = Depends(get_session),
+):
     """获取运行历史"""
-    async with async_session() as session:
-        result = await session.execute(
-            select(RunMetrics)
-            .order_by(desc(RunMetrics.started_at))
-            .limit(limit)
-        )
-        
-        runs = []
-        for run in result.scalars():
-            runs.append({
-                "id": run.id,
-                "run_type": run.run_type,
-                "started_at": run.started_at.isoformat() if run.started_at else None,
-                "finished_at": run.finished_at.isoformat() if run.finished_at else None,
-                "duration": run.duration_seconds,
-                "sources_attempted": run.sources_attempted,
-                "sources_succeeded": run.sources_succeeded,
-                "sources_failed": run.sources_failed,
-                "items_fetched": run.items_fetched,
-                "items_deduped": run.items_deduped,
-                "items_final": run.items_final,
-            })
-        
-        return {"runs": runs, "total": len(runs)}
+    result = await session.execute(
+        select(RunMetrics)
+        .order_by(desc(RunMetrics.started_at))
+        .limit(limit)
+    )
+    
+    runs = []
+    for run in result.scalars():
+        runs.append({
+            "id": run.id,
+            "run_type": run.run_type,
+            "started_at": run.started_at.isoformat() if run.started_at else None,
+            "finished_at": run.finished_at.isoformat() if run.finished_at else None,
+            "duration": run.duration_seconds,
+            "sources_attempted": run.sources_attempted,
+            "sources_succeeded": run.sources_succeeded,
+            "sources_failed": run.sources_failed,
+            "items_fetched": run.items_fetched,
+            "items_deduped": run.items_deduped,
+            "items_final": run.items_final,
+        })
+    
+    return {"runs": runs, "total": len(runs)}
 
 
 @router.get("/admin/api/source-stats")
-async def get_source_stats(_: bool = Depends(verify_admin_credentials)):
+async def get_source_stats(
+    _: bool = Depends(verify_admin_credentials),
+    session: AsyncSession = Depends(get_session),
+):
     """获取源统计信息"""
-    async with async_session() as session:
-        # 按源统计新闻数量
-        result = await session.execute(
-            select(News.source, func.count(News.id))
-            .group_by(News.source)
-            .order_by(desc(func.count(News.id)))
-            .limit(20)
-        )
-        
-        stats = [{"source": row[0], "count": row[1]} for row in result.all()]
-        
-        return {"stats": stats}
+    # 按源统计新闻数量
+    result = await session.execute(
+        select(News.source, func.count(News.id))
+        .group_by(News.source)
+        .order_by(desc(func.count(News.id)))
+        .limit(20)
+    )
+    
+    stats = [{"source": row[0], "count": row[1]} for row in result.all()]
+    
+    return {"stats": stats}
 
 
 @router.get("/admin/api/system-info")
