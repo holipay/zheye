@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -227,11 +227,11 @@ async def update_source_health(
             health = SourceHealth(source_name=source_name)
             session.add(health)
         health.total_checks = (health.total_checks or 0) + 1
-        health.last_check = datetime.utcnow()
+        health.last_check = datetime.now(timezone.utc)
         if success:
             health.total_success = (health.total_success or 0) + 1
             health.consecutive_failures = 0
-            health.last_success = datetime.utcnow()
+            health.last_success = datetime.now(timezone.utc)
             health.last_items = items_count
         else:
             health.total_failure = (health.total_failure or 0) + 1

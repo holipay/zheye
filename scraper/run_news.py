@@ -3,7 +3,7 @@ import logging
 import os
 import random
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 import yaml
 
@@ -174,7 +174,7 @@ async def main():
     random.shuffle(sources)
 
     logger.info(f"Starting news scrape with {len(sources)} sources (batch size: {BATCH_SIZE})")
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
 
     existing_hashes = await get_existing_hashes()
     existing_titles = await get_existing_titles()
@@ -227,7 +227,7 @@ async def main():
     # 获取市场数据
     await fetch_market_data()
 
-    duration = (datetime.utcnow() - start_time).total_seconds()
+    duration = (datetime.now(timezone.utc) - start_time).total_seconds()
     logger.info(f"Scrape completed in {duration:.1f}s")
 
     try:
@@ -235,7 +235,7 @@ async def main():
             metrics = RunMetrics(
                 run_type="news_scrape",
                 started_at=start_time,
-                finished_at=datetime.utcnow(),
+                finished_at=datetime.now(timezone.utc),
                 duration_seconds=int(duration),
                 sources_attempted=sources_attempted,
                 sources_succeeded=sources_succeeded,
