@@ -19,9 +19,10 @@ from models.news import News
 from models.source_health import SourceHealth
 from models.run_metrics import RunMetrics
 from models.event import Event
-from app.i18n import get_text, get_language_from_request, DEFAULT_LANGUAGE
+from app.i18n import get_text, DEFAULT_LANGUAGE
 from app.auth import verify_admin_credentials, check_admin_enabled
-from app.csrf import generate_csrf_token, sign_token, csrf_protect
+from app.csrf import csrf_protect
+from app.context import get_template_context
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -29,17 +30,6 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templa
 
 # RSS 源配置文件路径
 CONFIG_PATH = Path(__file__).parent.parent.parent / "scraper" / "sources" / "config.yaml"
-
-
-def _get_admin_context(request: Request, **kwargs):
-    lang = get_language_from_request(request)
-    def t(key: str, **fmt_kwargs) -> str:
-        return get_text(lang, key, **fmt_kwargs)
-    
-    # 生成 CSRF token
-    csrf_token = sign_token(generate_csrf_token())
-    
-    return {"lang": lang, "t": t, "request": request, "csrf_token": csrf_token, **kwargs}
 
 
 def load_rss_config() -> dict:
@@ -79,7 +69,7 @@ async def admin_index(request: Request, lang: str, _: bool = Depends(verify_admi
     """管理后台首页"""
     if lang not in {"en", "zh"}:
         return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin")
-    ctx = _get_admin_context(request, title="Dashboard")
+    ctx = get_template_context(request, include_csrf=True, title="Dashboard")
     return templates.TemplateResponse(request=request, name="admin/index.html", context=ctx)
 
 
@@ -88,7 +78,7 @@ async def admin_sources(request: Request, lang: str, _: bool = Depends(verify_ad
     """RSS 源管理页面"""
     if lang not in {"en", "zh"}:
         return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin/sources")
-    ctx = _get_admin_context(request, title="RSS Sources")
+    ctx = get_template_context(request, include_csrf=True, title="RSS Sources")
     return templates.TemplateResponse(request=request, name="admin/sources.html", context=ctx)
 
 
@@ -97,7 +87,7 @@ async def admin_monitor(request: Request, lang: str, _: bool = Depends(verify_ad
     """数据监控页面"""
     if lang not in {"en", "zh"}:
         return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin/monitor")
-    ctx = _get_admin_context(request, title="Data Monitor")
+    ctx = get_template_context(request, include_csrf=True, title="Data Monitor")
     return templates.TemplateResponse(request=request, name="admin/monitor.html", context=ctx)
 
 
@@ -106,7 +96,7 @@ async def admin_logs(request: Request, lang: str, _: bool = Depends(verify_admin
     """运行日志页面"""
     if lang not in {"en", "zh"}:
         return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin/logs")
-    ctx = _get_admin_context(request, title="Logs")
+    ctx = get_template_context(request, include_csrf=True, title="Logs")
     return templates.TemplateResponse(request=request, name="admin/logs.html", context=ctx)
 
 

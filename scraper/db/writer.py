@@ -11,6 +11,7 @@ from scraper.pipeline.keywords import match_keywords, sync_keywords_to_db, save_
 from scraper.pipeline.entities import extract_entities, sync_entities_to_db, save_article_entities
 from scraper.pipeline.relations import calculate_and_save_relations
 from scraper.pipeline.events import detect_event_from_article, update_event_with_article
+from app.cache import invalidate_cache
 
 logger = logging.getLogger(__name__)
 
@@ -72,10 +73,39 @@ async def save_news(items: list[dict]) -> int:
 
         await session.commit()
 
+    # 清除相关缓存
+    if saved > 0:
+        _invalidate_news_cache()
+    
     if events_saved > 0:
+        _invalidate_events_cache()
         logger.info(f"Processed {events_saved} events")
     
     return saved
+
+
+def _invalidate_news_cache():
+    """清除新闻相关缓存"""
+    prefixes = [
+        "api:news:",
+        "api:categories:",
+        "api:article-types:",
+        "api:latest:",
+        "api:meta",
+        "api:keywords:",
+        "api:entities:",
+    ]
+    for prefix in prefixes:
+        invalidate_cache(prefix)
+
+
+def _invalidate_events_cache():
+    """清除事件相关缓存"""
+    prefixes = [
+        "api:events:",
+    ]
+    for prefix in prefixes:
+        invalidate_cache(prefix)
 
 
 async def process_article_event(session, item: dict) -> Optional[dict]:

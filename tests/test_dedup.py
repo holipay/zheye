@@ -1,4 +1,10 @@
-from scraper.pipeline.dedup import get_link_hash, similarity, is_duplicate
+from scraper.pipeline.dedup import (
+    get_link_hash,
+    similarity,
+    is_duplicate,
+    _get_ngrams,
+    _ngram_similarity,
+)
 
 
 class TestGetLinkHash:
@@ -49,6 +55,46 @@ class TestSimilarity:
         assert result < 0.3
 
 
+class TestGetNgrams:
+    def test_basic_ngrams(self):
+        result = _get_ngrams("hello", 3)
+        assert result == {"hel", "ell", "llo"}
+
+    def test_short_text(self):
+        result = _get_ngrams("hi", 3)
+        assert result == {"hi"}
+
+    def test_case_insensitive(self):
+        result = _get_ngrams("Hello", 3)
+        assert "hel" in result
+
+    def test_strips_whitespace(self):
+        result = _get_ngrams("  hello  ", 3)
+        assert "hel" in result
+
+
+class TestNgramSimilarity:
+    def test_identical_texts(self):
+        result = _ngram_similarity("hello world", "hello world")
+        assert result == 1.0
+
+    def test_empty_texts(self):
+        result = _ngram_similarity("", "")
+        assert result == 0.0
+
+    def test_one_empty(self):
+        result = _ngram_similarity("hello", "")
+        assert result == 0.0
+
+    def test_similar_texts(self):
+        result = _ngram_similarity("hello world", "hello worlds")
+        assert result > 0.7
+
+    def test_different_texts(self):
+        result = _ngram_similarity("hello", "world")
+        assert result < 0.3
+
+
 class TestIsDuplicate:
     def test_exact_match(self):
         existing = ["Fed raises rates", "Apple earnings"]
@@ -73,3 +119,14 @@ class TestIsDuplicate:
         existing = ["Fed raises interest rates"]
         assert is_duplicate("Fed raises rates", existing, threshold=0.5) is True
         assert is_duplicate("Fed raises rates", existing, threshold=0.99) is False
+
+    def test_ngram_prefilter(self):
+        """测试 n-gram 预筛选机制"""
+        # 完全不同的文本，应该被快速过滤
+        existing = ["The quick brown fox jumps over the lazy dog"]
+        assert is_duplicate("Completely different text here", existing) is False
+
+    def test_similar_with_ngram_prefilter(self):
+        """测试相似文本通过预筛选"""
+        existing = ["Federal Reserve raises interest rates"]
+        assert is_duplicate("Federal Reserve increases interest rates", existing) is True
