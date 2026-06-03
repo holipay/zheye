@@ -111,6 +111,11 @@
     "subtitle": "Automatically identify and track the development of important financial events",
     "loading": "Loading..."
   },
+  "articles": {
+    "title": "In-Depth Articles",
+    "subtitle": "Deep analysis articles with full content",
+    "no_articles": "No articles available"
+  },
   "footer": {
     "about": "About ZHEYE",
     "about_desc": "Global financial news aggregation and AI intelligent analysis platform, providing professional financial news and deep insights.",

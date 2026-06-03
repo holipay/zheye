@@ -1,14 +1,51 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="page-header">
-    <h2>{{ t("nav.news") }}</h2>
-    <p>In-depth articles and analysis</p>
+<div class="page-header" style="margin-bottom: var(--spacing-lg);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+        <h1 style="font-family: var(--font-serif); font-size: 28px; font-weight: 700;">{{ t("articles.title") }}</h1>
+        <div class="sort-toggle">
+            <a href="/{{ lang }}/articles?sort=date" class="sort-btn {% if sort != 'weight' %}active{% endif %}">{{ t("news.sort_latest") }}</a>
+            <a href="/{{ lang }}/articles?sort=weight" class="sort-btn {% if sort == 'weight' %}active{% endif %}">{{ t("news.sort_important") }}</a>
+        </div>
+    </div>
+    <p style="color: var(--text-secondary); font-size: 14px;">{{ t("articles.subtitle") }}</p>
 </div>
 
-<div class="articles-container">
-    <div class="coming-soon">
-        <p>🚧 Articles feature coming soon</p>
+<div class="content-layout" style="display: grid; grid-template-columns: 1fr 280px; gap: var(--spacing-lg);">
+    <!-- 文章列表 -->
+    <div class="articles-main">
+        <div id="articles-list" 
+             hx-get="/api/articles?sort={{ sort or 'date' }}&page={{ page or 1 }}&lang={{ lang }}" 
+             hx-trigger="load"
+             hx-swap="innerHTML">
+            <div class="loading">{{ t("common.loading") }}</div>
+        </div>
     </div>
+
+    <!-- 侧边栏 -->
+    <aside class="sidebar">
+        <!-- 热门关键词 -->
+        <div class="sidebar-widget">
+            <div class="widget-header">{{ t("home.hot_keywords") }}</div>
+            <div class="widget-content">
+                <div id="keyword-nav"
+                     hx-get="/api/keywords/popular?limit=20&lang={{ lang }}" hx-trigger="load" hx-swap="innerHTML">
+                    <div class="loading">{{ t("common.loading") }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 热门实体 -->
+        <div class="sidebar-widget">
+            <div class="widget-header">{{ t("home.focus_entities") }}</div>
+            <div class="widget-content">
+                <div id="entity-nav"
+                     hx-get="/api/entities/popular?limit=10&lang={{ lang }}" hx-trigger="load" hx-swap="innerHTML">
+                    <div class="loading">{{ t("common.loading") }}</div>
+                </div>
+            </div>
+        </div>
+    </aside>
 </div>
 {% endblock %}

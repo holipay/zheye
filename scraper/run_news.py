@@ -19,7 +19,9 @@ from scraper.pipeline.dedup import get_link_hash, is_duplicate
 from scraper.pipeline.classify import classify_by_keywords, detect_article_type
 from scraper.pipeline.regions import extract_regions
 from scraper.db.writer import save_news, get_existing_hashes, get_existing_titles, update_source_health, get_source_conditional_headers
+from scraper.sources.api_fetcher import MarketDataFetcher
 from models.run_metrics import RunMetrics
+from models.market_data import MarketData as MarketDataModel
 from models.base import async_session
 
 logging.basicConfig(
@@ -126,6 +128,44 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
     return items
 
 
+async def fetch_market_data():
+    """获取市场数据并保存到数据库"""
+    try:
+        fetcher = MarketDataFetcher()
+        if not fetcher.has_any_api:
+            logger.info("No market data API configured, skipping")
+            return
+
+        logger.info("Fetching market data...")
+        data = await fetcher.fetch_all()
+
+        total_items = sum(len(items) for items in data.values())
+        if total_items == 0:
+            logger.info("No market data fetched")
+            return
+
+        async with async_session() as session:
+            saved_count = 0
+            for category, items in data.items():
+                for item in items:
+                    market_data = MarketDataModel(
+                        source=item.source,
+                        data_type=item.data_type,
+                        symbol=item.symbol,
+                        value=item.value,
+                        timestamp=item.timestamp,
+                        extra_data=item.metadata or {},
+                    )
+                    session.add(market_data)
+                    saved_count += 1
+
+            await session.commit()
+            logger.info(f"Saved {saved_count} market data items")
+
+    except Exception as e:
+        logger.error(f"Failed to fetch market data: {e}")
+
+
 async def main():
     config = load_config()
     sources = config["sources"]
@@ -183,6 +223,9 @@ async def main():
         logger.info(f"Saved {saved} new items to database")
     else:
         logger.info("No new items to save")
+
+    # 获取市场数据
+    await fetch_market_data()
 
     duration = (datetime.utcnow() - start_time).total_seconds()
     logger.info(f"Scrape completed in {duration:.1f}s")
