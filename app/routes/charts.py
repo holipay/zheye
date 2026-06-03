@@ -158,9 +158,10 @@ async def get_sentiment_trend(days: int = Query(default=30, le=90)):
 
 
 @router.get("/categories")
-async def get_category_stats(days: int = Query(default=30, le=90)):
+async def get_category_stats(request: Request, days: int = Query(default=30, le=90)):
     """获取分类统计数据"""
-    cache_key = f"charts:categories:{days}"
+    lang = get_language_from_request(request)
+    cache_key = f"charts:categories:{days}:{lang}"
     cached = get_cached(cache_key)
     if cached:
         return cached
@@ -188,8 +189,11 @@ async def get_category_stats(days: int = Query(default=30, le=90)):
             "#fd79a8", "#55efc4"
         ]
 
+        # 翻译分类名称
+        labels = [get_text(lang, f"category.{c['name']}") for c in categories]
+
         response = {
-            "labels": [c["name"] for c in categories],
+            "labels": labels,
             "values": [c["count"] for c in categories],
             "colors": colors[:len(categories)]
         }
