@@ -12,7 +12,7 @@ import json
 import logging
 from typing import Optional
 
-from scraper.pipeline.utils import parse_ai_response, format_article_summaries
+from scraper.pipeline.utils import parse_ai_response, format_article_summaries, ai_analyze
 
 logger = logging.getLogger(__name__)
 
@@ -124,10 +124,6 @@ async def analyze_scenarios(event: dict, articles: list, ai_client, causal_patte
     Returns:
         情景推演框架
     """
-    if not ai_client or not ai_client.enabled:
-        logger.warning("AI 未启用，跳过情景分析")
-        return None
-    
     prompt = build_scenario_prompt(
         title=event.get('title', ''),
         description=event.get('description', ''),
@@ -136,23 +132,9 @@ async def analyze_scenarios(event: dict, articles: list, ai_client, causal_patte
         articles=articles
     )
     
-    try:
-        response = ai_client._call_api(
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.4,
-            max_tokens=3000
-        )
-        
-        if not response:
-            return None
-        
-        result = parse_ai_response(response)
-        if result:
-            result['ai_model'] = 'deepseek-chat'
-            result['ai_confidence'] = 0.8
-        
-        return result
-        
-    except Exception as e:
-        logger.error(f"情景分析失败: {e}")
-        return None
+    return await ai_analyze(
+        prompt=prompt,
+        ai_client=ai_client,
+        temperature=0.4,
+        max_tokens=3000
+    )

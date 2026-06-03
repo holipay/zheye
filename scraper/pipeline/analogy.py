@@ -17,7 +17,7 @@ import logging
 from typing import Optional, List, Dict
 from dataclasses import dataclass
 
-from scraper.pipeline.utils import parse_ai_response, format_article_summaries
+from scraper.pipeline.utils import parse_ai_response, format_article_summaries, ai_analyze
 
 logger = logging.getLogger(__name__)
 
@@ -204,10 +204,6 @@ async def extract_event_representation(event: dict, articles: list, ai_client) -
     Returns:
         多层表征字典
     """
-    if not ai_client or not ai_client.enabled:
-        logger.warning("AI 未启用，跳过表征提取")
-        return None
-    
     prompt = build_representation_prompt(
         title=event.get('title', ''),
         description=event.get('description', ''),
@@ -215,26 +211,12 @@ async def extract_event_representation(event: dict, articles: list, ai_client) -
         articles=articles
     )
     
-    try:
-        response = ai_client._call_api(
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.2,
-            max_tokens=2000
-        )
-        
-        if not response:
-            return None
-        
-        result = parse_ai_response(response)
-        if result:
-            result['ai_model'] = 'deepseek-chat'
-            result['ai_confidence'] = 0.8
-        
-        return result
-        
-    except Exception as e:
-        logger.error(f"表征提取失败: {e}")
-        return None
+    return await ai_analyze(
+        prompt=prompt,
+        ai_client=ai_client,
+        temperature=0.2,
+        max_tokens=2000
+    )
 
 
 async def analyze_analogy(source_repr: dict, target_repr: dict, ai_client) -> Optional[dict]:
@@ -249,30 +231,14 @@ async def analyze_analogy(source_repr: dict, target_repr: dict, ai_client) -> Op
     Returns:
         类比分析结果
     """
-    if not ai_client or not ai_client.enabled:
-        return None
-    
     prompt = build_analogy_prompt(source_repr, target_repr)
     
-    try:
-        response = ai_client._call_api(
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=1500
-        )
-        
-        if not response:
-            return None
-        
-        result = parse_ai_response(response)
-        if result:
-            result['ai_model'] = 'deepseek-chat'
-        
-        return result
-        
-    except Exception as e:
-        logger.error(f"类比分析失败: {e}")
-        return None
+    return await ai_analyze(
+        prompt=prompt,
+        ai_client=ai_client,
+        temperature=0.3,
+        max_tokens=1500
+    )
 
 
 def compute_structural_similarity(source_repr: dict, target_repr: dict) -> Dict[str, float]:

@@ -3,6 +3,7 @@
 抽取各 pipeline 模块的重复逻辑
 """
 
+import re
 import json
 import logging
 from difflib import SequenceMatcher
@@ -17,7 +18,11 @@ logger = logging.getLogger(__name__)
 
 def parse_ai_response(response: str) -> Optional[dict]:
     """
-    解析AI返回的JSON，支持 ```json 代码块和裸JSON
+    解析AI返回的JSON，支持多种格式：
+    1. ```json 代码块
+    2. ``` 代码块
+    3. 裸 JSON（可能包含额外文本）
+    4. 处理尾部逗号等常见问题
     
     Args:
         response: AI返回的原始文本
@@ -25,21 +30,85 @@ def parse_ai_response(response: str) -> Optional[dict]:
     Returns:
         解析后的字典，或 None
     """
+    if not response:
+        return None
+    
     try:
-        if "```json" in response:
-            start = response.index("```json") + 7
-            end = response.index("```", start)
-            json_str = response[start:end].strip()
-        elif "```" in response:
-            start = response.index("```") + 3
-            end = response.index("```", start)
-            json_str = response[start:end].strip()
+        # 方法1: 从 markdown 代码块提取
+        code_blocks = re.findall(r'```(?:json)?\s*\n(.*?)```', response, re.DOTALL)
+        if code_blocks:
+            json_str = code_blocks[-1].strip()  # 取最后一个代码块
         else:
-            json_str = response.strip()
+            # 方法2: 提取裸 JSON（支持 {} 和 []）
+            json_match = re.search(r'(\{[\s\S]*\}|\[[\s\S]*\])', response)
+            if json_match:
+                json_str = json_match.group(1)
+            else:
+                logger.error(f"AI 响应中未找到 JSON: {response[:200]}...")
+                return None
+        
+        # 清理常见问题
+        json_str = re.sub(r',\s*([}\]])', r'\1', json_str)  # 移除尾部逗号
+        json_str = re.sub(r'//.*?\n', '\n', json_str)  # 移除单行注释
+        json_str = re.sub(r'/\*.*?\*/', '', json_str, flags=re.DOTALL)  # 移除多行注释
         
         return json.loads(json_str)
-    except (json.JSONDecodeError, ValueError) as e:
-        logger.error(f"解析AI响应失败: {e}")
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON 解析失败: {e}, 原文前200字: {response[:200]}...")
+        return None
+    except Exception as e:
+        logger.error(f"解析AI响应异常: {e}")
+        return None
+
+
+async def ai_analyze(prompt: str, ai_client, *, 
+                     temperature: float = 0.3,
+                     max_tokens: int = 3000,
+                     system_message: str = None) -> Optional[dict]:
+    """
+    通用 AI 分析调用器
+    
+    Args:
+        prompt: 用户提示词
+        ai_client: AI 客户端实例
+        temperature: 温度参数
+        max_tokens: 最大 token 数
+        system_message: 系统消息（可选）
+    
+    Returns:
+        解析后的结果字典，或 None
+    """
+    if not ai_client or not ai_client.enabled:
+        logger.warning("AI 未启用")
+        return None
+    
+    # 构建消息
+    messages = []
+    if system_message:
+        messages.append({"role": "system", "content": system_message})
+    messages.append({"role": "user", "content": prompt})
+    
+    try:
+        # 使用公共 chat 方法
+        response = ai_client.chat(
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+        
+        if not response:
+            return None
+        
+        result = parse_ai_response(response)
+        if result:
+            result['ai_model'] = 'deepseek-chat'
+            result['ai_confidence'] = 0.8
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"AI 分析失败: {e}")
         return None
 
 

@@ -15,7 +15,7 @@ import logging
 from datetime import datetime
 from typing import Optional, List
 
-from scraper.pipeline.utils import parse_ai_response, format_article_summaries
+from scraper.pipeline.utils import parse_ai_response, format_article_summaries, ai_analyze
 
 logger = logging.getLogger(__name__)
 
@@ -231,10 +231,6 @@ async def analyze_event_knowledge(event: dict, articles: list, ai_client) -> Opt
     Returns:
         知识框架字典，或 None
     """
-    if not ai_client or not ai_client.enabled:
-        logger.warning("AI 未启用，跳过知识分析")
-        return None
-    
     prompt = build_analysis_prompt(
         title=event.get('title', ''),
         description=event.get('description', ''),
@@ -242,26 +238,12 @@ async def analyze_event_knowledge(event: dict, articles: list, ai_client) -> Opt
         articles=articles
     )
     
-    try:
-        response = ai_client._call_api(
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,  # 低温度，更确定性的输出
-            max_tokens=3000
-        )
-        
-        if not response:
-            return None
-        
-        result = parse_ai_response(response)
-        if result:
-            result['ai_model'] = 'deepseek-chat'
-            result['ai_confidence'] = 0.8  # 可以后续根据响应质量调整
-        
-        return result
-        
-    except Exception as e:
-        logger.error(f"知识分析失败: {e}")
-        return None
+    return await ai_analyze(
+        prompt=prompt,
+        ai_client=ai_client,
+        temperature=0.3,
+        max_tokens=3000
+    )
 
 
 async def analyze_causal_chain(event: dict, articles: list, ai_client) -> Optional[dict]:
@@ -276,10 +258,6 @@ async def analyze_causal_chain(event: dict, articles: list, ai_client) -> Option
     Returns:
         因果链结构 {nodes: [...], links: [...], summary: "..."}
     """
-    if not ai_client or not ai_client.enabled:
-        logger.warning("AI 未启用，跳过因果链分析")
-        return None
-    
     prompt = build_causal_chain_prompt(
         title=event.get('title', ''),
         description=event.get('description', ''),
@@ -287,26 +265,12 @@ async def analyze_causal_chain(event: dict, articles: list, ai_client) -> Option
         articles=articles
     )
     
-    try:
-        response = ai_client._call_api(
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=4000
-        )
-        
-        if not response:
-            return None
-        
-        result = parse_ai_response(response)
-        if result:
-            result['ai_model'] = 'deepseek-chat'
-            result['ai_confidence'] = 0.8
-        
-        return result
-        
-    except Exception as e:
-        logger.error(f"因果链分析失败: {e}")
-        return None
+    return await ai_analyze(
+        prompt=prompt,
+        ai_client=ai_client,
+        temperature=0.3,
+        max_tokens=4000
+    )
 
 
 def get_knowledge_type_label(atom_type: str, lang: str = 'zh') -> str:

@@ -9,6 +9,8 @@ AI 分析服务模块
 """
 
 import os
+import re
+import time
 import json
 import logging
 from datetime import datetime, date
@@ -18,6 +20,19 @@ from dataclasses import dataclass
 from scraper.pipeline.utils import parse_ai_response
 
 logger = logging.getLogger(__name__)
+
+
+def _smart_truncate(text: str, max_len: int = 3000) -> str:
+    """在句子边界智能截断文本"""
+    if len(text) <= max_len:
+        return text
+    truncated = text[:max_len]
+    # 在句子边界截断
+    for sep in ['。', '.\n', '.', '；', '\n']:
+        last_sep = truncated.rfind(sep)
+        if last_sep > max_len * 0.6:
+            return truncated[:last_sep + len(sep)]
+    return truncated
 
 
 @dataclass
@@ -49,10 +64,20 @@ class DeepSeekClient:
     使用 OpenAI SDK 兼容接口
     """
     
-    def __init__(self):
+    # 可重试的异常类型
+    RETRYABLE_ERRORS = (
+        "RateLimitError",
+        "APITimeoutError", 
+        "APIConnectionError",
+        "APIStatusError",
+    )
+    
+    def __init__(self, max_retries: int = 3, timeout: int = 30):
         self.api_key = os.getenv("DEEPSEEK_API_KEY", "")
         self.api_base = os.getenv("DEEPSEEK_API_BASE", "https://api.deepseek.com")
         self.enabled = bool(self.api_key)
+        self.max_retries = max_retries
+        self.timeout = timeout
         
         if not self.enabled:
             logger.info("DeepSeek API: 未配置 API Key，AI 分析功能已禁用")
@@ -63,7 +88,8 @@ class DeepSeekClient:
             from openai import OpenAI
             self.client = OpenAI(
                 api_key=self.api_key,
-                base_url=self.api_base
+                base_url=self.api_base,
+                timeout=self.timeout
             )
             logger.info(f"DeepSeek API: 已连接 {self.api_base}")
         except ImportError:
@@ -72,21 +98,74 @@ class DeepSeekClient:
             self.client = None
     
     def _call_api(self, messages: list[dict], temperature: float = 0.7, max_tokens: int = 2000) -> Optional[str]:
-        """调用 API"""
+        """
+        调用 API（带重试机制）
+        
+        Args:
+            messages: 消息列表
+            temperature: 温度参数
+            max_tokens: 最大 token 数
+        
+        Returns:
+            API 响应内容或 None
+        """
         if not self.enabled or not self.client:
             return None
         
-        try:
-            response = self.client.chat.completions.create(
-                model="deepseek-chat",
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            logger.error(f"DeepSeek API 调用失败: {e}")
-            return None
+        last_error = None
+        for attempt in range(self.max_retries):
+            try:
+                response = self.client.chat.completions.create(
+                    model="deepseek-chat",
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    timeout=self.timeout
+                )
+                
+                # 记录 token 使用量
+                if hasattr(response, 'usage') and response.usage:
+                    usage = response.usage
+                    logger.debug(f"API 调用: prompt={usage.prompt_tokens}, "
+                               f"completion={usage.completion_tokens}, "
+                               f"total={usage.total_tokens}")
+                
+                return response.choices[0].message.content
+                
+            except Exception as e:
+                error_type = type(e).__name__
+                last_error = e
+                
+                # 检查是否为可重试错误
+                if error_type in self.RETRYABLE_ERRORS:
+                    wait_time = (2 ** attempt) * 1.0  # 指数退避
+                    logger.warning(f"API 调用失败 ({error_type}), {wait_time}s 后重试 "
+                                 f"(第{attempt + 1}/{self.max_retries}次): {e}")
+                    time.sleep(wait_time)
+                    continue
+                else:
+                    # 不可重试错误，直接失败
+                    logger.error(f"API 调用异常 ({error_type}): {e}")
+                    return None
+        
+        # 所有重试都失败
+        logger.error(f"API 调用失败，已重试{self.max_retries}次: {last_error}")
+        return None
+    
+    def chat(self, messages: list[dict], temperature: float = 0.7, 
+             max_tokens: int = 2000) -> Optional[str]:
+        """
+        公共 API 调用接口
+        
+        Args:
+            messages: 消息列表
+            temperature: 温度参数
+            max_tokens: 最大 token 数
+        
+        Returns:
+            API 响应内容或 None
+        """
+        return self._call_api(messages, temperature, max_tokens)
     
     def analyze_article(self, title: str, content: str = None, summary: str = None, 
                        category: str = None, lang: str = "en") -> Optional[ArticleAnalysis]:
@@ -108,8 +187,8 @@ class DeepSeekClient:
         if summary:
             text += f"摘要: {summary}\n"
         if content:
-            # 限制内容长度，避免 token 超限
-            text += f"正文: {content[:3000]}\n"
+            # 使用智能截断，在句子边界断开
+            text += f"正文: {_smart_truncate(content, 3000)}\n"
         if category:
             text += f"分类: {category}\n"
         
