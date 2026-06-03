@@ -389,11 +389,14 @@ async def get_system_info(_: bool = Depends(verify_admin_credentials)):
     import platform
     import sys
     
+    # 数据库连接信息脱敏：只显示是否配置，不暴露主机信息
+    db_configured = bool(os.getenv("DATABASE_URL"))
+    
     return {
         "platform": platform.platform(),
         "python_version": sys.version,
-        "database_url": os.getenv("DATABASE_URL", "").split("@")[-1] if os.getenv("DATABASE_URL") else "未配置",
+        "database_configured": db_configured,
         "ai_enabled": bool(os.getenv("DEEPSEEK_API_KEY")),
-        "config_path": str(CONFIG_PATH),
+        "config_path": str(CONFIG_PATH.name),  # 只返回文件名，不返回完整路径
         "config_exists": CONFIG_PATH.exists(),
     }

@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from sqlalchemy import select, func, desc, text
+from sqlalchemy import select, func, desc, text, Table, Column, MetaData
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.base import get_session
 from models.daily_report import DailyReport
@@ -331,12 +331,33 @@ async def get_reports_list(
     
     table_name = REPORT_TABLES[period]
     
-    result = await session.execute(text(f"""
-        SELECT period_start, period_end, overview, market_sentiment, news_count, generated_at
-        FROM {table_name}
-        ORDER BY period_start DESC
-        LIMIT :limit
-    """), {"limit": limit})
+    # 使用 SQLAlchemy table 构造替代 f-string SQL 拼接
+    metadata = MetaData()
+    report_table = Table(
+        table_name, metadata,
+        Column("period_start"),
+        Column("period_end"),
+        Column("overview"),
+        Column("market_sentiment"),
+        Column("news_count"),
+        Column("generated_at"),
+        extend_existing=True
+    )
+    
+    query = (
+        select(
+            report_table.c.period_start,
+            report_table.c.period_end,
+            report_table.c.overview,
+            report_table.c.market_sentiment,
+            report_table.c.news_count,
+            report_table.c.generated_at,
+        )
+        .order_by(report_table.c.period_start.desc())
+        .limit(limit)
+    )
+    
+    result = await session.execute(query)
     
     reports = []
     for row in result.mappings():
