@@ -65,6 +65,11 @@ class Settings:
     # 图表配置
     CHART_DEFAULT_DAYS: int = int(os.getenv("CHART_DEFAULT_DAYS", "30"))
     CHART_MAX_DAYS: int = int(os.getenv("CHART_MAX_DAYS", "90"))
+    
+    # 速率限制配置
+    RATE_LIMIT_DEFAULT: str = os.getenv("RATE_LIMIT_DEFAULT", "60/minute")
+    RATE_LIMIT_API: str = os.getenv("RATE_LIMIT_API", "30/minute")
+    RATE_LIMIT_ADMIN: str = os.getenv("RATE_LIMIT_ADMIN", "120/minute")
 
 
 settings = Settings()

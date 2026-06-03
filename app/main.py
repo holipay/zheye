@@ -1,11 +1,20 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 from pathlib import Path
 import logging
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 logger = logging.getLogger(__name__)
+
+# 速率限制器
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(title="zheye", description="全球新闻聚合与 AI 分析平台")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 
@@ -19,7 +28,8 @@ app.include_router(charts.router)
 
 
 @app.get("/health")
-async def health():
+@limiter.exempt  # 健康检查不限速
+async def health(request: Request):
     """健康检查端点，检测数据库连接"""
     checks = {"status": "ok", "database": "unknown"}
     

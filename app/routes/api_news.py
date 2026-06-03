@@ -11,10 +11,12 @@ from models.article_relation import ArticleRelation
 from models.entity import Entity
 from models.article_entity import ArticleEntity
 from app.cache import get_cached, set_cached
-from app.routes.api_common import router, templates, _get_api_context
+from app.config import settings
+from app.routes.api_common import router, templates, _get_api_context, limiter
 
 
 @router.get("/news", response_class=HTMLResponse)
+@limiter.limit(settings.RATE_LIMIT_API)
 async def get_news(
     request: Request,
     session: AsyncSession = Depends(get_session),
@@ -576,6 +578,7 @@ async def get_news_by_entity(
 
 
 @router.get("/search", response_class=HTMLResponse)
+@limiter.limit(settings.RATE_LIMIT_API)
 async def search_news(
     request: Request,
     session: AsyncSession = Depends(get_session),

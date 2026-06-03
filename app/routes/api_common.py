@@ -3,9 +3,15 @@ from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from models.base import get_session
 from models.event import Event
 from app.context import get_api_context
+from app.config import settings
+
+# 速率限制器
+limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter(prefix="/api")
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -14,7 +20,7 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templa
 _get_api_context = get_api_context
 
 
-async def _get_event_and_articles(session, event_id: str, max_articles: int = 5):
+async def _get_event_and_articles(session: AsyncSession, event_id: str, max_articles: int = 5):
     """
     获取事件及其关联文章（公共辅助函数）
     
