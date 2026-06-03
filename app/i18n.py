@@ -30,9 +30,12 @@ def get_text(lang: str, key: str, **kwargs) -> str:
 
     for k in keys:
         if isinstance(value, dict):
-            value = value.get(k, key)
+            value = value.get(k)
+            if value is None:
+                # 如果翻译不存在，返回键的最后一部分（如分类名称本身）
+                return keys[-1]
         else:
-            return key
+            return keys[-1]
 
     if isinstance(value, str) and kwargs:
         try:
@@ -40,7 +43,7 @@ def get_text(lang: str, key: str, **kwargs) -> str:
         except (KeyError, ValueError):
             return value
 
-    return value if isinstance(value, str) else key
+    return value if isinstance(value, str) else keys[-1]
 
 
 def get_language_from_request(request) -> str:
