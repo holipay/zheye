@@ -10,6 +10,28 @@ sources:
     lang: en
     weight: 2.0
     category: news_media
+    enabled: false
+
+  - name: MarketWatch
+    type: rss
+    url: https://feeds.content.dowjones.io/public/rss/mw_topstories
+    lang: en
+    weight: 1.8
+    category: news_media
+
+  - name: Yahoo Finance
+    type: rss
+    url: https://finance.yahoo.com/news/rssindex
+    lang: en
+    weight: 1.8
+    category: news_media
+
+  - name: Seeking Alpha
+    type: rss
+    url: https://seekingalpha.com/market_currents.xml
+    lang: en
+    weight: 1.8
+    category: news_media
 
   - name: Bloomberg
     type: rss
