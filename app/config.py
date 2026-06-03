@@ -21,6 +21,8 @@ class Settings:
     
     ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "admin")
     ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "")
+    
+    CSRF_SECRET_KEY: str = os.getenv("CSRF_SECRET_KEY", "")
 
 
 settings = Settings()
