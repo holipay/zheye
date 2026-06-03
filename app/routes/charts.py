@@ -227,17 +227,21 @@ async def get_keyword_trends(limit: int = Query(default=10, le=20), days: int = 
         if not keywords:
             return {"labels": [], "datasets": []}
 
-        # 获取每个关键词的趋势
-        keyword_data = {}
-        for keyword in keywords:
-            result = await session.execute(text("""
-                SELECT date, count
-                FROM trends
-                WHERE keyword = :keyword AND date >= :start_date
-                ORDER BY date
-            """), {"keyword": keyword, "start_date": start_date})
+        # 一次性获取所有关键词的趋势数据（避免 N+1 查询）
+        result = await session.execute(text("""
+            SELECT keyword, date, count
+            FROM trends
+            WHERE keyword IN :keywords AND date >= :start_date
+            ORDER BY keyword, date
+        """), {"keywords": tuple(keywords), "start_date": start_date})
 
-            keyword_data[keyword] = {str(row[0]): row[1] for row in result}
+        # 按关键词分组
+        keyword_data = {}
+        for row in result:
+            keyword = row[0]
+            if keyword not in keyword_data:
+                keyword_data[keyword] = {}
+            keyword_data[keyword][str(row[1])] = row[2]
 
         # 生成日期标签
         all_dates = set()
@@ -253,7 +257,7 @@ async def get_keyword_trends(limit: int = Query(default=10, le=20), days: int = 
 
         datasets = []
         for i, keyword in enumerate(keywords):
-            values = [keyword_data[keyword].get(d, 0) for d in labels]
+            values = [keyword_data.get(keyword, {}).get(d, 0) for d in labels]
             datasets.append({
                 "label": keyword,
                 "data": values,
