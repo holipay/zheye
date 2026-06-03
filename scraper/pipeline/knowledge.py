@@ -16,6 +16,7 @@ from datetime import datetime
 from typing import Optional, List
 
 from scraper.pipeline.utils import parse_ai_response, format_article_summaries, ai_analyze
+from models.schemas import KnowledgeAnalysisSchema, CausalChainSchema
 
 logger = logging.getLogger(__name__)
 
@@ -242,7 +243,9 @@ async def analyze_event_knowledge(event: dict, articles: list, ai_client) -> Opt
         prompt=prompt,
         ai_client=ai_client,
         temperature=0.3,
-        max_tokens=3000
+        max_tokens=3000,
+        schema=KnowledgeAnalysisSchema,
+        function_name="analyze_event_knowledge"
     )
 
 
@@ -269,7 +272,9 @@ async def analyze_causal_chain(event: dict, articles: list, ai_client) -> Option
         prompt=prompt,
         ai_client=ai_client,
         temperature=0.3,
-        max_tokens=4000
+        max_tokens=4000,
+        schema=CausalChainSchema,
+        function_name="analyze_causal_chain"
     )
 
 

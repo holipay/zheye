@@ -7,7 +7,8 @@ import re
 import json
 import logging
 from difflib import SequenceMatcher
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Type
+from pydantic import BaseModel, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -16,16 +17,13 @@ logger = logging.getLogger(__name__)
 # AI 响应解析
 # ============================================================
 
-def parse_ai_response(response: str) -> Optional[dict]:
+def parse_ai_response(response: str, schema: Type[BaseModel] = None) -> Optional[dict]:
     """
-    解析AI返回的JSON，支持多种格式：
-    1. ```json 代码块
-    2. ``` 代码块
-    3. 裸 JSON（可能包含额外文本）
-    4. 处理尾部逗号等常见问题
+    解析AI返回的JSON，支持多种格式和可选的 Schema 验证
     
     Args:
         response: AI返回的原始文本
+        schema: Pydantic Schema 类（可选），用于验证数据结构
     
     Returns:
         解析后的字典，或 None
@@ -52,7 +50,19 @@ def parse_ai_response(response: str) -> Optional[dict]:
         json_str = re.sub(r'//.*?\n', '\n', json_str)  # 移除单行注释
         json_str = re.sub(r'/\*.*?\*/', '', json_str, flags=re.DOTALL)  # 移除多行注释
         
-        return json.loads(json_str)
+        result = json.loads(json_str)
+        
+        # Schema 验证
+        if schema and result:
+            try:
+                validated = schema(**result)
+                return validated.model_dump()
+            except ValidationError as e:
+                logger.warning(f"Schema 验证失败，使用原始数据: {e}")
+                # 验证失败时仍返回原始数据，但记录警告
+                return result
+        
+        return result
         
     except json.JSONDecodeError as e:
         logger.error(f"JSON 解析失败: {e}, 原文前200字: {response[:200]}...")
@@ -65,7 +75,9 @@ def parse_ai_response(response: str) -> Optional[dict]:
 async def ai_analyze(prompt: str, ai_client, *, 
                      temperature: float = 0.3,
                      max_tokens: int = 3000,
-                     system_message: str = None) -> Optional[dict]:
+                     system_message: str = None,
+                     schema: Type[BaseModel] = None,
+                     function_name: str = "ai_analyze") -> Optional[dict]:
     """
     通用 AI 分析调用器
     
@@ -75,6 +87,8 @@ async def ai_analyze(prompt: str, ai_client, *,
         temperature: 温度参数
         max_tokens: 最大 token 数
         system_message: 系统消息（可选）
+        schema: Pydantic Schema 类（可选），用于验证返回数据
+        function_name: 调用函数名（用于指标统计）
     
     Returns:
         解析后的结果字典，或 None
@@ -94,13 +108,14 @@ async def ai_analyze(prompt: str, ai_client, *,
         response = ai_client.chat(
             messages=messages,
             temperature=temperature,
-            max_tokens=max_tokens
+            max_tokens=max_tokens,
+            function_name=function_name
         )
         
         if not response:
             return None
         
-        result = parse_ai_response(response)
+        result = parse_ai_response(response, schema=schema)
         if result:
             result['ai_model'] = 'deepseek-chat'
             result['ai_confidence'] = 0.8

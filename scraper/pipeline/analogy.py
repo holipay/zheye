@@ -18,6 +18,7 @@ from typing import Optional, List, Dict
 from dataclasses import dataclass
 
 from scraper.pipeline.utils import parse_ai_response, format_article_summaries, ai_analyze
+from models.schemas import EventRepresentationSchema, AnalogyResultSchema
 
 logger = logging.getLogger(__name__)
 
@@ -215,7 +216,9 @@ async def extract_event_representation(event: dict, articles: list, ai_client) -
         prompt=prompt,
         ai_client=ai_client,
         temperature=0.2,
-        max_tokens=2000
+        max_tokens=2000,
+        schema=EventRepresentationSchema,
+        function_name="extract_event_representation"
     )
 
 
@@ -237,7 +240,9 @@ async def analyze_analogy(source_repr: dict, target_repr: dict, ai_client) -> Op
         prompt=prompt,
         ai_client=ai_client,
         temperature=0.3,
-        max_tokens=1500
+        max_tokens=1500,
+        schema=AnalogyResultSchema,
+        function_name="analyze_analogy"
     )
 
 

@@ -13,6 +13,7 @@ import logging
 from typing import Optional
 
 from scraper.pipeline.utils import parse_ai_response, format_article_summaries, ai_analyze
+from models.schemas import ScenarioAnalysisSchema
 
 logger = logging.getLogger(__name__)
 
@@ -136,5 +137,7 @@ async def analyze_scenarios(event: dict, articles: list, ai_client, causal_patte
         prompt=prompt,
         ai_client=ai_client,
         temperature=0.4,
-        max_tokens=3000
+        max_tokens=3000,
+        schema=ScenarioAnalysisSchema,
+        function_name="analyze_scenarios"
     )

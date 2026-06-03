@@ -19,6 +19,7 @@ from dataclasses import dataclass
 
 from scraper.pipeline.utils import parse_ai_response
 from app.ai_metrics import get_ai_metrics
+from models.schemas import ArticleAnalysisSchema, DailyReportSchema, TrendSchema
 
 logger = logging.getLogger(__name__)
 
@@ -233,12 +234,13 @@ class DeepSeekClient:
             }
         ]
         
-        result = self._call_api(messages, temperature=0.3)
+        result = self._call_api(messages, temperature=0.3, function_name="analyze_article")
         if not result:
             return None
         
         try:
-            data = parse_ai_response(result)
+            # 使用 Schema 验证
+            data = parse_ai_response(result, schema=ArticleAnalysisSchema)
             if not data:
                 return None
             
@@ -308,12 +310,13 @@ class DeepSeekClient:
             }
         ]
         
-        result = self._call_api(messages, temperature=0.5, max_tokens=3000)
+        result = self._call_api(messages, temperature=0.5, max_tokens=3000, function_name="generate_daily_report")
         if not result:
             return None
         
         try:
-            data = parse_ai_response(result)
+            # 使用 Schema 验证
+            data = parse_ai_response(result, schema=DailyReportSchema)
             if not data:
                 return None
             
@@ -364,11 +367,12 @@ class DeepSeekClient:
             }
         ]
         
-        result = self._call_api(messages, temperature=0.5)
+        result = self._call_api(messages, temperature=0.5, function_name="analyze_keyword_trend")
         if not result:
             return None
         
-        return parse_ai_response(result)
+        # 使用 Schema 验证
+        return parse_ai_response(result, schema=TrendSchema)
     
     def generate_period_report(self, articles: list[dict], stats_summary: dict, period: str = "weekly") -> Optional[dict]:
         """
