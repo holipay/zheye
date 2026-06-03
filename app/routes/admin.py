@@ -108,26 +108,32 @@ async def admin_logs(request: Request, lang: str, _: bool = Depends(verify_admin
 async def get_dashboard(_: bool = Depends(verify_admin_credentials)):
     """获取仪表盘数据"""
     async with async_session() as session:
-        # 新闻统计
-        total_news = (await session.execute(select(func.count(News.id)))).scalar()
-        
-        # 今日新闻
         today = date.today()
-        today_news = (await session.execute(
-            select(func.count(News.id)).where(func.date(News.created_at) == today)
-        )).scalar()
-        
-        # 本周新闻
         week_ago = today - timedelta(days=7)
-        week_news = (await session.execute(
-            select(func.count(News.id)).where(News.created_at >= week_ago)
-        )).scalar()
         
-        # 源健康状态
-        source_count = (await session.execute(select(func.count(SourceHealth.id)))).scalar()
-        healthy_sources = (await session.execute(
-            select(func.count(SourceHealth.id)).where(SourceHealth.consecutive_failures < 3)
-        )).scalar()
+        # 使用单条 SQL 获取新闻统计（total, today, week）
+        news_stats_result = await session.execute(
+            select(
+                func.count(News.id).label("total"),
+                func.count(News.id).filter(func.date(News.created_at) == today).label("today"),
+                func.count(News.id).filter(News.created_at >= week_ago).label("week")
+            )
+        )
+        news_stats = news_stats_result.one()
+        total_news = news_stats.total
+        today_news = news_stats.today
+        week_news = news_stats.week
+        
+        # 使用单条 SQL 获取源统计（total, healthy）
+        source_stats_result = await session.execute(
+            select(
+                func.count(SourceHealth.id).label("total"),
+                func.count(SourceHealth.id).filter(SourceHealth.consecutive_failures < 3).label("healthy")
+            )
+        )
+        source_stats = source_stats_result.one()
+        source_count = source_stats.total
+        healthy_sources = source_stats.healthy
         
         # 事件统计
         active_events = (await session.execute(

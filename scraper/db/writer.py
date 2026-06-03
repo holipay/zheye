@@ -28,45 +28,54 @@ async def save_news(items: list[dict]) -> int:
         term_to_id = await sync_keywords_to_db(session, keywords_data)
         await session.commit()
 
+        # 批量预加载实体配置（避免循环内重复加载）
+        from scraper.pipeline.entities import load_entities, _build_entity_patterns
+        entities_config = load_entities()
+        entity_patterns = _build_entity_patterns(entities_config)
+
         for item in items:
             try:
-                stmt = pg_insert(News).values(**item).on_conflict_do_nothing(index_elements=["link_hash"])
+                # 使用 RETURNING id 直接获取插入的 ID，避免额外的 SELECT 查询
+                stmt = (
+                    pg_insert(News)
+                    .values(**item)
+                    .on_conflict_do_nothing(index_elements=["link_hash"])
+                    .returning(News.id)
+                )
                 result = await session.execute(stmt)
-                if result.rowcount > 0:
+                row = result.first()
+                
+                if row:
                     saved += 1
+                    article_id = row[0]
 
-                    get_id = select(News.id).where(News.link_hash == item["link_hash"])
-                    id_result = await session.execute(get_id)
-                    article_id = id_result.scalar_one_or_none()
+                    # 关键词匹配
+                    matched = match_keywords(
+                        title=item.get("title"),
+                        translated_title=item.get("translated_title"),
+                        summary=item.get("summary"),
+                        category=item.get("category", ""),
+                        content=item.get("content"),
+                    )
 
-                    if article_id:
-                        # 关键词匹配
-                        matched = match_keywords(
-                            title=item.get("title"),
-                            translated_title=item.get("translated_title"),
-                            summary=item.get("summary"),
-                            category=item.get("category", ""),
-                            content=item.get("content"),
-                        )
+                    if matched:
+                        await save_article_keywords(session, article_id, matched, term_to_id)
+                        await calculate_and_save_relations(session, article_id, item.get("category", ""))
 
-                        if matched:
-                            await save_article_keywords(session, article_id, matched, term_to_id)
-                            await calculate_and_save_relations(session, article_id, item.get("category", ""))
+                    # 实体提取（使用预加载的配置）
+                    entities = extract_entities(
+                        title=item.get("title", ""),
+                        summary=item.get("summary", ""),
+                        content=item.get("content"),
+                    )
+                    if entities:
+                        entity_name_to_id = await sync_entities_to_db(session, entities)
+                        await save_article_entities(session, article_id, entities, entity_name_to_id)
 
-                        # 实体提取
-                        entities = extract_entities(
-                            title=item.get("title", ""),
-                            summary=item.get("summary", ""),
-                            content=item.get("content"),
-                        )
-                        if entities:
-                            entity_name_to_id = await sync_entities_to_db(session, entities)
-                            await save_article_entities(session, article_id, entities, entity_name_to_id)
-
-                        # 事件检测和追踪
-                        event_result = await process_article_event(session, item)
-                        if event_result:
-                            events_saved += 1
+                    # 事件检测和追踪
+                    event_result = await process_article_event(session, item)
+                    if event_result:
+                        events_saved += 1
 
             except Exception as e:
                 logger.error(f"Error saving news {item.get('link')}: {e}")
