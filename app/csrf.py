@@ -64,8 +64,13 @@ def get_csrf_token_from_request(request: Request) -> str:
     if token:
         return token
     
-    # 其次从表单数据获取
-    # 注意：这需要请求体是表单格式
+    # 从查询参数获取（用于 HTMX 等场景）
+    token = request.query_params.get(CSRF_FORM_FIELD)
+    if token:
+        return token
+    
+    # 注意：从表单数据获取需要异步读取请求体，这里暂不实现
+    # 因为当前项目主要使用 HTMX 和 JSON API，表单提交较少
     return ""
 
 
