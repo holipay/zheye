@@ -45,9 +45,9 @@ class CausalLink(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     
-    # 关系
-    source_node_id = Column(BigInteger, nullable=False)
-    target_node_id = Column(BigInteger, nullable=False)
+    # 关系（添加外键约束）
+    source_node_id = Column(BigInteger, ForeignKey("causal_nodes.id", ondelete="CASCADE"), nullable=False)
+    target_node_id = Column(BigInteger, ForeignKey("causal_nodes.id", ondelete="CASCADE"), nullable=False)
     
     # 关系属性
     link_type = Column(String(50), default='causes')  # causes/enables/leads_to/triggers

@@ -4,7 +4,9 @@
 """
 import asyncio
 import sys
-sys.path.insert(0, '/opt/zheye')
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from models.base import async_session
 from models.keyword import Keyword

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, BigInteger, String, Text, Float, Boolean, Integer, DateTime, Index, func, UniqueConstraint
+from sqlalchemy import Column, BigInteger, String, Text, Float, Boolean, Integer, DateTime, Index, func, UniqueConstraint, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from models.base import Base
 
@@ -54,8 +54,8 @@ class EventKnowledgeAtom(Base):
     __tablename__ = "event_knowledge_atoms"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    event_id = Column(String(100), nullable=False)
-    atom_id = Column(BigInteger, nullable=False)
+    event_id = Column(String(100), ForeignKey("event_knowledge.event_id", ondelete="CASCADE"), nullable=False)
+    atom_id = Column(BigInteger, ForeignKey("knowledge_atoms.id", ondelete="CASCADE"), nullable=False)
     relevance = Column(Float, default=1.0)
     position = Column(Integer)  # 排序位置
     is_required = Column(Boolean, default=True)  # 是否必要知识
