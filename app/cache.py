@@ -8,7 +8,7 @@ from app.config import settings
 _lock = threading.RLock()
 
 # 使用线程安全的缓存
-_cache = TTLCache(maxsize=100, ttl=settings.CACHE_TTL_SECONDS)
+_cache = TTLCache(maxsize=settings.CACHE_MAX_SIZE, ttl=settings.CACHE_TTL_SECONDS)
 
 
 def get_cached(key: str) -> Optional[Any]:

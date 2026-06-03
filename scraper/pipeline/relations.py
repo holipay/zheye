@@ -3,10 +3,11 @@ from collections import defaultdict
 from sqlalchemy import select, and_, or_
 from models.article_keyword import ArticleKeyword
 from models.article_relation import ArticleRelation
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-RELATION_THRESHOLD = 0.3
+RELATION_THRESHOLD = settings.RELATION_THRESHOLD
 
 
 def _normalize_relation(source_id: int, target_id: int) -> tuple[int, int]:

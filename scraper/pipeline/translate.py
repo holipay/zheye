@@ -5,6 +5,7 @@ from typing import Optional
 import httpx
 
 from scraper.pipeline.utils import smart_truncate
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ _http_client: Optional[httpx.AsyncClient] = None
 
 # 内存缓存（避免重复调用 API）
 _translation_cache: dict[str, str] = {}
-CACHE_MAX_SIZE = 1000
+CACHE_MAX_SIZE = settings.TRANSLATION_CACHE_SIZE
 
 
 async def get_http_client() -> httpx.AsyncClient:

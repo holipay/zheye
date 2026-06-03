@@ -19,6 +19,7 @@ from dataclasses import dataclass
 
 from scraper.pipeline.utils import parse_ai_response, smart_truncate
 from app.ai_metrics import get_ai_metrics
+from app.config import settings
 from models.schemas import ArticleAnalysisSchema, DailyReportSchema, TrendSchema
 
 logger = logging.getLogger(__name__)
@@ -61,12 +62,12 @@ class DeepSeekClient:
         "APIStatusError",
     )
     
-    def __init__(self, max_retries: int = 3, timeout: int = 30):
-        self.api_key = os.getenv("DEEPSEEK_API_KEY", "")
-        self.api_base = os.getenv("DEEPSEEK_API_BASE", "https://api.deepseek.com")
+    def __init__(self, max_retries: int = None, timeout: int = None):
+        self.api_key = settings.DEEPSEEK_API_KEY
+        self.api_base = settings.DEEPSEEK_API_BASE
         self.enabled = bool(self.api_key)
-        self.max_retries = max_retries
-        self.timeout = timeout
+        self.max_retries = max_retries or settings.AI_MAX_RETRIES
+        self.timeout = timeout or settings.AI_TIMEOUT_SECONDS
         
         if not self.enabled:
             logger.info("DeepSeek API: 未配置 API Key，AI 分析功能已禁用")

@@ -3,10 +3,11 @@ import logging
 from collections import defaultdict
 
 from scraper.pipeline.utils import text_similarity
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_THRESHOLD = 0.75
+DEFAULT_THRESHOLD = settings.DEDUP_THRESHOLD
 
 
 def get_link_hash(link: str) -> str:

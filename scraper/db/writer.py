@@ -50,35 +50,44 @@ async def save_news(items: list[dict]) -> int:
                     article_id = row[0]
 
                     # 关键词匹配
-                    matched = match_keywords(
-                        title=item.get("title"),
-                        translated_title=item.get("translated_title"),
-                        summary=item.get("summary"),
-                        category=item.get("category", ""),
-                        content=item.get("content"),
-                    )
+                    try:
+                        matched = match_keywords(
+                            title=item.get("title"),
+                            translated_title=item.get("translated_title"),
+                            summary=item.get("summary"),
+                            category=item.get("category", ""),
+                            content=item.get("content"),
+                        )
 
-                    if matched:
-                        await save_article_keywords(session, article_id, matched, term_to_id)
-                        await calculate_and_save_relations(session, article_id, item.get("category", ""))
+                        if matched:
+                            await save_article_keywords(session, article_id, matched, term_to_id)
+                            await calculate_and_save_relations(session, article_id, item.get("category", ""))
+                    except Exception as e:
+                        logger.warning(f"关键词匹配失败 (article_id={article_id}): {e}")
 
                     # 实体提取（使用预加载的配置）
-                    entities = extract_entities(
-                        title=item.get("title", ""),
-                        summary=item.get("summary", ""),
-                        content=item.get("content"),
-                    )
-                    if entities:
-                        entity_name_to_id = await sync_entities_to_db(session, entities)
-                        await save_article_entities(session, article_id, entities, entity_name_to_id)
+                    try:
+                        entities = extract_entities(
+                            title=item.get("title", ""),
+                            summary=item.get("summary", ""),
+                            content=item.get("content"),
+                        )
+                        if entities:
+                            entity_name_to_id = await sync_entities_to_db(session, entities)
+                            await save_article_entities(session, article_id, entities, entity_name_to_id)
+                    except Exception as e:
+                        logger.warning(f"实体提取失败 (article_id={article_id}): {e}")
 
                     # 事件检测和追踪
-                    event_result = await process_article_event(session, item)
-                    if event_result:
-                        events_saved += 1
+                    try:
+                        event_result = await process_article_event(session, item)
+                        if event_result:
+                            events_saved += 1
+                    except Exception as e:
+                        logger.warning(f"事件检测失败 (article_id={article_id}): {e}")
 
             except Exception as e:
-                logger.error(f"Error saving news {item.get('link')}: {e}")
+                logger.error(f"保存新闻失败 {item.get('link')}: {e}", exc_info=True)
 
         await session.commit()
 

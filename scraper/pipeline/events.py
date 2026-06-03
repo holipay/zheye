@@ -15,6 +15,7 @@ from datetime import date, datetime
 from typing import Optional
 
 from scraper.pipeline.utils import text_similarity
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -281,14 +282,14 @@ class EventTracker:
     使用 OrderedDict 实现 LRU 缓存，自动淘汰最久未使用的事件。
     """
     
-    def __init__(self, max_size: int = 1000):
+    def __init__(self, max_size: int = None):
         """
         Args:
-            max_size: 缓存最大容量
+            max_size: 缓存最大容量，默认从配置读取
         """
         from collections import OrderedDict
         self._events_cache: OrderedDict[str, dict] = OrderedDict()
-        self._max_size = max_size
+        self._max_size = max_size or settings.EVENT_CACHE_SIZE
     
     def _evict_if_needed(self):
         """如果超过容量，淘汰最久未使用的事件"""
