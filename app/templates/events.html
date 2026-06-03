@@ -7,13 +7,11 @@
 </div>
 
 <div class="events-container">
-    <div id="events-timeline">
-        <!-- 通过 HTMX 加载事件时间线 -->
-        <div hx-get="/api/events/timeline?days={{ days }}{% if category %}&category={{ category }}{% endif %}&lang={{ lang }}" 
-             hx-trigger="load" 
-             hx-target="#events-timeline">
-            <div class="loading">{{ t("events.loading") }}</div>
-        </div>
+    <div id="events-timeline"
+         hx-get="/api/events/timeline?days={{ days }}{% if category %}&category={{ category }}{% endif %}&lang={{ lang }}" 
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <div class="loading">{{ t("events.loading") }}</div>
     </div>
 </div>
 

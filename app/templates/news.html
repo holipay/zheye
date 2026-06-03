@@ -34,7 +34,6 @@
             <div id="news-list" 
                  hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page or 1 }}&lang={{ lang }}" 
                  hx-trigger="load"
-                 hx-target="#news-list"
                  hx-swap="innerHTML">
                 <div class="loading">{{ t("common.loading") }}</div>
             </div>
@@ -48,7 +47,7 @@
             <div class="widget-header">{{ t("home.hot_keywords") }}</div>
             <div class="widget-content">
                 <div id="keyword-nav"
-                     hx-get="/api/keywords/popular?limit=20&lang={{ lang }}" hx-trigger="load" hx-target="#keyword-nav" hx-swap="innerHTML">
+                     hx-get="/api/keywords/popular?limit=20&lang={{ lang }}" hx-trigger="load" hx-swap="innerHTML">
                     <div class="loading">{{ t("common.loading") }}</div>
                 </div>
             </div>
@@ -59,7 +58,7 @@
             <div class="widget-header">{{ t("home.focus_entities") }}</div>
             <div class="widget-content">
                 <div id="entity-nav"
-                     hx-get="/api/entities/popular?limit=10&lang={{ lang }}" hx-trigger="load" hx-target="#entity-nav" hx-swap="innerHTML">
+                     hx-get="/api/entities/popular?limit=10&lang={{ lang }}" hx-trigger="load" hx-swap="innerHTML">
                     <div class="loading">{{ t("common.loading") }}</div>
                 </div>
             </div>
