@@ -1,0 +1,48 @@
+from fastapi import APIRouter, Request, HTTPException
+from fastapi.templating import Jinja2Templates
+from pathlib import Path
+from sqlalchemy import select
+from models.base import async_session
+from models.event import Event
+from app.i18n import get_text, get_language_from_request
+
+router = APIRouter(prefix="/api")
+templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
+
+
+def _get_api_context(request: Request, **kwargs):
+    # 优先从查询参数中获取语言
+    lang = request.query_params.get("lang")
+    if not lang:
+        lang = get_language_from_request(request)
+    def t(key: str, **fmt_kwargs) -> str:
+        return get_text(lang, key, **fmt_kwargs)
+    return {"lang": lang, "t": t, **kwargs}
+
+
+async def _get_event_and_articles(session, event_id: str, max_articles: int = 5):
+    """
+    获取事件及其关联文章（公共辅助函数）
+    
+    Returns:
+        (event, event_data, articles) 或抛出 HTTPException
+    """
+    result = await session.execute(select(Event).where(Event.event_id == event_id))
+    event = result.scalar_one_or_none()
+    
+    if not event:
+        raise HTTPException(status_code=404, detail="事件未找到")
+    
+    articles = []
+    if event.related_articles:
+        for article_ref in event.related_articles[:max_articles]:
+            if isinstance(article_ref, dict):
+                articles.append(article_ref)
+    
+    event_data = {
+        "title": event.title,
+        "description": event.description,
+        "category": event.category,
+    }
+    
+    return event, event_data, articles

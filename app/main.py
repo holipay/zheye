@@ -9,8 +9,10 @@ app = FastAPI(title="zheye", description="全球新闻聚合与 AI 分析平台"
 
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 
-from app.routes import pages, api, admin, charts
-app.include_router(api.router)
+from app.routes import pages, api_news, api_analysis, api_events, admin, charts
+app.include_router(api_news.router)
+app.include_router(api_analysis.router)
+app.include_router(api_events.router)
 app.include_router(pages.router)
 app.include_router(admin.router)
 app.include_router(charts.router)
