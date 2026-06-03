@@ -32,7 +32,17 @@ def get_text(lang: str, key: str, **kwargs) -> str:
         if isinstance(value, dict):
             value = value.get(k)
             if value is None:
-                # 如果翻译不存在，返回键的最后一部分（如分类名称本身）
+                # 如果翻译不存在，尝试返回英文翻译
+                if lang != "en":
+                    en_value = _translations.get("en", {})
+                    for en_k in keys:
+                        if isinstance(en_value, dict):
+                            en_value = en_value.get(en_k)
+                            if en_value is None:
+                                return keys[-1]
+                        else:
+                            return keys[-1]
+                    return en_value if isinstance(en_value, str) else keys[-1]
                 return keys[-1]
         else:
             return keys[-1]
