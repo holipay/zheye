@@ -24,7 +24,10 @@ async def test_health_endpoint():
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/health")
         assert response.status_code == 200
-        assert response.json() == {"status": "ok"}
+        data = response.json()
+        assert "status" in data
+        assert "database" in data
+        assert data["status"] in ["ok", "degraded"]
 
 
 @pytest.mark.anyio
@@ -42,7 +45,7 @@ async def test_pages_news():
     from app.main import app
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/news")
+        response = await client.get("/en/news")
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
 
@@ -52,7 +55,7 @@ async def test_pages_articles():
     from app.main import app
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/articles")
+        response = await client.get("/en/articles")
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
 
@@ -62,7 +65,7 @@ async def test_pages_analysis():
     from app.main import app
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/analysis")
+        response = await client.get("/en/analysis")
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
 
