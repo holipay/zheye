@@ -14,12 +14,6 @@
         </div>
     </div>
     
-    <!-- 分类筛选 -->
-    <div class="category-tabs" id="category-tabs"
-         hx-get="/api/categories?lang={{ lang }}" hx-trigger="load" hx-target="#category-tabs" hx-swap="innerHTML">
-        <a href="/{{ lang }}/news?category=all" class="tab {% if category == 'all' %}active{% endif %}">{{ t("category.all") }}</a>
-    </div>
-    
     <!-- 类型筛选 -->
     <div class="type-tabs" style="margin-top: var(--spacing-sm);" id="type-tabs"
          hx-get="/api/article-types?lang={{ lang }}" hx-trigger="load" hx-target="#type-tabs" hx-swap="innerHTML">
