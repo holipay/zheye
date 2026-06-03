@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from sqlalchemy import select
-from models.base import async_session
+from sqlalchemy.ext.asyncio import AsyncSession
+from models.base import get_session
 from models.event import Event
 from app.i18n import get_text, get_language_from_request
 

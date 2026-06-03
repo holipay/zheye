@@ -145,6 +145,9 @@ async def get_sentiment_distribution(session, start_date: date, end_date: date) 
     return distribution
 
 
+REPORT_TABLES = {"weekly_reports", "monthly_reports"}
+
+
 async def generate_period_report(target_date: date, period: str) -> bool:
     """生成周期报告"""
     if not is_ai_enabled():
@@ -190,6 +193,11 @@ async def generate_period_report(target_date: date, period: str) -> bool:
         
         # 保存到数据库
         table_name = "weekly_reports" if period == "weekly" else "monthly_reports"
+        
+        # 白名单验证表名，防止 SQL 注入
+        if table_name not in REPORT_TABLES:
+            logger.error(f"无效的报告类型: {period}")
+            return False
         
         # 检查表是否存在，如果不存在则创建
         await ensure_report_tables(session, table_name)
@@ -239,6 +247,10 @@ async def generate_period_report(target_date: date, period: str) -> bool:
 
 async def ensure_report_tables(session, table_name: str):
     """确保报告表存在"""
+    # 白名单验证表名，防止 SQL 注入
+    if table_name not in REPORT_TABLES:
+        raise ValueError(f"无效的表名: {table_name}")
+    
     create_table_sql = f"""
         CREATE TABLE IF NOT EXISTS {table_name} (
             id BIGSERIAL PRIMARY KEY,
