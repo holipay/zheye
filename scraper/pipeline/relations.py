@@ -1,12 +1,22 @@
 import logging
 from collections import defaultdict
-from sqlalchemy import select, and_
+from sqlalchemy import select, and_, or_
 from models.article_keyword import ArticleKeyword
 from models.article_relation import ArticleRelation
 
 logger = logging.getLogger(__name__)
 
 RELATION_THRESHOLD = 0.3
+
+
+def _normalize_relation(source_id: int, target_id: int) -> tuple[int, int]:
+    """
+    规范化关系方向：确保 source_id < target_id
+    这样可以避免存储重复的双向关系
+    """
+    if source_id > target_id:
+        return target_id, source_id
+    return source_id, target_id
 
 
 async def get_article_keyword_ids(session, article_id: int) -> set[int]:
@@ -19,9 +29,9 @@ async def get_article_keyword_ids(session, article_id: int) -> set[int]:
 
 async def calculate_and_save_relations(session, article_id: int, category: str):
     """
-    计算并保存文章关联（优化版本，避免 N+1 查询）
+    计算并保存文章关联（优化版本）
     
-    使用批量查询一次性获取所有候选文章的关键词，减少数据库往返。
+    只存储一条关系记录（source_id < target_id），查询时使用 OR 条件获取所有相关关系。
     """
     # 获取当前文章的关键词
     article_keywords = await get_article_keyword_ids(session, article_id)
@@ -43,27 +53,34 @@ async def calculate_and_save_relations(session, article_id: int, category: str):
     if not candidate_keywords:
         return
 
-    # 批量获取已有关系（单次查询）
+    # 批量获取已有关系（单次查询，使用 OR 条件获取两个方向的关系）
     existing_result = await session.execute(
-        select(ArticleRelation.target_id)
-        .where(ArticleRelation.source_id == article_id)
-    )
-    existing_targets = {row[0] for row in existing_result.fetchall()}
-
-    # 批量获取已有反向关系（单次查询）
-    reverse_existing_result = await session.execute(
-        select(ArticleRelation.source_id)
+        select(
+            ArticleRelation.source_id,
+            ArticleRelation.target_id
+        )
         .where(
-            ArticleRelation.target_id == article_id,
-            ArticleRelation.source_id.in_(list(candidate_keywords.keys()))
+            or_(
+                ArticleRelation.source_id == article_id,
+                ArticleRelation.target_id == article_id
+            )
         )
     )
-    reverse_existing = {row[0] for row in reverse_existing_result.fetchall()}
+    
+    # 构建已有关系集合（规范化方向）
+    existing_relations = set()
+    for row in existing_result:
+        normalized = _normalize_relation(row[0], row[1])
+        existing_relations.add(normalized)
 
     # 计算并保存关系
     new_relations = []
     for target_id, target_kw in candidate_keywords.items():
-        if target_id in existing_targets:
+        # 规范化方向
+        source, target = _normalize_relation(article_id, target_id)
+        
+        # 检查是否已存在
+        if (source, target) in existing_relations:
             continue
 
         intersection = article_keywords & target_kw
@@ -77,24 +94,53 @@ async def calculate_and_save_relations(session, article_id: int, category: str):
         if score >= RELATION_THRESHOLD:
             score_rounded = round(score, 4)
             
-            # 正向关系
+            # 只存储一条关系（source_id < target_id）
             new_relations.append(ArticleRelation(
-                source_id=article_id,
-                target_id=target_id,
+                source_id=source,
+                target_id=target,
                 relation_type="keyword_match",
                 score=score_rounded,
             ))
             
-            # 反向关系（如果不存在）
-            if target_id not in reverse_existing:
-                new_relations.append(ArticleRelation(
-                    source_id=target_id,
-                    target_id=article_id,
-                    relation_type="keyword_match",
-                    score=score_rounded,
-                ))
+            # 添加到已存在集合，避免重复
+            existing_relations.add((source, target))
 
     # 批量插入
     if new_relations:
         session.add_all(new_relations)
         logger.debug(f"Created {len(new_relations)} relations for article {article_id}")
+
+
+async def get_related_article_ids(session, article_id: int) -> set[int]:
+    """
+    获取与指定文章相关的所有文章 ID
+    
+    Args:
+        session: 数据库会话
+        article_id: 文章 ID
+    
+    Returns:
+        相关文章 ID 集合
+    """
+    result = await session.execute(
+        select(
+            ArticleRelation.source_id,
+            ArticleRelation.target_id
+        )
+        .where(
+            or_(
+                ArticleRelation.source_id == article_id,
+                ArticleRelation.target_id == article_id
+            )
+        )
+    )
+    
+    related_ids = set()
+    for row in result:
+        # 返回另一个方向的文章 ID
+        if row[0] == article_id:
+            related_ids.add(row[1])
+        else:
+            related_ids.add(row[0])
+    
+    return related_ids

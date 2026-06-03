@@ -1,7 +1,7 @@
 from fastapi import Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse
 from datetime import date, datetime
-from sqlalchemy import select, func, desc
+from sqlalchemy import select, func, desc, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.base import get_session
 from models.news import News
@@ -232,10 +232,16 @@ async def get_related_news(
     if not news:
         raise HTTPException(status_code=404, detail="News not found")
 
+    # 使用 OR 条件查询两个方向的关系
     query = (
         select(News, ArticleRelation.score)
-        .join(ArticleRelation, ArticleRelation.target_id == News.id)
-        .where(ArticleRelation.source_id == news_id)
+        .join(
+            ArticleRelation,
+            or_(
+                and_(ArticleRelation.source_id == news_id, ArticleRelation.target_id == News.id),
+                and_(ArticleRelation.target_id == news_id, ArticleRelation.source_id == News.id),
+            )
+        )
         .order_by(desc(ArticleRelation.score))
         .limit(limit)
     )
@@ -441,8 +447,13 @@ async def get_news_detail(
 
     related_query = (
         select(News, ArticleRelation.score, ArticleRelation.relation_type)
-        .join(ArticleRelation, ArticleRelation.target_id == News.id)
-        .where(ArticleRelation.source_id == news_id)
+        .join(
+            ArticleRelation,
+            or_(
+                and_(ArticleRelation.source_id == news_id, ArticleRelation.target_id == News.id),
+                and_(ArticleRelation.target_id == news_id, ArticleRelation.source_id == News.id),
+            )
+        )
         .order_by(desc(ArticleRelation.score))
         .limit(10)
     )
