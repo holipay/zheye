@@ -20,7 +20,21 @@
   },
   "category": {
     "all": "All",
-    "all_types": "All Types"
+    "all_types": "All Types",
+    "股市与市场": "Stock Market",
+    "央行与利率": "Central Bank & Rates",
+    "宏观经济": "Macroeconomy",
+    "大宗商品与能源": "Commodities & Energy",
+    "科技与企业": "Tech & Enterprise",
+    "国际财经": "International Finance",
+    "社会与人口": "Society & Demographics",
+    "政治与治理": "Politics & Governance",
+    "心理学与认知": "Psychology & Cognition",
+    "科技与研究": "Science & Research",
+    "健康与公共卫生": "Health & Public Health",
+    "环境与能源": "Environment & Energy",
+    "教育与媒体": "Education & Media",
+    "法律与伦理": "Law & Ethics"
   },
   "home": {
     "hero_title": "Global Financial News · AI Insights",

@@ -4,11 +4,11 @@
         <div class="event-breadcrumb">
             <a href="/{{ lang }}/events" hx-get="/api/events?lang={{ lang }}" hx-target="#main-content" hx-push-url="true">{{ t("events.title") }}</a>
             <span class="separator">/</span>
-            <span>{{ event.category }}</span>
+            <span>{{ t("category." + event.category) }}</span>
         </div>
         <h2 class="event-title">{{ event.title }}</h2>
         <div class="event-meta">
-            <span class="event-category badge">{{ event.category }}</span>
+            <span class="event-category badge">{{ t("category." + event.category) }}</span>
             <span class="event-type">{{ event.event_type or 'Uncategorized' }}</span>
             <span class="event-status status-{{ event.status }}">{{ event.status }}</span>
         </div>
@@ -123,7 +123,7 @@
             {% for related in event.related_events %}
             <div class="related-event-item">
                 <div class="related-event-header">
-                    <span class="related-category badge">{{ related.category }}</span>
+                    <span class="related-category badge">{{ t("category." + related.category) }}</span>
                     <span class="related-date">{{ related.last_updated }}</span>
                 </div>
                 <h4>

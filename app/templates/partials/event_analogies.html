@@ -45,7 +45,7 @@
                            hx-push-url="true">
                             {{ analogy.target_title }}
                         </a>
-                        <span class="analogy-category">{{ analogy.target_category }}</span>
+                        <span class="analogy-category">{{ t("category." + analogy.target_category) }}</span>
                     </div>
                     <div class="similarity-badge">
                         <div class="similarity-score">{{ (analogy.overall_similarity * 100) | int }}%</div>

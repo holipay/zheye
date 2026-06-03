@@ -5,12 +5,12 @@
         <div class="timeline-filters">
             <select id="event-category-filter" hx-get="/api/events/timeline?lang={{ lang }}" hx-target="#events-timeline-content" hx-include="[name='days']">
                 <option value="">{{ t("category.all") }}</option>
-                <option value="央行与利率" {% if category == '央行与利率' %}selected{% endif %}>央行与利率</option>
-                <option value="股市与市场" {% if category == '股市与市场' %}selected{% endif %}>股市与市场</option>
-                <option value="宏观经济" {% if category == '宏观经济' %}selected{% endif %}>宏观经济</option>
-                <option value="国际财经" {% if category == '国际财经' %}selected{% endif %}>国际财经</option>
-                <option value="科技与企业" {% if category == '科技与企业' %}selected{% endif %}>科技与企业</option>
-                <option value="大宗商品与能源" {% if category == '大宗商品与能源' %}selected{% endif %}>大宗商品与能源</option>
+                <option value="央行与利率" {% if category == '央行与利率' %}selected{% endif %}>{{ t("category.央行与利率") }}</option>
+                <option value="股市与市场" {% if category == '股市与市场' %}selected{% endif %}>{{ t("category.股市与市场") }}</option>
+                <option value="宏观经济" {% if category == '宏观经济' %}selected{% endif %}>{{ t("category.宏观经济") }}</option>
+                <option value="国际财经" {% if category == '国际财经' %}selected{% endif %}>{{ t("category.国际财经") }}</option>
+                <option value="科技与企业" {% if category == '科技与企业' %}selected{% endif %}>{{ t("category.科技与企业") }}</option>
+                <option value="大宗商品与能源" {% if category == '大宗商品与能源' %}selected{% endif %}>{{ t("category.大宗商品与能源") }}</option>
             </select>
             <select name="days" hx-get="/api/events/timeline?lang={{ lang }}" hx-target="#events-timeline-content" hx-include="#event-category-filter">
                 <option value="1" {% if days == 1 %}selected{% endif %}>Today</option>
@@ -29,7 +29,7 @@
                 <div class="timeline-marker"></div>
                 <div class="timeline-content">
                     <div class="event-header">
-                        <span class="event-category badge">{{ event.category }}</span>
+                        <span class="event-category badge">{{ t("category." + event.category) }}</span>
                         <span class="event-date">{{ event.last_updated }}</span>
                     </div>
                     <h4 class="event-title">

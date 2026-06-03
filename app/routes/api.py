@@ -11,12 +11,21 @@ from models.article_keyword import ArticleKeyword
 from models.article_relation import ArticleRelation
 from models.entity import Entity
 from models.article_entity import ArticleEntity
+from models.event import Event
 from models.daily_report import DailyReport
 from models.trend import Trend
 from app.cache import get_cached, set_cached
+from app.i18n import get_text, get_language_from_request
 
 router = APIRouter(prefix="/api")
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
+
+
+def _get_api_context(request: Request, **kwargs):
+    lang = get_language_from_request(request)
+    def t(key: str, **fmt_kwargs) -> str:
+        return get_text(lang, key, **fmt_kwargs)
+    return {"lang": lang, "t": t, **kwargs}
 
 
 @router.get("/news", response_class=HTMLResponse)
@@ -101,16 +110,9 @@ async def get_news(
 
         total_pages = (total + page_size - 1) // page_size
 
-    return templates.TemplateResponse(request=request, name="partials/news_list.html", context={
-        "news_items": news_items,
-        "category": category,
-        "article_type": article_type,
-        "keyword_id": keyword_id,
-        "sort": sort,
-        "page": page,
-        "total_pages": total_pages,
-        "total": total,
-    })
+    ctx = _get_api_context(request, news_items=news_items, category=category, article_type=article_type,
+                           keyword_id=keyword_id, sort=sort, page=page, total_pages=total_pages, total=total)
+    return templates.TemplateResponse(request=request, name="partials/news_list.html", context=ctx)
 
 
 @router.get("/categories", response_class=HTMLResponse)
@@ -125,9 +127,9 @@ async def get_categories(request: Request):
         result = await session.execute(query)
         categories = result.all()
     
-    response = templates.TemplateResponse(request=request, name="partials/categories.html", context={
-        "categories": categories,
-    })
+    response = templates.TemplateResponse(request=request, name="partials/categories.html", context=_get_api_context(
+        request, categories=categories,
+    ))
     set_cached(cache_key, response.body.decode(), ttl=300)
     return response
 
@@ -144,9 +146,9 @@ async def get_article_types(request: Request):
         result = await session.execute(query)
         article_types = result.all()
     
-    response = templates.TemplateResponse(request=request, name="partials/article_types.html", context={
-        "article_types": article_types,
-    })
+    response = templates.TemplateResponse(request=request, name="partials/article_types.html", context=_get_api_context(
+        request, article_types=article_types,
+    ))
     set_cached(cache_key, response.body.decode(), ttl=300)
     return response
 
@@ -158,13 +160,10 @@ async def get_latest(request: Request, limit: int = 10):
         result = await session.execute(query)
         news_items = result.scalars().all()
     
-    return templates.TemplateResponse(request=request, name="partials/news_list.html", context={
-        "news_items": news_items,
-        "category": "all",
-        "page": 1,
-        "total_pages": 1,
-        "total": len(news_items),
-    })
+    return templates.TemplateResponse(request=request, name="partials/news_list.html", context=_get_api_context(
+        request, news_items=news_items, category="all", article_type="all", sort="date",
+        page=1, total_pages=1, total=len(news_items),
+    ))
 
 
 @router.get("/meta")
@@ -298,10 +297,9 @@ async def get_popular_keywords(request: Request, lang: str = "en", limit: int = 
                 "article_count": count,
             })
 
-    return templates.TemplateResponse(request=request, name="partials/keywords.html", context={
-        "keywords": keywords,
-        "lang": lang,
-    })
+    return templates.TemplateResponse(request=request, name="partials/keywords.html", context=_get_api_context(
+        request, keywords=keywords,
+    ))
 
 
 @router.get("/keywords/{keyword_id}/articles")
@@ -409,12 +407,9 @@ async def get_news_detail(request: Request, news_id: int):
             for r, score, relation_type in related_result.all()
         ]
 
-    return templates.TemplateResponse(request=request, name="partials/news_detail.html", context={
-        "news": news,
-        "keywords": keywords,
-        "entities": entities,
-        "related": related,
-    })
+    return templates.TemplateResponse(request=request, name="partials/news_detail.html", context=_get_api_context(
+        request, news=news, keywords=keywords, entities=entities, related=related,
+    ))
 
 
 @router.get("/entities/popular", response_class=HTMLResponse)
@@ -443,10 +438,9 @@ async def get_popular_entities(request: Request, entity_type: str = None, limit:
                 "article_count": count,
             })
 
-    return templates.TemplateResponse(request=request, name="partials/entity_list.html", context={
-        "entities": entities,
-        "entity_type": entity_type,
-    })
+    return templates.TemplateResponse(request=request, name="partials/entity_list.html", context=_get_api_context(
+        request, entities=entities, entity_type=entity_type,
+    ))
 
 
 @router.get("/entities/types", response_class=HTMLResponse)
@@ -498,14 +492,10 @@ async def get_news_by_entity(request: Request, entity_id: int, page: int = 1, pa
 
         total_pages = (total + page_size - 1) // page_size
 
-    return templates.TemplateResponse(request=request, name="partials/news_list.html", context={
-        "news_items": news_items,
-        "category": "all",
-        "article_type": "all",
-        "page": page,
-        "total_pages": total_pages,
-        "total": total,
-    })
+    return templates.TemplateResponse(request=request, name="partials/news_list.html", context=_get_api_context(
+        request, news_items=news_items, category="all", article_type="all", sort="date",
+        page=page, total_pages=total_pages, total=total,
+    ))
 
 
 # ============================================================
@@ -853,14 +843,10 @@ async def search_news(
 ):
     """全文搜索新闻"""
     if not q or len(q.strip()) < 2:
-        return templates.TemplateResponse(request=request, name="partials/news_list.html", context={
-            "news_items": [],
-            "category": category,
-            "page": 1,
-            "total_pages": 0,
-            "total": 0,
-            "search_query": q,
-        })
+        return templates.TemplateResponse(request=request, name="partials/news_list.html", context=_get_api_context(
+            request, news_items=[], category=category, article_type="all", sort="date",
+            page=1, total_pages=0, total=0, search_query=q,
+        ))
 
     offset = (page - 1) * page_size
     search_term = f"%{q.strip()}%"
@@ -894,14 +880,10 @@ async def search_news(
 
         total_pages = (total + page_size - 1) // page_size
 
-    return templates.TemplateResponse(request=request, name="partials/news_list.html", context={
-        "news_items": news_items,
-        "category": category,
-        "page": page,
-        "total_pages": total_pages,
-        "total": total,
-        "search_query": q,
-    })
+    return templates.TemplateResponse(request=request, name="partials/news_list.html", context=_get_api_context(
+        request, news_items=news_items, category=category, article_type="all", sort="date",
+        page=page, total_pages=total_pages, total=total, search_query=q,
+    ))
 
 
 # ============================================================
@@ -1069,11 +1051,9 @@ async def get_events_timeline(
                 "article_count": len(event.related_articles) if event.related_articles else 0,
             })
 
-    response = templates.TemplateResponse(request=request, name="partials/events_timeline.html", context={
-        "events": event_list,
-        "category": category,
-        "days": days,
-    })
+    response = templates.TemplateResponse(request=request, name="partials/events_timeline.html", context=_get_api_context(
+        request, events=event_list, category=category, days=days,
+    ))
     set_cached(cache_key, response.body.decode(), ttl=120)
     return response
 

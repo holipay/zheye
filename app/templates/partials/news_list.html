@@ -3,7 +3,7 @@
     <div class="news-item" onclick="window.location='/{{ lang }}/news/{{ item.id }}'">
         <div class="news-item-header">
             <span class="news-source">{{ item.source }}</span>
-            <span class="news-category-tag">{{ item.category }}</span>
+            <span class="news-category-tag">{{ t("category." + item.category) }}</span>
             {% if item.article_type and item.article_type != 'news' %}
             <span class="badge {% if item.article_type == 'opinion' %}badge-neutral{% elif item.article_type == 'analysis' %}badge-positive{% else %}badge-neutral{% endif %}">{{ item.article_type }}</span>
             {% endif %}

@@ -2,7 +2,7 @@
     <article class="detail-article">
         <div class="detail-meta">
             <span class="news-source">{{ news.source }}</span>
-            <span class="news-category">{{ news.category }}</span>
+            <span class="news-category">{{ t("category." + news.category) }}</span>
             {% if news.article_type and news.article_type != 'news' %}
             <span class="news-type type-{{ news.article_type }}">{{ news.article_type }}</span>
             {% endif %}
@@ -75,7 +75,7 @@
             <a href="/{{ lang }}/news/{{ r.id }}" class="related-item">
                 <div class="related-meta">
                     <span class="related-source">{{ r.source }}</span>
-                    <span class="related-category">{{ r.category }}</span>
+                    <span class="related-category">{{ t("category." + r.category) }}</span>
                     <span class="related-date">{{ r.date }}</span>
                     <span class="related-score">Relevance: {{ "%.0f"|format(r.score * 100) }}%</span>
                 </div>
