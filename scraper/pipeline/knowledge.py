@@ -15,6 +15,8 @@ import logging
 from datetime import datetime
 from typing import Optional, List
 
+from scraper.pipeline.utils import parse_ai_response, format_article_summaries
+
 logger = logging.getLogger(__name__)
 
 
@@ -199,53 +201,22 @@ CAUSAL_CHAIN_PROMPT = """你是一个金融事件因果分析专家。你的任�
 
 def build_analysis_prompt(title: str, description: str, category: str, articles: list) -> str:
     """构建知识分析提示词"""
-    article_summaries = []
-    for i, article in enumerate(articles[:5], 1):
-        summary = article.get('summary', article.get('title', ''))
-        article_summaries.append(f"{i}. {article.get('title', '')} - {summary[:200]}")
-    
     return KNOWLEDGE_ANALYSIS_PROMPT.format(
         title=title,
         description=description or "无",
         category=category,
-        article_summaries="\n".join(article_summaries) if article_summaries else "无相关文章"
+        article_summaries=format_article_summaries(articles)
     )
 
 
 def build_causal_chain_prompt(title: str, description: str, category: str, articles: list) -> str:
     """构建因果链分析提示词"""
-    article_summaries = []
-    for i, article in enumerate(articles[:5], 1):
-        summary = article.get('summary', article.get('title', ''))
-        article_summaries.append(f"{i}. {article.get('title', '')} - {summary[:200]}")
-    
     return CAUSAL_CHAIN_PROMPT.format(
         title=title,
         description=description or "无",
         category=category,
-        article_summaries="\n".join(article_summaries) if article_summaries else "无相关文章"
+        article_summaries=format_article_summaries(articles)
     )
-
-
-def parse_ai_response(response: str) -> Optional[dict]:
-    """解析AI返回的JSON"""
-    try:
-        # 尝试提取JSON块
-        if "```json" in response:
-            start = response.index("```json") + 7
-            end = response.index("```", start)
-            json_str = response[start:end].strip()
-        elif "```" in response:
-            start = response.index("```") + 3
-            end = response.index("```", start)
-            json_str = response[start:end].strip()
-        else:
-            json_str = response.strip()
-        
-        return json.loads(json_str)
-    except (json.JSONDecodeError, ValueError) as e:
-        logger.error(f"解析AI响应失败: {e}")
-        return None
 
 
 async def analyze_event_knowledge(event: dict, articles: list, ai_client) -> Optional[dict]:

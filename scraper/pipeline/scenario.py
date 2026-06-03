@@ -12,6 +12,8 @@ import json
 import logging
 from typing import Optional
 
+from scraper.pipeline.utils import parse_ai_response, format_article_summaries
+
 logger = logging.getLogger(__name__)
 
 
@@ -100,38 +102,13 @@ SCENARIO_ANALYSIS_PROMPT = """你是一个金融事件分析框架设计师。�
 
 def build_scenario_prompt(title: str, description: str, category: str, causal_pattern: str, articles: list) -> str:
     """构建情景推演提示词"""
-    article_summaries = []
-    for i, article in enumerate(articles[:5], 1):
-        summary = article.get('summary', article.get('title', ''))
-        article_summaries.append(f"{i}. {article.get('title', '')} - {summary[:200]}")
-    
     return SCENARIO_ANALYSIS_PROMPT.format(
         title=title,
         description=description or "无",
         category=category,
         causal_pattern=causal_pattern or "未识别",
-        article_summaries="\n".join(article_summaries) if article_summaries else "无相关文章"
+        article_summaries=format_article_summaries(articles)
     )
-
-
-def parse_ai_response(response: str) -> Optional[dict]:
-    """解析AI返回的JSON"""
-    try:
-        if "```json" in response:
-            start = response.index("```json") + 7
-            end = response.index("```", start)
-            json_str = response[start:end].strip()
-        elif "```" in response:
-            start = response.index("```") + 3
-            end = response.index("```", start)
-            json_str = response[start:end].strip()
-        else:
-            json_str = response.strip()
-        
-        return json.loads(json_str)
-    except (json.JSONDecodeError, ValueError) as e:
-        logger.error(f"解析AI响应失败: {e}")
-        return None
 
 
 async def analyze_scenarios(event: dict, articles: list, ai_client, causal_pattern: str = None) -> Optional[dict]:

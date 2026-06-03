@@ -15,6 +15,8 @@ from datetime import datetime, date
 from typing import Optional
 from dataclasses import dataclass
 
+from scraper.pipeline.utils import parse_ai_response
+
 logger = logging.getLogger(__name__)
 
 
@@ -144,14 +146,9 @@ class DeepSeekClient:
             return None
         
         try:
-            # 提取 JSON 部分
-            json_start = result.find("{")
-            json_end = result.rfind("}") + 1
-            if json_start == -1 or json_end == 0:
-                logger.error(f"无法解析 AI 返回结果: {result}")
+            data = parse_ai_response(result)
+            if not data:
                 return None
-            
-            data = json.loads(result[json_start:json_end])
             
             return ArticleAnalysis(
                 sentiment=data.get("sentiment", "neutral"),
@@ -161,7 +158,7 @@ class DeepSeekClient:
                 tags=data.get("tags", []),
                 importance=float(data.get("importance", 0.5))
             )
-        except (json.JSONDecodeError, ValueError) as e:
+        except (ValueError, TypeError) as e:
             logger.error(f"解析 AI 返回结果失败: {e}")
             return None
     
@@ -224,9 +221,9 @@ class DeepSeekClient:
             return None
         
         try:
-            json_start = result.find("{")
-            json_end = result.rfind("}") + 1
-            data = json.loads(result[json_start:json_end])
+            data = parse_ai_response(result)
+            if not data:
+                return None
             
             return DailyReport(
                 date=target_date,
@@ -237,7 +234,7 @@ class DeepSeekClient:
                 trend_analysis=data.get("trend_analysis", ""),
                 news_count=len(articles)
             )
-        except (json.JSONDecodeError, ValueError) as e:
+        except (ValueError, TypeError) as e:
             logger.error(f"解析每日报告失败: {e}")
             return None
     
@@ -279,12 +276,7 @@ class DeepSeekClient:
         if not result:
             return None
         
-        try:
-            json_start = result.find("{")
-            json_end = result.rfind("}") + 1
-            return json.loads(result[json_start:json_end])
-        except json.JSONDecodeError:
-            return None
+        return parse_ai_response(result)
     
     def generate_period_report(self, articles: list[dict], stats_summary: dict, period: str = "weekly") -> Optional[dict]:
         """
@@ -353,17 +345,12 @@ class DeepSeekClient:
         if not result:
             return None
         
-        try:
-            json_start = result.find("{")
-            json_end = result.rfind("}") + 1
-            if json_start == -1 or json_end == 0:
-                logger.error(f"无法解析 AI 返回结果: {result}")
-                return None
-            
-            return json.loads(result[json_start:json_end])
-        except json.JSONDecodeError as e:
-            logger.error(f"解析 AI 返回结果失败: {e}")
+        data = parse_ai_response(result)
+        if not data:
+            logger.error(f"无法解析 AI 返回结果")
             return None
+        
+        return data
 
 
 # 全局实例

@@ -28,6 +28,34 @@ def _get_api_context(request: Request, **kwargs):
     return {"lang": lang, "t": t, **kwargs}
 
 
+async def _get_event_and_articles(session, event_id: str, max_articles: int = 5):
+    """
+    获取事件及其关联文章（公共辅助函数）
+    
+    Returns:
+        (event, event_data, articles) 或抛出 HTTPException
+    """
+    result = await session.execute(select(Event).where(Event.event_id == event_id))
+    event = result.scalar_one_or_none()
+    
+    if not event:
+        raise HTTPException(status_code=404, detail="事件未找到")
+    
+    articles = []
+    if event.related_articles:
+        for article_ref in event.related_articles[:max_articles]:
+            if isinstance(article_ref, dict):
+                articles.append(article_ref)
+    
+    event_data = {
+        "title": event.title,
+        "description": event.description,
+        "category": event.category,
+    }
+    
+    return event, event_data, articles
+
+
 @router.get("/news", response_class=HTMLResponse)
 async def get_news(
     request: Request,
@@ -1151,30 +1179,10 @@ async def trigger_knowledge_analysis(event_id: str):
     from models.knowledge import EventKnowledge, EventKnowledgeAtom, KnowledgeAtom
     
     async with async_session() as session:
-        # 获取事件
-        result = await session.execute(
-            select(Event).where(Event.event_id == event_id)
-        )
-        event = result.scalar_one_or_none()
-        
-        if not event:
-            raise HTTPException(status_code=404, detail="事件未找到")
-        
-        # 获取相关文章
-        articles = []
-        if event.related_articles:
-            for article_ref in event.related_articles[:5]:
-                if isinstance(article_ref, dict):
-                    articles.append(article_ref)
+        event, event_data, articles = await _get_event_and_articles(session, event_id)
         
         # 调用AI分析
         ai_client = DeepSeekClient()
-        event_data = {
-            "title": event.title,
-            "description": event.description,
-            "category": event.category,
-        }
-        
         analysis = await analyze_event_knowledge(event_data, articles, ai_client)
         
         if not analysis:
@@ -1336,30 +1344,10 @@ async def trigger_causal_chain_analysis(event_id: str):
     from models.causal_chain import CausalNode, CausalLink
     
     async with async_session() as session:
-        # 获取事件
-        result = await session.execute(
-            select(Event).where(Event.event_id == event_id)
-        )
-        event = result.scalar_one_or_none()
-        
-        if not event:
-            raise HTTPException(status_code=404, detail="事件未找到")
-        
-        # 获取相关文章
-        articles = []
-        if event.related_articles:
-            for article_ref in event.related_articles[:5]:
-                if isinstance(article_ref, dict):
-                    articles.append(article_ref)
+        event, event_data, articles = await _get_event_and_articles(session, event_id)
         
         # 调用AI分析
         ai_client = DeepSeekClient()
-        event_data = {
-            "title": event.title,
-            "description": event.description,
-            "category": event.category,
-        }
-        
         analysis = await analyze_causal_chain(event_data, articles, ai_client)
         
         if not analysis:
@@ -1497,28 +1485,9 @@ async def trigger_analogy_analysis(event_id: str):
     from models.event_representation import EventRepresentation, HistoricalAnalogy
     
     async with async_session() as session:
-        # 获取事件
-        result = await session.execute(
-            select(Event).where(Event.event_id == event_id)
-        )
-        event = result.scalar_one_or_none()
-        
-        if not event:
-            raise HTTPException(status_code=404, detail="事件未找到")
-        
-        # 获取相关文章
-        articles = []
-        if event.related_articles:
-            for article_ref in event.related_articles[:5]:
-                if isinstance(article_ref, dict):
-                    articles.append(article_ref)
+        event, event_data, articles = await _get_event_and_articles(session, event_id)
         
         ai_client = DeepSeekClient()
-        event_data = {
-            "title": event.title,
-            "description": event.description,
-            "category": event.category,
-        }
         
         # 步骤1: 提取当前事件的表征
         repr_result = await extract_event_representation(event_data, articles, ai_client)
@@ -1721,21 +1690,7 @@ async def trigger_scenario_analysis(event_id: str):
     from models.event_representation import EventRepresentation
     
     async with async_session() as session:
-        # 获取事件
-        result = await session.execute(
-            select(Event).where(Event.event_id == event_id)
-        )
-        event = result.scalar_one_or_none()
-        
-        if not event:
-            raise HTTPException(status_code=404, detail="事件未找到")
-        
-        # 获取相关文章
-        articles = []
-        if event.related_articles:
-            for article_ref in event.related_articles[:5]:
-                if isinstance(article_ref, dict):
-                    articles.append(article_ref)
+        event, event_data, articles = await _get_event_and_articles(session, event_id)
         
         # 获取因果模式（如果已有表征）
         repr_result = await session.execute(
@@ -1746,12 +1701,6 @@ async def trigger_scenario_analysis(event_id: str):
         
         # 调用AI分析
         ai_client = DeepSeekClient()
-        event_data = {
-            "title": event.title,
-            "description": event.description,
-            "category": event.category,
-        }
-        
         analysis = await analyze_scenarios(event_data, articles, ai_client, causal_pattern)
         
         if not analysis:

@@ -1,6 +1,7 @@
 import hashlib
 import logging
-from difflib import SequenceMatcher
+
+from scraper.pipeline.utils import text_similarity
 
 logger = logging.getLogger(__name__)
 
@@ -12,9 +13,7 @@ def get_link_hash(link: str) -> str:
 
 
 def similarity(a: str, b: str) -> float:
-    if not a or not b:
-        return 0.0
-    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
+    return text_similarity(a, b)
 
 
 def is_duplicate(title: str, existing_titles: list[str], threshold: float = DEFAULT_THRESHOLD) -> bool:

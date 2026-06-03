@@ -13,7 +13,8 @@ import logging
 import re
 from datetime import date, datetime
 from typing import Optional
-from difflib import SequenceMatcher
+
+from scraper.pipeline.utils import text_similarity
 
 logger = logging.getLogger(__name__)
 
@@ -116,14 +117,7 @@ def calculate_event_similarity(title1: str, title2: str) -> float:
     Returns:
         相似度分数 0-1
     """
-    # 转换为小写并清理
-    t1 = title1.lower().strip()
-    t2 = title2.lower().strip()
-    
-    # 使用 SequenceMatcher 计算相似度
-    similarity = SequenceMatcher(None, t1, t2).ratio()
-    
-    return similarity
+    return text_similarity(title1, title2)
 
 
 def is_same_event(title1: str, title2: str, threshold: float = 0.6) -> bool:
