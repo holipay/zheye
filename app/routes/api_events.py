@@ -664,17 +664,22 @@ async def trigger_analogy_analysis(
     candidates_result = await session.execute(candidates_query)
     candidates = candidates_result.scalars().all()
     
+    # 批量查询已存在的类比关系（避免循环内 N+1 查询）
+    candidate_ids = [c.event_id for c in candidates]
+    existing_result = await session.execute(
+        select(HistoricalAnalogy.target_event_id)
+        .where(
+            HistoricalAnalogy.source_event_id == event_id,
+            HistoricalAnalogy.target_event_id.in_(candidate_ids)
+        )
+    )
+    existing_targets = {row[0] for row in existing_result.fetchall()}
+    
     # 步骤3: 对每个候选进行详细的类比分析
     analogies_created = 0
     for candidate in candidates:
-        # 检查是否已存在
-        existing = await session.execute(
-            select(HistoricalAnalogy).where(
-                HistoricalAnalogy.source_event_id == event_id,
-                HistoricalAnalogy.target_event_id == candidate.event_id
-            )
-        )
-        if existing.scalar():
+        # 跳过已存在的类比
+        if candidate.event_id in existing_targets:
             continue
         
         # 计算规则相似度
