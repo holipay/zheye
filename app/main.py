@@ -18,15 +18,6 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 
-from app.routes import pages, api_news, api_analysis, api_events, admin, charts
-app.include_router(api_news.router)
-app.include_router(api_analysis.router)
-app.include_router(api_events.router)
-app.include_router(pages.router)
-app.include_router(admin.router)
-app.include_router(charts.router)
-
-
 @app.get("/health")
 @limiter.exempt  # 健康检查不限速
 async def health(request: Request):
@@ -47,3 +38,11 @@ async def health(request: Request):
     
     status_code = 200 if checks["status"] == "ok" else 503
     return JSONResponse(content=checks, status_code=status_code)
+
+from app.routes import pages, api_news, api_analysis, api_events, admin, charts
+app.include_router(api_news.router)
+app.include_router(api_analysis.router)
+app.include_router(api_events.router)
+app.include_router(pages.router)
+app.include_router(admin.router)
+app.include_router(charts.router)
