@@ -13,12 +13,10 @@
         <div class="container">
             <div class="top-bar-left">
                 <span class="market-tag">{{ t("top_bar.realtime") }}</span>
-                <span class="divider">|</span>
-                <span id="current-time"></span>
             </div>
             <div class="top-bar-right">
-                <a href="/{{ lang }}/analysis">{{ t("nav.deep_analysis") }}</a>
-                <a href="/{{ lang }}/events">{{ t("nav.event_tracking") }}</a>
+                <a href="/{{ lang }}/login">{{ t("nav.user_login") }}</a>
+                <a href="/{{ lang }}/admin">{{ t("nav.admin_dashboard") }}</a>
             </div>
         </div>
     </div>
@@ -109,24 +107,6 @@
         </div>
     </footer>
 
-    <script>
-        // 更新时间
-        function updateTime() {
-            const now = new Date();
-            const options = { 
-                year: 'numeric', 
-                month: '2-digit', 
-                day: '2-digit',
-                hour: '2-digit', 
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: false 
-            };
-            const locale = '{{ lang }}' === 'zh' ? 'zh-CN' : 'en-US';
-            document.getElementById('current-time').textContent = now.toLocaleString(locale, options);
-        }
-        updateTime();
-        setInterval(updateTime, 1000);
-    </script>
+
 </body>
 </html>

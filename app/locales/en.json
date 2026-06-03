@@ -10,7 +10,9 @@
     "analysis": "Analysis",
     "events": "Events",
     "deep_analysis": "Deep Analysis",
-    "event_tracking": "Event Tracking"
+    "event_tracking": "Event Tracking",
+    "user_login": "User Login",
+    "admin_dashboard": "Admin Dashboard"
   },
   "top_bar": {
     "realtime": "Real-time News"

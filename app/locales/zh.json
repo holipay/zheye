@@ -10,7 +10,9 @@
     "analysis": "分析",
     "events": "事件",
     "deep_analysis": "深度分析",
-    "event_tracking": "事件追踪"
+    "event_tracking": "事件追踪",
+    "user_login": "用户登录",
+    "admin_dashboard": "管理后台"
   },
   "top_bar": {
     "realtime": "实时资讯"
