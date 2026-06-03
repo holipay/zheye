@@ -1,7 +1,7 @@
 from fastapi import Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse
 from datetime import date, datetime
-from sqlalchemy import select, func, desc, or_
+from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.base import get_session
 from models.news import News
@@ -266,7 +266,20 @@ async def get_keywords(
     page: int = 1,
     page_size: int = 50,
 ):
-    query = select(Keyword)
+    # 使用子查询一次性获取文章计数，避免 N+1 查询
+    article_count_subq = (
+        select(
+            ArticleKeyword.keyword_id,
+            func.count(ArticleKeyword.id).label("article_count")
+        )
+        .group_by(ArticleKeyword.keyword_id)
+        .subquery()
+    )
+
+    query = (
+        select(Keyword, func.coalesce(article_count_subq.c.article_count, 0).label("article_count"))
+        .outerjoin(article_count_subq, Keyword.id == article_count_subq.c.keyword_id)
+    )
     count_query = select(func.count(Keyword.id))
 
     if category:
@@ -282,15 +295,10 @@ async def get_keywords(
     offset = (page - 1) * page_size
     query = query.order_by(Keyword.category, desc(Keyword.weight)).offset(offset).limit(page_size)
     result = await session.execute(query)
-    keywords = result.scalars().all()
+    rows = result.all()
 
     keyword_list = []
-    for kw in keywords:
-        count_result = await session.execute(
-            select(func.count(ArticleKeyword.id)).where(ArticleKeyword.keyword_id == kw.id)
-        )
-        article_count = count_result.scalar()
-
+    for kw, article_count in rows:
         keyword_list.append({
             "id": kw.id,
             "term": kw.term,
@@ -565,7 +573,7 @@ async def search_news(
     page: int = 1,
     page_size: int = 20,
 ):
-    """全文搜索新闻"""
+    """全文搜索新闻 - 使用 PostgreSQL 全文搜索"""
     if not q or len(q.strip()) < 2:
         return templates.TemplateResponse(request=request, name="partials/news_list.html", context=_get_api_context(
             request, news_items=[], category=category, article_type="all", sort="date",
@@ -573,13 +581,18 @@ async def search_news(
         ))
 
     offset = (page - 1) * page_size
-    search_term = f"%{q.strip()}%"
-
-    base_filter = or_(
-        News.title.ilike(search_term),
-        News.translated_title.ilike(search_term),
-        News.summary.ilike(search_term),
+    search_term = q.strip()
+    
+    # 使用 PostgreSQL 全文搜索
+    # to_tsvector('simple', ...) 配合 plainto_tsquery('simple', ...) 支持中英文
+    ts_query = func.plainto_tsquery('simple', search_term)
+    ts_vector = func.to_tsvector('simple', 
+        News.title + ' ' + func.coalesce(News.translated_title, '') + ' ' + func.coalesce(News.content, '')
     )
+    
+    # 使用 @@ 运算符进行全文搜索匹配
+    from sqlalchemy import cast, Boolean
+    base_filter = ts_vector.op('@@')(ts_query)
 
     count_query = select(func.count(News.id)).where(base_filter)
     if category and category != "all":
@@ -588,10 +601,13 @@ async def search_news(
     total_result = await session.execute(count_query)
     total = total_result.scalar()
 
+    # 使用 ts_rank 进行相关性排序
+    rank = func.ts_rank(ts_vector, ts_query).label("rank")
+    
     query = (
-        select(News)
+        select(News, rank)
         .where(base_filter)
-        .order_by(desc(News.date))
+        .order_by(desc(rank), desc(News.date))
         .offset(offset)
         .limit(page_size)
     )
@@ -599,7 +615,8 @@ async def search_news(
         query = query.where(News.category == category)
 
     result = await session.execute(query)
-    news_items = result.scalars().all()
+    rows = result.all()
+    news_items = [row[0] for row in rows]
 
     total_pages = (total + page_size - 1) // page_size
 

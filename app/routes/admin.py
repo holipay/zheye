@@ -158,16 +158,24 @@ async def get_dashboard(_: bool = Depends(verify_admin_credentials)):
         )
         category_stats = [{"name": row[0], "count": row[1]} for row in category_stats_result.all()]
         
-        # 最近7天每日新闻数量
-        daily_stats = []
-        for i in range(7):
-            day = today - timedelta(days=i)
-            count_result = await session.execute(
-                select(func.count(News.id)).where(func.date(News.date) == day)
+        # 最近7天每日新闻数量 - 使用单条 SQL 按日期分组
+        daily_stats_result = await session.execute(
+            select(
+                func.date(News.date).label("day"),
+                func.count(News.id).label("count")
             )
-            count = count_result.scalar()
-            daily_stats.append({"date": str(day), "count": count})
-        daily_stats.reverse()
+            .where(News.date >= today - timedelta(days=6))
+            .group_by(func.date(News.date))
+            .order_by(func.date(News.date))
+        )
+        daily_counts = {str(row.day): row.count for row in daily_stats_result.all()}
+        
+        # 填充缺失的日期
+        daily_stats = []
+        for i in range(6, -1, -1):
+            day = today - timedelta(days=i)
+            day_str = str(day)
+            daily_stats.append({"date": day_str, "count": daily_counts.get(day_str, 0)})
         
         return {
             "overview": {
