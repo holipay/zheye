@@ -30,7 +30,7 @@ TYPE_PATTERNS = [
 ]
 
 def load_categories() -> dict:
-    config_path = Path(__file__).parent / "sources" / "config.yaml"
+    config_path = Path(__file__).parent.parent / "sources" / "config.yaml"
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
