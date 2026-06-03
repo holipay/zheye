@@ -5,13 +5,14 @@
 
 import logging
 from datetime import date, timedelta
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 from sqlalchemy import select, func, desc, text
 
 from models.base import async_session
 from models.news import News
 from models.trend import Trend
 from app.cache import get_cached, set_cached
+from app.i18n import get_text, get_language_from_request
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/charts")
@@ -70,9 +71,10 @@ async def get_daily_trend(days: int = Query(default=30, le=90)):
 
 
 @router.get("/sentiment")
-async def get_sentiment_distribution(days: int = Query(default=7, le=30)):
+async def get_sentiment_distribution(request: Request, days: int = Query(default=7, le=30)):
     """获取情感分布数据"""
-    cache_key = f"charts:sentiment:{days}"
+    lang = get_language_from_request(request)
+    cache_key = f"charts:sentiment:{days}:{lang}"
     cached = get_cached(cache_key)
     if cached:
         return cached
@@ -93,8 +95,14 @@ async def get_sentiment_distribution(days: int = Query(default=7, le=30)):
         for row in result:
             sentiment_map[row[0]] = row[1]
 
+        # 根据语言返回标签
+        if lang == "zh":
+            labels = ["积极", "中性", "消极", "未分析"]
+        else:
+            labels = ["Positive", "Neutral", "Negative", "Unanalyzed"]
+
         response = {
-            "labels": ["积极", "中性", "消极", "未分析"],
+            "labels": labels,
             "values": [
                 sentiment_map["positive"],
                 sentiment_map["neutral"],

@@ -67,7 +67,7 @@ def extract_date_from_html(url: str, html: str) -> Optional[datetime]:
                 try:
                     return datetime.strptime(date_str, "%Y-%m-%d")
                 except ValueError:
-                    pass
+                    logger.debug(f"Failed to parse date format: {date_str}")
         return None
     except Exception as e:
         logger.debug(f"Failed to extract date from {url}: {e}")
