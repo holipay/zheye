@@ -1,11 +1,15 @@
 import logging
 import re
+import os
 from pathlib import Path
 from typing import Optional
 from collections import defaultdict
 import yaml
 
 logger = logging.getLogger(__name__)
+
+# NER 配置
+USE_NER = os.getenv("USE_NER", "true").lower() == "true"
 
 _entities_cache: Optional[dict] = None
 
@@ -115,16 +119,44 @@ def _get_context(text: str, match_start: int, match_end: int, max_len: int = 100
     return snippet[:max_len]
 
 
-def extract_entities(title: str, summary: str = "", content: str = "") -> list[dict]:
+def extract_entities(title: str, summary: str = "", content: str = "", use_ner: bool = None) -> list[dict]:
     """
     从文本中提取实体
     
-    使用预编译的正则表达式，提高匹配效率。
+    使用混合方法：
+    1. 正则表达式提取数值实体（货币、百分比等）
+    2. NER 提取命名实体（组织、人名、地名等）
+    3. 合并结果，NER 优先
+    
+    Args:
+        title: 标题
+        summary: 摘要
+        content: 正文
+        use_ner: 是否使用 NER（None 时使用环境变量配置）
     """
     text = " ".join(filter(None, [title, summary, content]))
     if not text.strip():
         return []
 
+    # 正则提取数值实体
+    regex_entities = _extract_regex_entities(text)
+    
+    # 是否使用 NER
+    if use_ner is None:
+        use_ner = USE_NER
+    
+    if use_ner:
+        try:
+            from scraper.pipeline.ner import extract_entities_hybrid
+            return extract_entities_hybrid(text, regex_entities)
+        except Exception as e:
+            logger.warning(f"NER extraction failed, falling back to regex: {e}")
+    
+    return regex_entities
+
+
+def _extract_regex_entities(text: str) -> list[dict]:
+    """使用正则表达式提取实体（数值实体更准确）"""
     results = []
     seen = set()
     

@@ -29,66 +29,136 @@ async def save_news(items: list[dict[str, any]]) -> int:
         term_to_id = await sync_keywords_to_db(session, keywords_data)
         await session.commit()
 
-        # 批量预加载实体配置（避免循环内重复加载）
-        from scraper.pipeline.entities import load_entities, _build_entity_patterns
-        entities_config = load_entities()
-        entity_patterns = _build_entity_patterns(entities_config)
+        # ========== 阶段1: 批量插入新闻 ==========
+        stmt = (
+            pg_insert(News)
+            .values(items)
+            .on_conflict_do_nothing(index_elements=["link_hash"])
+            .returning(News.id, News.link_hash)
+        )
+        result = await session.execute(stmt)
+        inserted_rows = result.fetchall()
+        saved = len(inserted_rows)
 
-        for item in items:
+        if saved == 0:
+            logger.info("No new articles to insert")
+            return 0
+
+        # 构建 link_hash -> article_id 映射
+        hash_to_id = {row[1]: row[0] for row in inserted_rows}
+        # 构建 link_hash -> item 映射（用于后处理）
+        hash_to_item = {item["link_hash"]: item for item in items if "link_hash" in item}
+
+        # ========== 阶段2: 批量后处理关键词/实体/事件 ==========
+        all_keyword_records = []
+        all_entity_records = []
+        all_entities = []  # 收集所有实体，用于批量同步
+
+        for link_hash, article_id in hash_to_id.items():
+            item = hash_to_item.get(link_hash)
+            if not item:
+                continue
+
+            # 关键词匹配（CPU 密集，但不涉及 IO）
             try:
-                # 使用 RETURNING id 直接获取插入的 ID，避免额外的 SELECT 查询
-                stmt = (
-                    pg_insert(News)
-                    .values(**item)
-                    .on_conflict_do_nothing(index_elements=["link_hash"])
-                    .returning(News.id)
+                matched = match_keywords(
+                    title=item.get("title"),
+                    translated_title=item.get("translated_title"),
+                    summary=item.get("summary"),
+                    category=item.get("category", ""),
+                    content=item.get("content"),
                 )
-                result = await session.execute(stmt)
-                row = result.first()
-                
-                if row:
-                    saved += 1
-                    article_id = row[0]
-
-                    # 关键词匹配
-                    try:
-                        matched = match_keywords(
-                            title=item.get("title"),
-                            translated_title=item.get("translated_title"),
-                            summary=item.get("summary"),
-                            category=item.get("category", ""),
-                            content=item.get("content"),
-                        )
-
-                        if matched:
-                            await save_article_keywords(session, article_id, matched, term_to_id)
-                            await calculate_and_save_relations(session, article_id, item.get("category", ""))
-                    except Exception as e:
-                        logger.warning(f"关键词匹配失败 (article_id={article_id}): {e}")
-
-                    # 实体提取（使用预加载的配置）
-                    try:
-                        entities = extract_entities(
-                            title=item.get("title", ""),
-                            summary=item.get("summary", ""),
-                            content=item.get("content"),
-                        )
-                        if entities:
-                            entity_name_to_id = await sync_entities_to_db(session, entities)
-                            await save_article_entities(session, article_id, entities, entity_name_to_id)
-                    except Exception as e:
-                        logger.warning(f"实体提取失败 (article_id={article_id}): {e}")
-
-                    # 事件检测和追踪
-                    try:
-                        event_result = await process_article_event(session, item)
-                        if event_result:
-                            events_saved += 1
-                    except Exception as e:
-                        logger.warning(f"事件检测失败 (article_id={article_id}): {e}")
-
+                if matched:
+                    for mk in matched:
+                        keyword_id = term_to_id.get(mk["term"])
+                        if keyword_id:
+                            all_keyword_records.append({
+                                "article_id": article_id,
+                                "keyword_id": keyword_id,
+                                "relevance": mk.get("relevance", 1.0),
+                            })
             except Exception as e:
-                logger.error(f"保存新闻失败 {item.get('link')}: {e}", exc_info=True)
+                logger.warning(f"关键词匹配失败 (article_id={article_id}): {e}")
+
+            # 实体提取（CPU 密集，但不涉及 IO）
+            try:
+                entities = extract_entities(
+                    title=item.get("title", ""),
+                    summary=item.get("summary", ""),
+                    content=item.get("content"),
+                )
+                if entities:
+                    all_entities.append((article_id, entities))
+            except Exception as e:
+                logger.warning(f"实体提取失败 (article_id={article_id}): {e}")
+
+            # 事件检测
+            try:
+                event_result = await process_article_event(session, item)
+                if event_result:
+                    events_saved += 1
+            except Exception as e:
+                logger.warning(f"事件检测失败 (article_id={article_id}): {e}")
+
+        # ========== 阶段3: 批量插入关键词关联 ==========
+        if all_keyword_records:
+            try:
+                from models.article_keyword import ArticleKeyword
+                kw_stmt = (
+                    pg_insert(ArticleKeyword)
+                    .values(all_keyword_records)
+                    .on_conflict_do_nothing()
+                )
+                await session.execute(kw_stmt)
+                logger.debug(f"批量插入 {len(all_keyword_records)} 条关键词关联")
+            except Exception as e:
+                logger.warning(f"批量插入关键词关联失败: {e}")
+
+        # 批量计算文章关系
+        for link_hash, article_id in hash_to_id.items():
+            item = hash_to_item.get(link_hash)
+            if item:
+                try:
+                    await calculate_and_save_relations(session, article_id, item.get("category", ""))
+                except Exception as e:
+                    logger.warning(f"关系计算失败 (article_id={article_id}): {e}")
+
+        # ========== 阶段4: 批量同步实体并插入关联 ==========
+        if all_entities:
+            try:
+                # 合并所有实体，一次性同步到数据库
+                merged_entities = {}
+                for article_id, entities in all_entities:
+                    for ent in entities:
+                        name = ent["name"]
+                        if name not in merged_entities:
+                            merged_entities[name] = ent
+
+                entity_name_to_id = await sync_entities_to_db(session, list(merged_entities.values()))
+
+                # 构建实体关联记录
+                for article_id, entities in all_entities:
+                    for ent in entities:
+                        entity_id = entity_name_to_id.get(ent["name"])
+                        if entity_id:
+                            all_entity_records.append({
+                                "article_id": article_id,
+                                "entity_id": entity_id,
+                                "context": ent.get("context", ""),
+                            })
+
+                # 批量插入实体关联
+                if all_entity_records:
+                    from models.article_entity import ArticleEntity
+                    ent_stmt = (
+                        pg_insert(ArticleEntity)
+                        .values(all_entity_records)
+                        .on_conflict_do_nothing()
+                    )
+                    await session.execute(ent_stmt)
+                    logger.debug(f"批量插入 {len(all_entity_records)} 条实体关联")
+            except Exception as e:
+                logger.warning(f"批量插入实体关联失败: {e}")
 
         await session.commit()
 
@@ -100,6 +170,7 @@ async def save_news(items: list[dict[str, any]]) -> int:
         _invalidate_events_cache()
         logger.info(f"Processed {events_saved} events")
     
+    logger.info(f"批量插入完成: {saved} 篇新闻, {len(all_keyword_records)} 条关键词, {len(all_entity_records)} 条实体")
     return saved
 
 

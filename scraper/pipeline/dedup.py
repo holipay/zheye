@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import os
 from collections import defaultdict
 
 from scraper.pipeline.utils import text_similarity
@@ -8,6 +9,9 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 DEFAULT_THRESHOLD = settings.DEDUP_THRESHOLD
+
+# TF-IDF 去重配置
+USE_TFIDF_DEDUP = os.getenv("USE_TFIDF_DEDUP", "true").lower() == "true"
 
 
 def get_link_hash(link: str) -> str:
@@ -37,17 +41,38 @@ def _ngram_similarity(a: str, b: str, n: int = 3) -> float:
     return intersection / union if union > 0 else 0.0
 
 
-def is_duplicate(title: str, existing_titles: list[str], threshold: float = DEFAULT_THRESHOLD) -> bool:
+def is_duplicate(title: str, existing_titles: list[str], threshold: float = DEFAULT_THRESHOLD, use_tfidf: bool = None) -> bool:
     """
     检查标题是否重复
-    使用两阶段策略：
-    1. 快速 n-gram 预筛选，过滤明显不相似的候选
-    2. 对候选进行精确相似度计算
+    
+    使用混合策略：
+    1. 如果启用 TF-IDF，使用语义去重
+    2. 否则使用传统 n-gram + 精确相似度
+    
+    Args:
+        title: 待检查的标题
+        existing_titles: 已有标题列表
+        threshold: 相似度阈值
+        use_tfidf: 是否使用 TF-IDF（None 时使用环境变量配置）
     """
     if not title or not existing_titles:
         return False
     
-    # 预筛选阈值：比最终阈值低一些，确保召回率
+    # 是否使用 TF-IDF
+    if use_tfidf is None:
+        use_tfidf = USE_TFIDF_DEDUP
+    
+    if use_tfidf:
+        try:
+            from scraper.pipeline.tfidf_dedup import TFIDFDeduplicator
+            # 每次调用创建新实例，避免状态污染
+            dedup = TFIDFDeduplicator(threshold=threshold)
+            dedup.fit(existing_titles)
+            return dedup.is_duplicate(title)
+        except Exception as e:
+            logger.warning(f"TF-IDF 去重失败，降级到传统方法: {e}")
+    
+    # 传统方法：n-gram 预筛选 + 精确相似度
     prefilter_threshold = threshold * 0.6
     
     for existing in existing_titles:
