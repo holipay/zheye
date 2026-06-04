@@ -104,5 +104,9 @@ class Settings:
     # 深度分析模块开关
     ENABLE_DEEP_ANALYST: bool = os.getenv("ENABLE_DEEP_ANALYST", "false").lower() == "true"
 
+    # 深度分析流水线配置
+    DEEP_ANALYSIS_MAX_EVENTS: int = _safe_int(os.getenv("DEEP_ANALYSIS_MAX_EVENTS"), 10)
+    DEEP_ANALYSIS_COOLDOWN_HOURS: int = _safe_int(os.getenv("DEEP_ANALYSIS_COOLDOWN_HOURS"), 24)
+
 
 settings = Settings()
