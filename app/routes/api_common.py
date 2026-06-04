@@ -9,6 +9,7 @@ from models.base import get_session
 from models.event import Event
 from app.context import get_api_context
 from app.config import settings
+from app.errors import ErrorMessages as Err
 
 # 速率限制器
 limiter = Limiter(key_func=get_remote_address)
@@ -31,7 +32,7 @@ async def _get_event_and_articles(session: AsyncSession, event_id: str, max_arti
     event = result.scalar_one_or_none()
     
     if not event:
-        raise HTTPException(status_code=404, detail="事件未找到")
+        raise HTTPException(status_code=404, detail=Err.EVENT_NOT_FOUND)
     
     articles = []
     if event.related_articles:

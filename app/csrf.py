@@ -7,6 +7,7 @@ import secrets
 import hmac
 from fastapi import Request, HTTPException, status
 from app.config import settings
+from app.errors import ErrorMessages as Err
 
 # CSRF token 有效期（秒）
 CSRF_TOKEN_MAX_AGE = 3600  # 1 小时
@@ -88,14 +89,14 @@ def validate_csrf_token(request: Request) -> bool:
     if not cookie_token:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="CSRF token 缺失"
+            detail=Err.CSRF_MISSING
         )
     
     # 验证 cookie 中的 token 签名
     if not verify_signed_token(cookie_token):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="CSRF token 无效"
+            detail=Err.CSRF_INVALID
         )
     
     # 从请求中获取提交的 token
@@ -103,14 +104,14 @@ def validate_csrf_token(request: Request) -> bool:
     if not request_token:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="CSRF token 未提交"
+            detail=Err.CSRF_NOT_SUBMITTED
         )
     
     # 验证提交的 token 签名
     if not verify_signed_token(request_token):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="CSRF token 无效"
+            detail=Err.CSRF_INVALID
         )
     
     # 使用常量时间比较防止时序攻击

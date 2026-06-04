@@ -5,6 +5,7 @@ from models.base import get_session
 from models.event import Event
 from deep_analyst.models.causal_chain import CausalNode, CausalLink, NodeType
 from app.cache import get_cached, set_cached
+from app.errors import ErrorMessages as Err
 from fastapi import Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse
 from app.routes.api_common import router, templates, _get_api_context
@@ -159,7 +160,7 @@ async def get_event_detail(
     event = result.scalar_one_or_none()
 
     if not event:
-        raise HTTPException(status_code=404, detail="事件未找到")
+        raise HTTPException(status_code=404, detail=Err.EVENT_NOT_FOUND)
 
     # 获取关联文章详情
     articles = []

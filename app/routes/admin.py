@@ -26,6 +26,7 @@ from app.i18n import get_text, DEFAULT_LANGUAGE
 from app.auth import verify_admin_credentials, check_admin_enabled
 from app.csrf import csrf_protect
 from app.context import get_template_context
+from app.errors import ErrorMessages as Err
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -266,7 +267,7 @@ async def get_source_detail(
             break
     
     if not source:
-        raise HTTPException(status_code=404, detail="源未找到")
+        raise HTTPException(status_code=404, detail=Err.SOURCE_NOT_FOUND)
     
     # 获取健康状态
     health_result = await session.execute(
@@ -321,12 +322,12 @@ async def toggle_source(source_name: str, request: Request, _: bool = Depends(ve
             break
     
     if not found:
-        raise HTTPException(status_code=404, detail="源未找到")
+        raise HTTPException(status_code=404, detail=Err.SOURCE_NOT_FOUND)
     
     if save_rss_config(config):
         return {"success": True, "message": f"源 {source_name} 状态已更新"}
     else:
-        raise HTTPException(status_code=500, detail="保存配置失败")
+        raise HTTPException(status_code=500, detail=Err.SAVE_CONFIG_FAILED)
 
 
 @router.put("/admin/api/sources/{source_name}")
@@ -356,12 +357,12 @@ async def update_source(
             break
     
     if not found:
-        raise HTTPException(status_code=404, detail="源未找到")
+        raise HTTPException(status_code=404, detail=Err.SOURCE_NOT_FOUND)
     
     if save_rss_config(config):
         return {"success": True, "message": f"源 {source_name} 配置已更新"}
     else:
-        raise HTTPException(status_code=500, detail="保存配置失败")
+        raise HTTPException(status_code=500, detail=Err.SAVE_CONFIG_FAILED)
 
 
 @router.get("/admin/api/run-history")

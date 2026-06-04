@@ -3,8 +3,11 @@ from pathlib import Path
 from typing import Dict, Any
 
 LOCALES_DIR = Path(__file__).parent / "locales"
-SUPPORTED_LANGUAGES = {"en", "zh"}
-DEFAULT_LANGUAGE = "en"
+
+# 从配置中导入，避免重复定义
+from app.config import settings
+SUPPORTED_LANGUAGES = settings.SUPPORTED_LANGUAGES
+DEFAULT_LANGUAGE = settings.DEFAULT_LANGUAGE
 
 _translations: Dict[str, Dict[str, Any]] = {}
 

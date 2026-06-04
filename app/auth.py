@@ -7,6 +7,7 @@ import secrets
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from app.config import settings
+from app.errors import ErrorMessages as Err
 
 security = HTTPBasic(auto_error=False)
 
@@ -16,7 +17,7 @@ def verify_admin_credentials(credentials: HTTPBasicCredentials = Depends(securit
     if not credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="需要认证",
+            detail=Err.AUTH_REQUIRED,
             headers={"WWW-Authenticate": "Basic"},
         )
     
@@ -24,7 +25,7 @@ def verify_admin_credentials(credentials: HTTPBasicCredentials = Depends(securit
     if not settings.ADMIN_PASSWORD:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="管理后台未配置，请设置 ADMIN_PASSWORD 环境变量",
+            detail=Err.ADMIN_NOT_CONFIGURED,
         )
     
     # 使用常量时间比较防止时序攻击
@@ -40,7 +41,7 @@ def verify_admin_credentials(credentials: HTTPBasicCredentials = Depends(securit
     if not (correct_username and correct_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="用户名或密码错误",
+            detail=Err.AUTH_INVALID,
             headers={"WWW-Authenticate": "Basic"},
         )
     
@@ -52,6 +53,6 @@ def check_admin_enabled() -> bool:
     if not settings.ADMIN_PASSWORD:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="管理后台未配置",
+            detail=Err.ADMIN_NOT_CONFIGURED,
         )
     return True

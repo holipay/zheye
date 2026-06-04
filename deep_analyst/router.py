@@ -11,6 +11,7 @@ from models.event import Event
 from app.cache import get_cached, set_cached, invalidate_cache
 from app.auth import verify_admin_credentials
 from app.csrf import csrf_protect
+from app.routes.api_common import _get_event_and_articles
 from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -24,34 +25,12 @@ from deep_analyst.models.knowledge import EventKnowledge, EventKnowledgeAtom, Kn
 from deep_analyst.models.causal_chain import CausalNode, CausalLink, NodeType
 from deep_analyst.models.event_representation import EventRepresentation, HistoricalAnalogy
 from deep_analyst.models.scenario import EventScenario
+from app.errors import ErrorMessages as Err
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/deep-analyst", tags=["deep-analyst"])
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
-
-
-async def _get_event_and_articles(session: AsyncSession, event_id: str, max_articles: int = 5):
-    """获取事件及其关联文章"""
-    result = await session.execute(select(Event).where(Event.event_id == event_id))
-    event = result.scalar_one_or_none()
-    
-    if not event:
-        raise HTTPException(status_code=404, detail="事件未找到")
-    
-    articles = []
-    if event.related_articles:
-        for article_ref in event.related_articles[:max_articles]:
-            if isinstance(article_ref, dict):
-                articles.append(article_ref)
-    
-    event_data = {
-        "title": event.title,
-        "description": event.description,
-        "category": event.category,
-    }
-    
-    return event, event_data, articles
 
 
 def _generate_causal_mermaid(nodes: list, links: list) -> str:
@@ -188,7 +167,7 @@ async def trigger_knowledge_analysis(
     analysis = await analyze_event_knowledge(event_data, articles, ai_client, existing_atoms)
     
     if not analysis:
-        raise HTTPException(status_code=500, detail="知识分析失败")
+        raise HTTPException(status_code=500, detail=Err.KNOWLEDGE_ANALYSIS_FAILED)
     
     existing = await session.execute(
         select(EventKnowledge).where(EventKnowledge.event_id == event_id)
@@ -373,7 +352,7 @@ async def trigger_causal_chain_analysis(
     analysis = await analyze_causal_chain(event_data, articles, ai_client)
     
     if not analysis:
-        raise HTTPException(status_code=500, detail="因果链分析失败")
+        raise HTTPException(status_code=500, detail=Err.CAUSAL_CHAIN_ANALYSIS_FAILED)
     
     old_nodes = await session.execute(
         select(CausalNode).where(CausalNode.event_id == event_id)
@@ -520,7 +499,7 @@ async def trigger_analogy_analysis(
     
     repr_result = await extract_event_representation(event_data, articles, ai_client)
     if not repr_result:
-        raise HTTPException(status_code=500, detail="表征提取失败")
+        raise HTTPException(status_code=500, detail=Err.REPRESENTATION_EXTRACTION_FAILED)
     
     existing_repr = await session.execute(
         select(EventRepresentation).where(EventRepresentation.event_id == event_id)
@@ -722,7 +701,7 @@ async def trigger_scenario_analysis(
     analysis = await analyze_scenarios(event_data, articles, ai_client, causal_pattern)
     
     if not analysis:
-        raise HTTPException(status_code=500, detail="情景分析失败")
+        raise HTTPException(status_code=500, detail=Err.SCENARIO_ANALYSIS_FAILED)
     
     existing = await session.execute(
         select(EventScenario).where(EventScenario.event_id == event_id)
@@ -834,7 +813,7 @@ async def update_atom(
     new_atom = await update_knowledge_atom(session, atom_id, new_content, new_title, reason)
     
     if not new_atom:
-        raise HTTPException(status_code=404, detail="知识原子不存在")
+        raise HTTPException(status_code=404, detail=Err.KNOWLEDGE_ATOM_NOT_FOUND)
     
     await session.commit()
     

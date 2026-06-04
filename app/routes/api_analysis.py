@@ -7,6 +7,7 @@ from models.trend import Trend
 from models.failed_task import FailedAnalysisTask
 from models.analysis_version import AnalysisVersion
 from app.cache import get_cached, set_cached
+from app.errors import ErrorMessages as Err
 from fastapi import HTTPException, Depends, Query, Request
 from app.routes.api_common import router, limiter
 from app.auth import verify_admin_credentials
@@ -31,7 +32,7 @@ def parse_date(target_date: str) -> date:
     try:
         return date.fromisoformat(target_date)
     except ValueError:
-        raise HTTPException(status_code=400, detail="日期格式无效，请使用 YYYY-MM-DD")
+        raise HTTPException(status_code=400, detail=Err.INVALID_DATE_FORMAT)
 
 
 def serialize_daily_report(report: DailyReport) -> dict:
@@ -354,7 +355,7 @@ async def get_reports_list(
 
     # 使用白名单验证表名，防止 SQL 注入
     if period not in REPORT_TABLES:
-        raise HTTPException(status_code=400, detail="无效的报告类型")
+        raise HTTPException(status_code=400, detail=Err.INVALID_REPORT_TYPE)
     
     table_name = REPORT_TABLES[period]
     
@@ -470,10 +471,10 @@ async def retry_failed_task(
     task = await manager.get_task_by_id(task_id)
     
     if not task:
-        raise HTTPException(status_code=404, detail="任务不存在")
+        raise HTTPException(status_code=404, detail=Err.TASK_NOT_FOUND)
     
     if task.status not in ("pending", "retrying", "abandoned"):
-        raise HTTPException(status_code=400, detail=f"任务状态 {task.status} 不可重试")
+        raise HTTPException(status_code=400, detail=Err.TASK_NOT_RETRYABLE)
     
     # 重置任务状态
     await manager.update_task_status(task_id, "pending")
@@ -529,7 +530,7 @@ async def delete_failed_task(
     task = await session.get(FailedAnalysisTask, task_id)
     
     if not task:
-        raise HTTPException(status_code=404, detail="任务不存在")
+        raise HTTPException(status_code=404, detail=Err.TASK_NOT_FOUND)
     
     await session.delete(task)
     await session.commit()
@@ -675,7 +676,7 @@ async def get_latest_version(
     version = result.scalar_one_or_none()
     
     if not version:
-        raise HTTPException(status_code=404, detail="未找到分析版本")
+        raise HTTPException(status_code=404, detail=Err.ANALYSIS_VERSION_NOT_FOUND)
     
     return {
         "id": version.id,
