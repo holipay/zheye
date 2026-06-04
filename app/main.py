@@ -46,3 +46,13 @@ app.include_router(api_events.router)
 app.include_router(pages.router)
 app.include_router(admin.router)
 app.include_router(charts.router)
+
+# 深度分析模块（可选）
+from app.config import settings
+if settings.ENABLE_DEEP_ANALYST:
+    try:
+        from deep_analyst.router import router as deep_analyst_router
+        app.include_router(deep_analyst_router)
+        logger.info("Deep Analyst module enabled")
+    except Exception as e:
+        logger.warning(f"Failed to load Deep Analyst module: {e}")

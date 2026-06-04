@@ -100,6 +100,9 @@ class Settings:
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     REDIS_STREAM_NAME: str = os.getenv("REDIS_STREAM_NAME", "zheye:articles")
     REDIS_CONSUMER_GROUP: str = os.getenv("REDIS_CONSUMER_GROUP", "zheye:workers")
+    
+    # 深度分析模块开关
+    ENABLE_DEEP_ANALYST: bool = os.getenv("ENABLE_DEEP_ANALYST", "false").lower() == "true"
 
 
 settings = Settings()
