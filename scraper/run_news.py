@@ -15,7 +15,7 @@ load_dotenv()
 from scraper.sources.fetcher import Fetcher
 from scraper.sources.rss_parser import parse_feed
 from scraper.sources.article_extractor import extract_article_from_html, extract_date_from_html
-from scraper.pipeline.dedup import get_link_hash, is_duplicate
+from scraper.pipeline.dedup import get_link_hash, is_duplicate, add_to_dedup_cache
 from app.config import settings
 from scraper.pipeline.classify import classify_hybrid, classify_hybrid_async, detect_article_type
 from scraper.pipeline.regions import extract_regions
@@ -140,6 +140,8 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
         async with _shared_lock:
             existing_hashes.add(link_hash)
             existing_titles.append(item.title)
+            # 添加到去重缓存
+            add_to_dedup_cache(item.title)
 
     await update_source_health(
         name,

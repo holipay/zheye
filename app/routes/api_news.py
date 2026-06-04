@@ -24,7 +24,7 @@ async def get_news(
     article_type: str = "all",
     keyword_id: int = None,
     sort: str = "date",
-    page: int = 1,
+    page: int = Query(default=1, ge=1, description="页码"),
 ):
     page_size = 20
     offset = (page - 1) * page_size
@@ -584,8 +584,8 @@ async def search_news(
     session: AsyncSession = Depends(get_session),
     q: str = "",
     category: str = "all",
-    page: int = 1,
-    page_size: int = 20,
+    page: int = Query(default=1, ge=1, description="页码"),
+    page_size: int = Query(default=20, ge=1, le=100, description="每页数量"),
 ):
     """全文搜索新闻 - 使用 PostgreSQL 全文搜索"""
     if not q or len(q.strip()) < 2:

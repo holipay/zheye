@@ -286,9 +286,26 @@ async def process_article_event(session: AsyncSession, item: dict[str, any]) -> 
         return None
 
 
-async def get_existing_hashes(limit: int = 10000) -> set[str]:
+async def get_existing_hashes(days: int = 7, limit: int = 50000) -> set[str]:
+    """
+    获取最近 N 天的文章 hash 集合
+    
+    Args:
+        days: 加载最近几天的数据，默认 7 天
+        limit: 最大加载数量，默认 50000
+    
+    Returns:
+        link_hash 集合
+    """
+    from datetime import timedelta
+    cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
+    
     async with async_session() as session:
-        result = await session.execute(select(News.link_hash).limit(limit))
+        result = await session.execute(
+            select(News.link_hash)
+            .where(News.created_at >= cutoff_date)
+            .limit(limit)
+        )
         return {row[0] for row in result.fetchall()}
 
 

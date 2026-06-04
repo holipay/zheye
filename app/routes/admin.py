@@ -9,10 +9,11 @@ import json
 import logging
 from datetime import datetime, date, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 from fastapi import APIRouter, Request, HTTPException, Depends, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel, Field
 from sqlalchemy import select, func, desc, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +30,14 @@ from app.context import get_template_context
 logger = logging.getLogger(__name__)
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
+
+
+class SourceUpdateRequest(BaseModel):
+    """RSS 源更新请求模型"""
+    weight: Optional[float] = Field(None, ge=0, le=10, description="权重 0-10")
+    category: Optional[str] = Field(None, max_length=50, description="分类")
+    enabled: Optional[bool] = Field(None, description="是否启用")
+    timeout: Optional[int] = Field(None, ge=1, le=120, description="超时时间 1-120 秒")
 
 # RSS 源配置文件路径
 CONFIG_PATH = Path(__file__).parent.parent.parent / "scraper" / "sources" / "config.yaml"
@@ -321,10 +330,13 @@ async def toggle_source(source_name: str, request: Request, _: bool = Depends(ve
 
 
 @router.put("/admin/api/sources/{source_name}")
-async def update_source(source_name: str, request: Request, _: bool = Depends(verify_admin_credentials), __: bool = Depends(csrf_protect)):
+async def update_source(
+    source_name: str,
+    data: SourceUpdateRequest,
+    _: bool = Depends(verify_admin_credentials),
+    __: bool = Depends(csrf_protect),
+):
     """更新源配置"""
-    data = await request.json()
-    
     config = load_rss_config()
     sources = config.get("sources", [])
     
@@ -332,14 +344,14 @@ async def update_source(source_name: str, request: Request, _: bool = Depends(ve
     for src in sources:
         if src.get("name") == source_name:
             # 更新允许的字段
-            if "weight" in data:
-                src["weight"] = float(data["weight"])
-            if "category" in data:
-                src["category"] = data["category"]
-            if "enabled" in data:
-                src["enabled"] = bool(data["enabled"])
-            if "timeout" in data:
-                src["timeout"] = int(data["timeout"])
+            if data.weight is not None:
+                src["weight"] = data.weight
+            if data.category is not None:
+                src["category"] = data.category
+            if data.enabled is not None:
+                src["enabled"] = data.enabled
+            if data.timeout is not None:
+                src["timeout"] = data.timeout
             found = True
             break
     

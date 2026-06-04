@@ -9,6 +9,7 @@ from models.analysis_version import AnalysisVersion
 from app.cache import get_cached, set_cached
 from fastapi import HTTPException, Depends, Query
 from app.routes.api_common import router
+from app.auth import verify_admin_credentials
 
 REPORT_TABLES = {"weekly_reports", "monthly_reports"}
 
@@ -439,6 +440,7 @@ async def get_failed_tasks_stats(session: AsyncSession = Depends(get_session)):
 async def retry_failed_task(
     task_id: int,
     session: AsyncSession = Depends(get_session),
+    _admin: bool = Depends(verify_admin_credentials),
 ):
     """手动重试指定的失败任务"""
     from scraper.pipeline.retry_manager import get_retry_manager
@@ -466,6 +468,7 @@ async def retry_failed_task(
 async def retry_all_failed_tasks(
     session: AsyncSession = Depends(get_session),
     task_type: str = None,
+    _admin: bool = Depends(verify_admin_credentials),
 ):
     """批量重试所有待重试的失败任务"""
     from scraper.pipeline.retry_manager import get_retry_manager
@@ -499,6 +502,7 @@ async def retry_all_failed_tasks(
 async def delete_failed_task(
     task_id: int,
     session: AsyncSession = Depends(get_session),
+    _admin: bool = Depends(verify_admin_credentials),
 ):
     """删除指定的失败任务"""
     task = await session.get(FailedAnalysisTask, task_id)
@@ -516,6 +520,7 @@ async def delete_failed_task(
 async def cleanup_failed_tasks(
     session: AsyncSession = Depends(get_session),
     days: int = Query(default=30, ge=1, le=365),
+    _admin: bool = Depends(verify_admin_credentials),
 ):
     """清理旧的已完成/已放弃任务"""
     from scraper.pipeline.retry_manager import get_retry_manager

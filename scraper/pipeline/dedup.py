@@ -1,6 +1,7 @@
 import hashlib
 import logging
 from collections import defaultdict
+from typing import Optional
 
 from app.config import settings
 from scraper.pipeline.utils import text_similarity
@@ -11,6 +12,9 @@ DEFAULT_THRESHOLD = settings.DEDUP_THRESHOLD
 
 # TF-IDF 去重配置
 USE_TFIDF_DEDUP = settings.USE_TFIDF_DEDUP
+
+# 全局去重器实例
+_tfidf_deduplicator = None
 
 
 def get_link_hash(link: str) -> str:
@@ -40,6 +44,18 @@ def _ngram_similarity(a: str, b: str, n: int = 3) -> float:
     return intersection / union if union > 0 else 0.0
 
 
+def _get_tfidf_deduplicator(threshold: float = DEFAULT_THRESHOLD):
+    """获取全局 TF-IDF 去重器实例"""
+    global _tfidf_deduplicator
+    if _tfidf_deduplicator is None:
+        try:
+            from scraper.pipeline.tfidf_dedup import TFIDFDeduplicator
+            _tfidf_deduplicator = TFIDFDeduplicator(threshold=threshold)
+        except Exception as e:
+            logger.warning(f"Failed to create TF-IDF deduplicator: {e}")
+    return _tfidf_deduplicator
+
+
 def is_duplicate(title: str, existing_titles: list[str], threshold: float = DEFAULT_THRESHOLD, use_tfidf: bool = None) -> bool:
     """
     检查标题是否重复
@@ -63,11 +79,12 @@ def is_duplicate(title: str, existing_titles: list[str], threshold: float = DEFA
     
     if use_tfidf:
         try:
-            from scraper.pipeline.tfidf_dedup import TFIDFDeduplicator
-            # 每次调用创建新实例，避免状态污染
-            dedup = TFIDFDeduplicator(threshold=threshold)
-            dedup.fit(existing_titles)
-            return dedup.is_duplicate(title)
+            dedup = _get_tfidf_deduplicator(threshold)
+            if dedup:
+                # 只在矩阵未构建或标题数量变化较大时重新 fit
+                if not dedup._is_fitted or abs(len(dedup._titles) - len(existing_titles)) > 50:
+                    dedup.fit(existing_titles)
+                return dedup.is_duplicate(title)
         except Exception as e:
             logger.warning(f"TF-IDF 去重失败，降级到传统方法: {e}")
     
@@ -85,3 +102,13 @@ def is_duplicate(title: str, existing_titles: list[str], threshold: float = DEFA
             return True
     
     return False
+
+
+def add_to_dedup_cache(title: str):
+    """将新标题添加到去重缓存"""
+    global _tfidf_deduplicator
+    if _tfidf_deduplicator and title:
+        try:
+            _tfidf_deduplicator.add_title(title)
+        except Exception as e:
+            logger.debug(f"Failed to add title to dedup cache: {e}")

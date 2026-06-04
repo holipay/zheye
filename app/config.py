@@ -96,11 +96,6 @@ class Settings:
     # 去重配置
     USE_TFIDF_DEDUP: bool = os.getenv("USE_TFIDF_DEDUP", "true").lower() == "true"
     
-    # Redis 配置
-    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    REDIS_STREAM_NAME: str = os.getenv("REDIS_STREAM_NAME", "zheye:articles")
-    REDIS_CONSUMER_GROUP: str = os.getenv("REDIS_CONSUMER_GROUP", "zheye:workers")
-    
     # 深度分析模块开关
     ENABLE_DEEP_ANALYST: bool = os.getenv("ENABLE_DEEP_ANALYST", "false").lower() == "true"
 

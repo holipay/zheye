@@ -18,15 +18,11 @@ from typing import Optional
 from dataclasses import dataclass
 
 from deep_analyst.utils import parse_ai_response, smart_truncate
+from app.ai_metrics import get_ai_metrics
+from app.config import settings
+from models.schemas import ArticleAnalysisSchema, DailyReportSchema, TrendSchema
 
 logger = logging.getLogger(__name__)
-
-
-# 配置 - 从环境变量读取
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
-DEEPSEEK_API_BASE = os.getenv("DEEPSEEK_API_BASE", "https://api.deepseek.com")
-AI_MAX_RETRIES = int(os.getenv("AI_MAX_RETRIES", "3"))
-AI_TIMEOUT_SECONDS = int(os.getenv("AI_TIMEOUT_SECONDS", "30"))
 
 
 @dataclass
@@ -67,11 +63,11 @@ class DeepSeekClient:
     )
     
     def __init__(self, max_retries: int = None, timeout: int = None):
-        self.api_key = DEEPSEEK_API_KEY
-        self.api_base = DEEPSEEK_API_BASE
+        self.api_key = settings.DEEPSEEK_API_KEY
+        self.api_base = settings.DEEPSEEK_API_BASE
         self.enabled = bool(self.api_key)
-        self.max_retries = max_retries or AI_MAX_RETRIES
-        self.timeout = timeout or AI_TIMEOUT_SECONDS
+        self.max_retries = max_retries or settings.AI_MAX_RETRIES
+        self.timeout = timeout or settings.AI_TIMEOUT_SECONDS
         
         if not self.enabled:
             logger.info("DeepSeek API: 未配置 API Key，AI 分析功能已禁用")
@@ -108,6 +104,7 @@ class DeepSeekClient:
         if not self.enabled or not self.client:
             return None
         
+        metrics = get_ai_metrics()
         last_error = None
         
         for attempt in range(self.max_retries):
@@ -123,6 +120,11 @@ class DeepSeekClient:
                 # 记录 token 使用量
                 if hasattr(response, 'usage') and response.usage:
                     usage = response.usage
+                    metrics.record_usage(
+                        prompt_tokens=usage.prompt_tokens,
+                        completion_tokens=usage.completion_tokens,
+                        function_name=function_name
+                    )
                     logger.debug(f"API 调用: prompt={usage.prompt_tokens}, "
                                f"completion={usage.completion_tokens}, "
                                f"total={usage.total_tokens}")
