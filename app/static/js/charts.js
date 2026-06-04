@@ -33,7 +33,7 @@ const ChartUtils = {
                     padding: 16,
                     usePointStyle: true,
                     font: {
-                        family: "'Inter', sans-serif",
+                        family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif",
                         size: 12
                     }
                 }
@@ -41,11 +41,11 @@ const ChartUtils = {
             tooltip: {
                 backgroundColor: 'rgba(26, 26, 46, 0.9)',
                 titleFont: {
-                    family: "'Inter', sans-serif",
+                    family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif",
                     size: 13
                 },
                 bodyFont: {
-                    family: "'Inter', sans-serif",
+                    family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif",
                     size: 12
                 },
                 padding: 12,
@@ -74,7 +74,7 @@ const ChartUtils = {
                         },
                         ticks: {
                             font: {
-                                family: "'Inter', sans-serif",
+                                family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif",
                                 size: 11
                             }
                         }
@@ -86,7 +86,7 @@ const ChartUtils = {
                         },
                         ticks: {
                             font: {
-                                family: "'Inter', sans-serif",
+                                family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif",
                                 size: 11
                             }
                         }
@@ -127,7 +127,7 @@ const ChartUtils = {
                         },
                         ticks: {
                             font: {
-                                family: "'Inter', sans-serif",
+                                family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif",
                                 size: 11
                             }
                         }
@@ -139,7 +139,7 @@ const ChartUtils = {
                         },
                         ticks: {
                             font: {
-                                family: "'Inter', sans-serif",
+                                family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif",
                                 size: 11
                             }
                         }
