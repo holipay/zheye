@@ -196,7 +196,7 @@ async def fetch_market_data():
 async def main():
     config = load_config()
     sources = [s for s in config["sources"] if s.get("enabled", True)]
-    settings = config["settings"]
+    config_settings = config["settings"]
 
     # 重置监控器
     reset_monitor()
@@ -224,8 +224,8 @@ async def main():
     items_deduped = 0
 
     async with Fetcher(
-        timeout=settings.FETCH_TIMEOUT,
-        max_retries=settings.FETCH_MAX_RETRIES,
+        timeout=config_settings.get("fetch_timeout", 20),
+        max_retries=config_settings.get("max_retries", 2),
         max_concurrent=BATCH_SIZE,
     ) as fetcher:
         batches = [sources[i:i + BATCH_SIZE] for i in range(0, len(sources), BATCH_SIZE)]
