@@ -34,6 +34,8 @@ def _build_entity_patterns(config: dict) -> dict[str, list[tuple[re.Pattern, str
     """
     预编译所有实体别名的正则表达式
     
+    对短别名（<=3字符）使用严格边界匹配，避免误匹配
+    
     Returns:
         {entity_type: [(compiled_pattern, entity_name, alias), ...]}
     """
@@ -55,8 +57,12 @@ def _build_entity_patterns(config: dict) -> dict[str, list[tuple[re.Pattern, str
                     continue
                 try:
                     if entity_type in ("companies", "organizations"):
-                        # 使用词边界匹配
-                        pattern = re.compile(r'\b' + re.escape(alias) + r'\b', re.IGNORECASE)
+                        # 短词使用严格边界（前后不能是字母）
+                        if len(alias) <= 3:
+                            pattern = re.compile(r'(?<![a-zA-Z])' + re.escape(alias) + r'(?![a-zA-Z])', re.IGNORECASE)
+                        else:
+                            # 使用词边界匹配
+                            pattern = re.compile(r'\b' + re.escape(alias) + r'\b', re.IGNORECASE)
                     else:
                         # 使用简单包含匹配
                         pattern = re.compile(re.escape(alias), re.IGNORECASE)

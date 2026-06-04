@@ -17,6 +17,10 @@ def _build_keyword_patterns(keywords: list[dict]) -> dict[str, list[tuple[re.Pat
     """
     预编译所有关键词的正则表达式
     
+    对短词（<=3字符）使用严格边界匹配，避免误匹配：
+    - "AI" 不会匹配 "said", "paid", "main"
+    - "US" 不会匹配 "industry", "bonus"
+    
     Returns:
         {lang: [(compiled_pattern, keyword_data), ...]}
     """
@@ -30,7 +34,11 @@ def _build_keyword_patterns(keywords: list[dict]) -> dict[str, list[tuple[re.Pat
             if lang == "en":
                 if len(term) < 3:
                     continue
-                pattern = re.compile(r'\b' + re.escape(term) + r'\b', re.IGNORECASE)
+                # 短词使用严格边界（前后不能是字母）
+                if len(term) <= 3:
+                    pattern = re.compile(r'(?<![a-zA-Z])' + re.escape(term) + r'(?![a-zA-Z])', re.IGNORECASE)
+                else:
+                    pattern = re.compile(r'\b' + re.escape(term) + r'\b', re.IGNORECASE)
             else:
                 if len(term) < 2:
                     continue

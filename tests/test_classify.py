@@ -23,7 +23,7 @@ class TestClassifyByKeywords:
         assert result == "科技与企业"
 
     def test_international_keyword(self):
-        result = classify_by_keywords("US imposes new tariffs on China")
+        result = classify_by_keywords("US imposes new tariff on China")
         assert result == "国际财经"
 
     def test_summary_used(self):

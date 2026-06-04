@@ -16,7 +16,7 @@ from scraper.sources.fetcher import Fetcher
 from scraper.sources.rss_parser import parse_feed
 from scraper.sources.article_extractor import extract_article_from_html, extract_date_from_html
 from scraper.pipeline.dedup import get_link_hash, is_duplicate
-from scraper.pipeline.classify import classify_by_keywords, detect_article_type
+from scraper.pipeline.classify import classify_hybrid, detect_article_type
 from scraper.pipeline.regions import extract_regions
 from scraper.db.writer import save_news, get_existing_hashes, get_existing_titles, update_source_health, get_source_conditional_headers
 from scraper.sources.api_fetcher import MarketDataFetcher
@@ -36,6 +36,9 @@ BATCH_DELAY_MIN = 20.0                  # 批次间最小延迟（秒）
 BATCH_DELAY_MAX = 45.0                  # 批次间最大延迟（秒）
 ARTICLE_DELAY_MIN = 2.0                 # 文章间最小延迟
 ARTICLE_DELAY_MAX = 5.0                 # 文章间最大延迟
+
+# LLM 分类配置
+USE_LLM_CLASSIFIER = os.getenv("USE_LLM_CLASSIFIER", "true").lower() == "true"
 
 
 def load_config() -> dict:
@@ -97,6 +100,14 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
         if not pub_date:
             logger.warning(f"No publication date for: {item.title} ({item.link})")
 
+        # 混合分类：关键词快速过滤 + LLM 语义分类
+        article_category, confidence, method = classify_hybrid(
+            item.title, item.summary or "", use_llm=USE_LLM_CLASSIFIER
+        )
+        if article_category is None:
+            logger.info(f"Filtered out ({method}): {item.title}")
+            continue
+
         article_type = detect_article_type(item.title, item.summary, content)
         regions = extract_regions(item.title, item.summary, content)
 
@@ -106,7 +117,7 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
             "link": item.link,
             "link_hash": link_hash,
             "source": name,
-            "category": category,
+            "category": article_category,
             "lang": lang,
             "summary": item.summary,
             "content": content,
@@ -168,7 +179,7 @@ async def fetch_market_data():
 
 async def main():
     config = load_config()
-    sources = config["sources"]
+    sources = [s for s in config["sources"] if s.get("enabled", True)]
     settings = config["settings"]
 
     random.shuffle(sources)
