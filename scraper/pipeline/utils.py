@@ -196,3 +196,171 @@ def text_similarity(a: str, b: str) -> float:
     if not a or not b:
         return 0.0
     return SequenceMatcher(None, a.lower().strip(), b.lower().strip()).ratio()
+
+
+# ============================================================
+# 置信度计算
+# ============================================================
+
+def calculate_confidence(result: dict, response_text: str = None, 
+                        required_fields: list = None, 
+                        field_validators: dict = None) -> float:
+    """
+    动态计算AI分析结果的置信度
+    
+    Args:
+        result: AI分析结果字典
+        response_text: AI原始响应文本（可选）
+        required_fields: 必填字段列表（可选）
+        field_validators: 字段验证器字典（可选）{field_name: validator_func}
+    
+    Returns:
+        置信度分数 0.0-1.0
+    """
+    if not result:
+        return 0.0
+    
+    scores = []
+    
+    # 1. 完整性评分（权重0.3）
+    completeness = _calculate_completeness(result, required_fields)
+    scores.append(("completeness", completeness, 0.3))
+    
+    # 2. 格式规范性评分（权重0.2）
+    format_score = _calculate_format_score(result)
+    scores.append(("format", format_score, 0.2))
+    
+    # 3. 内容质量评分（权重0.3）
+    content_score = _calculate_content_quality(result, field_validators)
+    scores.append(("content", content_score, 0.3))
+    
+    # 4. 响应质量评分（权重0.2，可选）
+    if response_text:
+        response_score = _calculate_response_quality(response_text)
+        scores.append(("response", response_score, 0.2))
+    else:
+        # 重新分配权重
+        total_weight = sum(w for _, _, w in scores)
+        scores = [(n, s, w / total_weight) for n, s, w in scores]
+    
+    # 加权计算最终置信度
+    final_score = sum(score * weight for _, score, weight in scores)
+    
+    # 限制在0-1范围
+    return max(0.0, min(1.0, final_score))
+
+
+def _calculate_completeness(result: dict, required_fields: list = None) -> float:
+    """计算完整性评分"""
+    if not result:
+        return 0.0
+    
+    # 默认检查所有非空字段
+    if required_fields is None:
+        required_fields = list(result.keys())
+    
+    if not required_fields:
+        return 1.0
+    
+    filled_count = sum(
+        1 for field in required_fields 
+        if field in result and result[field] is not None and result[field] != ""
+    )
+    
+    return filled_count / len(required_fields)
+
+
+def _calculate_format_score(result: dict) -> float:
+    """计算格式规范性评分"""
+    score = 1.0
+    
+    # 检查sentiment格式
+    if "sentiment" in result:
+        valid_sentiments = {"positive", "negative", "neutral"}
+        if result["sentiment"] not in valid_sentiments:
+            score -= 0.3
+    
+    # 检查数值范围
+    numeric_fields = {
+        "sentiment_score": (-1.0, 1.0),
+        "importance": (0.0, 1.0),
+        "confidence": (0.0, 1.0),
+    }
+    
+    for field, (min_val, max_val) in numeric_fields.items():
+        if field in result:
+            try:
+                val = float(result[field])
+                if val < min_val or val > max_val:
+                    score -= 0.2
+            except (ValueError, TypeError):
+                score -= 0.2
+    
+    # 检查列表字段
+    list_fields = ["key_points", "tags", "hot_topics", "key_events"]
+    for field in list_fields:
+        if field in result and not isinstance(result[field], list):
+            score -= 0.1
+    
+    return max(0.0, score)
+
+
+def _calculate_content_quality(result: dict, field_validators: dict = None) -> float:
+    """计算内容质量评分"""
+    score = 1.0
+    
+    # 检查摘要长度
+    summary_fields = ["summary_zh", "overview", "analysis"]
+    for field in summary_fields:
+        if field in result and isinstance(result[field], str):
+            # 摘要太短或太长都扣分
+            length = len(result[field])
+            if length < 10:
+                score -= 0.2
+            elif length > 1000:
+                score -= 0.1
+    
+    # 检查列表内容
+    list_fields = ["key_points", "tags"]
+    for field in list_fields:
+        if field in result and isinstance(result[field], list):
+            # 空列表扣分
+            if len(result[field]) == 0:
+                score -= 0.2
+    
+    # 自定义验证器
+    if field_validators:
+        for field, validator in field_validators.items():
+            if field in result:
+                try:
+                    if not validator(result[field]):
+                        score -= 0.1
+                except Exception:
+                    score -= 0.1
+    
+    return max(0.0, score)
+
+
+def _calculate_response_quality(response_text: str) -> float:
+    """计算响应质量评分"""
+    if not response_text:
+        return 0.0
+    
+    score = 1.0
+    
+    # 检查是否包含JSON
+    if not re.search(r'[\{\[]', response_text):
+        score -= 0.3
+    
+    # 检查响应长度（太短可能不完整）
+    if len(response_text) < 20:
+        score -= 0.3
+    
+    # 检查是否有明显的错误标记
+    error_indicators = ["error", "抱歉", "无法", "失败"]
+    for indicator in error_indicators:
+        if indicator in response_text.lower():
+            score -= 0.2
+            break
+    
+    return max(0.0, score)

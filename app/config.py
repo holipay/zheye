@@ -107,6 +107,13 @@ class Settings:
     # 深度分析流水线配置
     DEEP_ANALYSIS_MAX_EVENTS: int = _safe_int(os.getenv("DEEP_ANALYSIS_MAX_EVENTS"), 10)
     DEEP_ANALYSIS_COOLDOWN_HOURS: int = _safe_int(os.getenv("DEEP_ANALYSIS_COOLDOWN_HOURS"), 24)
+    
+    # 数据质量配置
+    AI_CONFIDENCE_THRESHOLD: float = _safe_float(os.getenv("AI_CONFIDENCE_THRESHOLD"), 0.7)
+    AI_CONFIDENCE_ENABLED: bool = os.getenv("AI_CONFIDENCE_ENABLED", "true").lower() == "true"
+    AI_RETRY_MAX_RETRIES: int = _safe_int(os.getenv("AI_RETRY_MAX_RETRIES"), 3)
+    AI_RETRY_BASE_DELAY: int = _safe_int(os.getenv("AI_RETRY_BASE_DELAY"), 60)
+    AI_VERSION_KEEP_COUNT: int = _safe_int(os.getenv("AI_VERSION_KEEP_COUNT"), 5)
 
 
 settings = Settings()

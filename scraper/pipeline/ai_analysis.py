@@ -17,7 +17,7 @@ from datetime import datetime, date
 from typing import Optional
 from dataclasses import dataclass
 
-from scraper.pipeline.utils import parse_ai_response, smart_truncate
+from scraper.pipeline.utils import parse_ai_response, smart_truncate, calculate_confidence
 from app.ai_metrics import get_ai_metrics
 from app.config import settings
 from models.schemas import ArticleAnalysisSchema, DailyReportSchema, TrendSchema
@@ -232,6 +232,40 @@ class DeepSeekClient:
             if not data:
                 return None
             
+            # 动态计算置信度
+            confidence = calculate_confidence(
+                data, 
+                response_text=result,
+                required_fields=["sentiment", "sentiment_score", "summary_zh", "key_points", "importance"],
+                field_validators={
+                    "sentiment": lambda x: x in ("positive", "negative", "neutral"),
+                    "sentiment_score": lambda x: -1.0 <= float(x) <= 1.0,
+                    "importance": lambda x: 0.0 <= float(x) <= 1.0,
+                }
+            )
+            
+            # 置信度过滤
+            if settings.AI_CONFIDENCE_ENABLED and confidence < settings.AI_CONFIDENCE_THRESHOLD:
+                logger.warning(f"AI 分析置信度过低 ({confidence:.2f} < {settings.AI_CONFIDENCE_THRESHOLD}): {title[:50]}...")
+                # 记录失败任务
+                self._record_failed_task(
+                    task_type="article_analysis",
+                    target_id=title[:200],
+                    input_data={"title": title, "content": content, "summary": summary, "category": category},
+                    failure_reason="low_confidence",
+                    error_message=f"置信度 {confidence:.2f} 低于阈值 {settings.AI_CONFIDENCE_THRESHOLD}",
+                    error_details={"confidence": confidence, "result": data}
+                )
+                return None
+            
+            # 保存分析版本
+            self._save_analysis_version(
+                analysis_type="article",
+                target_id=title[:200],
+                result_data=data,
+                confidence=confidence,
+            )
+            
             return ArticleAnalysis(
                 sentiment=data.get("sentiment", "neutral"),
                 sentiment_score=float(data.get("sentiment_score", 0)),
@@ -243,6 +277,93 @@ class DeepSeekClient:
         except (ValueError, TypeError) as e:
             logger.error(f"解析 AI 返回结果失败: {e}")
             return None
+    
+    def _record_failed_task(self, task_type: str, target_id: str, input_data: dict,
+                           failure_reason: str, error_message: str = None, 
+                           error_details: dict = None):
+        """记录失败的分析任务到数据库"""
+        try:
+            from models.base import async_session
+            from models.failed_task import FailedAnalysisTask
+            from datetime import datetime, timedelta
+            
+            async def _save():
+                async with async_session() as session:
+                    # 检查是否已存在相同任务
+                    existing = await session.query(FailedAnalysisTask).filter(
+                        FailedAnalysisTask.task_type == task_type,
+                        FailedAnalysisTask.target_id == target_id,
+                        FailedAnalysisTask.status.in_(["pending", "retrying"])
+                    ).first()
+                    
+                    if existing:
+                        # 更新现有任务
+                        existing.retry_count += 1
+                        existing.last_retry_at = datetime.utcnow()
+                        existing.error_message = error_message
+                        existing.error_details = error_details
+                        if existing.retry_count >= existing.max_retries:
+                            existing.status = "abandoned"
+                    else:
+                        # 创建新任务
+                        task = FailedAnalysisTask(
+                            task_type=task_type,
+                            target_id=target_id,
+                            input_data=input_data,
+                            failure_reason=failure_reason,
+                            error_message=error_message,
+                            error_details=error_details,
+                            next_retry_at=datetime.utcnow() + timedelta(seconds=settings.AI_RETRY_BASE_DELAY)
+                        )
+                        session.add(task)
+                    
+                    await session.commit()
+            
+            import asyncio
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    asyncio.create_task(_save())
+                else:
+                    loop.run_until_complete(_save())
+            except RuntimeError:
+                # 没有事件循环，同步执行
+                import asyncio
+                asyncio.run(_save())
+                
+        except Exception as e:
+            logger.error(f"记录失败任务时出错: {e}")
+    
+    def _save_analysis_version(self, analysis_type: str, target_id: str, 
+                              result_data: dict, confidence: float = None,
+                              analysis_duration_ms: int = None):
+        """异步保存分析结果版本"""
+        try:
+            from scraper.pipeline.version_manager import get_version_manager
+            
+            async def _save():
+                manager = get_version_manager()
+                await manager.save_version(
+                    analysis_type=analysis_type,
+                    target_id=target_id,
+                    result_data=result_data,
+                    confidence=confidence,
+                    ai_model="deepseek-chat",
+                    analysis_duration_ms=analysis_duration_ms,
+                )
+            
+            import asyncio
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    asyncio.create_task(_save())
+                else:
+                    loop.run_until_complete(_save())
+            except RuntimeError:
+                asyncio.run(_save())
+                
+        except Exception as e:
+            logger.error(f"保存分析版本时出错: {e}")
     
     def generate_daily_report(self, articles: list[dict], target_date: date = None) -> Optional[DailyReport]:
         """

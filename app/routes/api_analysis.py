@@ -4,8 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.base import get_session
 from models.daily_report import DailyReport
 from models.trend import Trend
+from models.failed_task import FailedAnalysisTask
+from models.analysis_version import AnalysisVersion
 from app.cache import get_cached, set_cached
-from fastapi import HTTPException, Depends
+from fastapi import HTTPException, Depends, Query
 from app.routes.api_common import router
 
 REPORT_TABLES = {"weekly_reports", "monthly_reports"}
@@ -376,3 +378,288 @@ async def get_reports_list(
     data = {"period": period, "reports": reports}
     set_cached(cache_key, data, ttl=300)
     return data
+
+
+# ============================================================
+# 失败任务管理 API
+# ============================================================
+
+@router.get("/analysis/failed-tasks")
+async def get_failed_tasks(
+    session: AsyncSession = Depends(get_session),
+    task_type: str = None,
+    status: str = None,
+    limit: int = Query(default=50, le=200),
+):
+    """获取失败的分析任务列表"""
+    query = select(FailedAnalysisTask)
+    
+    if task_type:
+        query = query.where(FailedAnalysisTask.task_type == task_type)
+    if status:
+        query = query.where(FailedAnalysisTask.status == status)
+    
+    query = query.order_by(FailedAnalysisTask.created_at.desc()).limit(limit)
+    
+    result = await session.execute(query)
+    tasks = result.scalars().all()
+    
+    return {
+        "tasks": [
+            {
+                "id": task.id,
+                "task_type": task.task_type,
+                "target_id": task.target_id,
+                "target_type": task.target_type,
+                "failure_reason": task.failure_reason,
+                "error_message": task.error_message,
+                "retry_count": task.retry_count,
+                "max_retries": task.max_retries,
+                "status": task.status,
+                "next_retry_at": task.next_retry_at.isoformat() if task.next_retry_at else None,
+                "created_at": task.created_at.isoformat() if task.created_at else None,
+            }
+            for task in tasks
+        ],
+        "total": len(tasks),
+    }
+
+
+@router.get("/analysis/failed-tasks/stats")
+async def get_failed_tasks_stats(session: AsyncSession = Depends(get_session)):
+    """获取失败任务统计信息"""
+    from scraper.pipeline.retry_manager import get_retry_manager
+    
+    manager = get_retry_manager()
+    stats = await manager.get_statistics()
+    return stats
+
+
+@router.post("/analysis/failed-tasks/{task_id}/retry")
+async def retry_failed_task(
+    task_id: int,
+    session: AsyncSession = Depends(get_session),
+):
+    """手动重试指定的失败任务"""
+    from scraper.pipeline.retry_manager import get_retry_manager
+    
+    manager = get_retry_manager()
+    task = await manager.get_task_by_id(task_id)
+    
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    
+    if task.status not in ("pending", "retrying", "abandoned"):
+        raise HTTPException(status_code=400, detail=f"任务状态 {task.status} 不可重试")
+    
+    # 重置任务状态
+    await manager.update_task_status(task_id, "pending")
+    
+    return {
+        "message": "任务已重置为待重试状态",
+        "task_id": task_id,
+        "status": "pending",
+    }
+
+
+@router.post("/analysis/failed-tasks/retry-all")
+async def retry_all_failed_tasks(
+    session: AsyncSession = Depends(get_session),
+    task_type: str = None,
+):
+    """批量重试所有待重试的失败任务"""
+    from scraper.pipeline.retry_manager import get_retry_manager
+    
+    manager = get_retry_manager()
+    
+    # 获取所有可重试的任务
+    query = select(FailedAnalysisTask).where(
+        FailedAnalysisTask.status.in_(["pending", "retrying", "abandoned"])
+    )
+    if task_type:
+        query = query.where(FailedAnalysisTask.task_type == task_type)
+    
+    result = await session.execute(query)
+    tasks = result.scalars().all()
+    
+    reset_count = 0
+    for task in tasks:
+        if task.retry_count < task.max_retries:
+            await manager.update_task_status(task.id, "pending")
+            reset_count += 1
+    
+    return {
+        "message": f"已重置 {reset_count} 个任务",
+        "total_tasks": len(tasks),
+        "reset_count": reset_count,
+    }
+
+
+@router.delete("/analysis/failed-tasks/{task_id}")
+async def delete_failed_task(
+    task_id: int,
+    session: AsyncSession = Depends(get_session),
+):
+    """删除指定的失败任务"""
+    task = await session.get(FailedAnalysisTask, task_id)
+    
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    
+    await session.delete(task)
+    await session.commit()
+    
+    return {"message": "任务已删除", "task_id": task_id}
+
+
+@router.delete("/analysis/failed-tasks/cleanup")
+async def cleanup_failed_tasks(
+    session: AsyncSession = Depends(get_session),
+    days: int = Query(default=30, ge=1, le=365),
+):
+    """清理旧的已完成/已放弃任务"""
+    from scraper.pipeline.retry_manager import get_retry_manager
+    
+    manager = get_retry_manager()
+    deleted_count = await manager.cleanup_old_tasks(days)
+    
+    return {
+        "message": f"已清理 {deleted_count} 个旧任务",
+        "deleted_count": deleted_count,
+    }
+
+
+# ============================================================
+# 分析版本管理 API
+# ============================================================
+
+@router.get("/analysis/versions/{analysis_type}/{target_id}")
+async def get_analysis_versions(
+    analysis_type: str,
+    target_id: str,
+    session: AsyncSession = Depends(get_session),
+    limit: int = Query(default=10, le=50),
+):
+    """获取分析结果的版本历史"""
+    query = (
+        select(AnalysisVersion)
+        .where(
+            AnalysisVersion.analysis_type == analysis_type,
+            AnalysisVersion.target_id == target_id,
+        )
+        .order_by(AnalysisVersion.version_number.desc())
+        .limit(limit)
+    )
+    
+    result = await session.execute(query)
+    versions = result.scalars().all()
+    
+    return {
+        "analysis_type": analysis_type,
+        "target_id": target_id,
+        "versions": [
+            {
+                "id": v.id,
+                "version_number": v.version_number,
+                "confidence": v.confidence,
+                "change_summary": v.change_summary,
+                "changed_fields": v.changed_fields,
+                "ai_model": v.ai_model,
+                "analysis_duration_ms": v.analysis_duration_ms,
+                "created_at": v.created_at.isoformat() if v.created_at else None,
+            }
+            for v in versions
+        ],
+        "total": len(versions),
+    }
+
+
+@router.get("/analysis/versions/{analysis_type}/{target_id}/compare")
+async def compare_analysis_versions(
+    analysis_type: str,
+    target_id: str,
+    version1: int = Query(..., description="第一个版本号"),
+    version2: int = Query(..., description="第二个版本号"),
+    session: AsyncSession = Depends(get_session),
+):
+    """对比两个分析版本的差异"""
+    # 获取两个版本
+    query1 = select(AnalysisVersion).where(
+        AnalysisVersion.analysis_type == analysis_type,
+        AnalysisVersion.target_id == target_id,
+        AnalysisVersion.version_number == version1,
+    )
+    query2 = select(AnalysisVersion).where(
+        AnalysisVersion.analysis_type == analysis_type,
+        AnalysisVersion.target_id == target_id,
+        AnalysisVersion.version_number == version2,
+    )
+    
+    result1 = await session.execute(query1)
+    result2 = await session.execute(query2)
+    
+    v1 = result1.scalar_one_or_none()
+    v2 = result2.scalar_one_or_none()
+    
+    if not v1:
+        raise HTTPException(status_code=404, detail=f"版本 {version1} 不存在")
+    if not v2:
+        raise HTTPException(status_code=404, detail=f"版本 {version2} 不存在")
+    
+    # 计算差异
+    diff = v1.diff_with(v2)
+    
+    return {
+        "analysis_type": analysis_type,
+        "target_id": target_id,
+        "version1": {
+            "version_number": v1.version_number,
+            "confidence": v1.confidence,
+            "created_at": v1.created_at.isoformat() if v1.created_at else None,
+        },
+        "version2": {
+            "version_number": v2.version_number,
+            "confidence": v2.confidence,
+            "created_at": v2.created_at.isoformat() if v2.created_at else None,
+        },
+        "changes": diff,
+        "changed_fields": list(diff.keys()),
+        "total_changes": len(diff),
+    }
+
+
+@router.get("/analysis/versions/{analysis_type}/{target_id}/latest")
+async def get_latest_version(
+    analysis_type: str,
+    target_id: str,
+    session: AsyncSession = Depends(get_session),
+):
+    """获取最新的分析版本"""
+    query = (
+        select(AnalysisVersion)
+        .where(
+            AnalysisVersion.analysis_type == analysis_type,
+            AnalysisVersion.target_id == target_id,
+        )
+        .order_by(AnalysisVersion.version_number.desc())
+        .limit(1)
+    )
+    
+    result = await session.execute(query)
+    version = result.scalar_one_or_none()
+    
+    if not version:
+        raise HTTPException(status_code=404, detail="未找到分析版本")
+    
+    return {
+        "id": version.id,
+        "analysis_type": version.analysis_type,
+        "target_id": version.target_id,
+        "version_number": version.version_number,
+        "result_data": version.result_data,
+        "confidence": version.confidence,
+        "change_summary": version.change_summary,
+        "changed_fields": version.changed_fields,
+        "ai_model": version.ai_model,
+        "created_at": version.created_at.isoformat() if version.created_at else None,
+    }
