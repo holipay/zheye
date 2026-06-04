@@ -41,7 +41,9 @@ def _get_redis():
             import redis
             _redis_client = redis.from_url(REDIS_URL, decode_responses=True)
             _redis_client.ping()
-            logger.info(f"Connected to Redis: {REDIS_URL}")
+            # 只记录 host:port，不泄露密码
+            safe_url = REDIS_URL.split("@")[-1] if "@" in REDIS_URL else REDIS_URL
+            logger.info(f"Connected to Redis: {safe_url}")
         except Exception as e:
             logger.error(f"Failed to connect to Redis: {e}")
             _redis_client = None

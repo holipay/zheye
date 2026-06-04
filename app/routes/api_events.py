@@ -8,6 +8,8 @@ from models.causal_chain import CausalNode, CausalLink
 from models.event_representation import EventRepresentation, HistoricalAnalogy
 from models.scenario import EventScenario
 from app.cache import get_cached, set_cached
+from app.auth import verify_admin_credentials
+from app.csrf import csrf_protect
 from fastapi import Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse
 from app.routes.api_common import router, templates, _get_api_context, _get_event_and_articles
@@ -274,6 +276,8 @@ async def get_event_knowledge(
 @router.post("/events/{event_id}/knowledge/analyze")
 async def trigger_knowledge_analysis(
     event_id: str,
+    _: bool = Depends(verify_admin_credentials),
+    __: bool = Depends(csrf_protect),
     session: AsyncSession = Depends(get_session),
 ):
     """触发事件知识分析（手动或自动）"""
@@ -444,6 +448,8 @@ async def get_event_causal_chain(
 @router.post("/events/{event_id}/causal-chain/analyze")
 async def trigger_causal_chain_analysis(
     event_id: str,
+    _: bool = Depends(verify_admin_credentials),
+    __: bool = Depends(csrf_protect),
     session: AsyncSession = Depends(get_session),
 ):
     """触发因果链分析"""
@@ -588,6 +594,8 @@ async def get_event_analogies(
 @router.post("/events/{event_id}/analogies/analyze")
 async def trigger_analogy_analysis(
     event_id: str,
+    _: bool = Depends(verify_admin_credentials),
+    __: bool = Depends(csrf_protect),
     session: AsyncSession = Depends(get_session),
 ):
     """触发历史类比分析"""
@@ -800,6 +808,8 @@ async def get_event_scenarios(
 @router.post("/events/{event_id}/scenarios/analyze")
 async def trigger_scenario_analysis(
     event_id: str,
+    _: bool = Depends(verify_admin_credentials),
+    __: bool = Depends(csrf_protect),
     session: AsyncSession = Depends(get_session),
 ):
     """触发情景推演分析"""

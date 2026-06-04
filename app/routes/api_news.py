@@ -1,4 +1,4 @@
-from fastapi import Request, HTTPException, Depends
+from fastapi import Request, HTTPException, Depends, Query
 from fastapi.responses import HTMLResponse
 from datetime import date, datetime
 from sqlalchemy import select, func, desc, or_, and_
@@ -151,7 +151,7 @@ async def get_article_types(
 async def get_latest(
     request: Request,
     session: AsyncSession = Depends(get_session),
-    limit: int = 10,
+    limit: int = Query(default=10, le=100),
 ):
     query = select(News).order_by(desc(News.created_at)).limit(limit)
     result = await session.execute(query)

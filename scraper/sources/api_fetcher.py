@@ -71,7 +71,8 @@ class ExchangeRateAPI:
                 else:
                     logger.warning(f"ExchangeRate-API 返回错误: {data.get('error-type')}")
             except Exception as e:
-                logger.error(f"ExchangeRate-API 请求失败: {e}")
+                # 不打印完整URL，避免泄露API key
+                logger.error(f"ExchangeRate-API 请求失败: {type(e).__name__}")
         
         return None
     

@@ -29,8 +29,11 @@ def generate_csrf_token() -> str:
 def _get_secret_key() -> str:
     """获取用于签名的密钥"""
     # 使用专门的 CSRF_SECRET_KEY，如果未配置则回退到 ADMIN_PASSWORD
-    # 注意：在生产环境中应该始终配置 CSRF_SECRET_KEY
-    return settings.CSRF_SECRET_KEY or settings.ADMIN_PASSWORD or "default-csrf-secret-key-change-in-production"
+    # 生产环境必须配置其中一个，否则拒绝启动
+    key = settings.CSRF_SECRET_KEY or settings.ADMIN_PASSWORD
+    if not key:
+        raise RuntimeError("CSRF_SECRET_KEY or ADMIN_PASSWORD must be configured")
+    return key
 
 
 def sign_token(token: str) -> str:

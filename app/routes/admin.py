@@ -10,7 +10,7 @@ import logging
 from datetime import datetime, date, timedelta
 from pathlib import Path
 from typing import Any
-from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi import APIRouter, Request, HTTPException, Depends, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func, desc, text
@@ -354,7 +354,7 @@ async def update_source(source_name: str, request: Request, _: bool = Depends(ve
 
 @router.get("/admin/api/run-history")
 async def get_run_history(
-    limit: int = 20,
+    limit: int = Query(default=20, le=100),
     _: bool = Depends(verify_admin_credentials),
     session: AsyncSession = Depends(get_session),
 ):

@@ -179,7 +179,8 @@ async def get_trends(
     
     query = select(Trend).where(Trend.date == report_date)
     if keyword:
-        query = query.where(Trend.keyword.ilike(f"%{keyword}%"))
+        escaped = keyword.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        query = query.where(Trend.keyword.ilike(f"%{escaped}%"))
     query = query.order_by(desc(Trend.count)).limit(limit)
     
     result = await session.execute(query)
