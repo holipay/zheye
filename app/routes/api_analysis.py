@@ -7,9 +7,10 @@ from models.trend import Trend
 from models.failed_task import FailedAnalysisTask
 from models.analysis_version import AnalysisVersion
 from app.cache import get_cached, set_cached
-from fastapi import HTTPException, Depends, Query
-from app.routes.api_common import router
+from fastapi import HTTPException, Depends, Query, Request
+from app.routes.api_common import router, limiter
 from app.auth import verify_admin_credentials
+from app.config import settings
 
 REPORT_TABLES = {"weekly_reports", "monthly_reports"}
 
@@ -56,7 +57,9 @@ def serialize_daily_report(report: DailyReport) -> dict:
 
 
 @router.get("/analysis/daily/{target_date}")
+@limiter.limit(settings.RATE_LIMIT_API)
 async def get_daily_report(
+    request: Request,
     target_date: str,
     session: AsyncSession = Depends(get_session),
 ):
@@ -82,7 +85,11 @@ async def get_daily_report(
 
 
 @router.get("/analysis/latest")
-async def get_latest_report(session: AsyncSession = Depends(get_session)):
+@limiter.limit(settings.RATE_LIMIT_API)
+async def get_latest_report(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
     """获取最新的每日分析报告"""
     cache_key = "api:analysis:latest"
     cached = get_cached(cache_key)
@@ -103,7 +110,9 @@ async def get_latest_report(session: AsyncSession = Depends(get_session)):
 
 
 @router.get("/analysis/sentiment")
+@limiter.limit(settings.RATE_LIMIT_API)
 async def get_sentiment_stats(
+    request: Request,
     session: AsyncSession = Depends(get_session),
     target_date: str = None,
 ):
@@ -166,7 +175,9 @@ async def get_sentiment_stats(
 
 
 @router.get("/analysis/trends")
+@limiter.limit(settings.RATE_LIMIT_API)
 async def get_trends(
+    request: Request,
     session: AsyncSession = Depends(get_session),
     target_date: str = None,
     keyword: str = None,
@@ -208,7 +219,11 @@ async def get_trends(
 
 
 @router.get("/analysis/status")
-async def get_analysis_status(session: AsyncSession = Depends(get_session)):
+@limiter.limit(settings.RATE_LIMIT_API)
+async def get_analysis_status(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
     """获取 AI 分析功能状态"""
     from scraper.pipeline.ai_analysis import is_ai_enabled
     
@@ -231,7 +246,9 @@ async def get_analysis_status(session: AsyncSession = Depends(get_session)):
 
 
 @router.get("/analysis/weekly/{target_date}")
+@limiter.limit(settings.RATE_LIMIT_API)
 async def get_weekly_report(
+    request: Request,
     target_date: str,
     session: AsyncSession = Depends(get_session),
 ):
@@ -277,7 +294,9 @@ async def get_weekly_report(
 
 
 @router.get("/analysis/monthly/{target_date}")
+@limiter.limit(settings.RATE_LIMIT_API)
 async def get_monthly_report(
+    request: Request,
     target_date: str,
     session: AsyncSession = Depends(get_session),
 ):
@@ -320,7 +339,9 @@ async def get_monthly_report(
 
 
 @router.get("/analysis/reports")
+@limiter.limit(settings.RATE_LIMIT_API)
 async def get_reports_list(
+    request: Request,
     session: AsyncSession = Depends(get_session),
     period: str = "weekly",
     limit: int = 10,

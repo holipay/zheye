@@ -12,23 +12,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from dotenv import load_dotenv
 load_dotenv()
 
-from scraper.sources.fetcher import Fetcher
-from scraper.sources.rss_parser import parse_feed
-from scraper.sources.article_extractor import extract_article_from_html, extract_date_from_html
-from scraper.pipeline.dedup import get_link_hash, is_duplicate, add_to_dedup_cache
 from app.config import settings
-from scraper.pipeline.classify import classify_hybrid, classify_hybrid_async, detect_article_type
-from scraper.pipeline.regions import extract_regions
-from scraper.pipeline.scheduler import filter_and_sort_sources, get_health_summary
-from scraper.db.writer import save_news, get_existing_hashes, get_existing_titles, update_source_health, get_source_conditional_headers
-from scraper.monitor import get_monitor, reset_monitor
-from scraper.sources.api_fetcher import MarketDataFetcher
-from models.run_metrics import RunMetrics
-from models.market_data import MarketData as MarketDataModel
-from models.base import async_session
 
+# 统一日志配置
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO),
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
