@@ -18,6 +18,7 @@ from scraper.sources.article_extractor import extract_article_from_html, extract
 from scraper.pipeline.dedup import get_link_hash, is_duplicate
 from scraper.pipeline.classify import classify_hybrid, detect_article_type
 from scraper.pipeline.regions import extract_regions
+from scraper.pipeline.scheduler import filter_and_sort_sources, get_health_summary
 from scraper.db.writer import save_news, get_existing_hashes, get_existing_titles, update_source_health, get_source_conditional_headers
 from scraper.sources.api_fetcher import MarketDataFetcher
 from models.run_metrics import RunMetrics
@@ -182,7 +183,12 @@ async def main():
     sources = [s for s in config["sources"] if s.get("enabled", True)]
     settings = config["settings"]
 
-    random.shuffle(sources)
+    # 智能调度：根据健康状态过滤和排序源
+    sources = await filter_and_sort_sources(sources)
+    
+    # 获取健康状态摘要
+    health_summary = await get_health_summary()
+    logger.info(f"健康状态: {health_summary['healthy_sources']}/{health_summary['total_sources']} 个源可用")
 
     logger.info(f"Starting news scrape with {len(sources)} sources (batch size: {BATCH_SIZE})")
     start_time = datetime.now(timezone.utc)
