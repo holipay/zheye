@@ -21,7 +21,7 @@ from deep_analyst.knowledge import analyze_event_knowledge, analyze_causal_chain
 from deep_analyst.analogy import extract_event_representation, analyze_analogy, compute_structural_similarity
 from deep_analyst.scenario import analyze_scenarios
 from deep_analyst.models.knowledge import EventKnowledge, EventKnowledgeAtom, KnowledgeAtom
-from deep_analyst.models.causal_chain import CausalNode, CausalLink
+from deep_analyst.models.causal_chain import CausalNode, CausalLink, NodeType
 from deep_analyst.models.event_representation import EventRepresentation, HistoricalAnalogy
 from deep_analyst.models.scenario import EventScenario
 
@@ -52,6 +52,59 @@ async def _get_event_and_articles(session: AsyncSession, event_id: str, max_arti
     }
     
     return event, event_data, articles
+
+
+def _generate_causal_mermaid(nodes: list, links: list) -> str:
+    """
+    生成因果链的Mermaid流程图语法
+    
+    Args:
+        nodes: 因果节点列表
+        links: 因果关系列表
+    
+    Returns:
+        Mermaid语法字符串
+    """
+    if not nodes:
+        return ""
+    
+    lines = ["graph LR"]
+    
+    # 节点ID映射（避免Mermaid语法问题）
+    id_map = {}
+    for i, node in enumerate(nodes):
+        safe_id = f"N{i}"
+        id_map[node.id] = safe_id
+        
+        # 转义特殊字符
+        title = node.title.replace('"', "'").replace("[", "(").replace("]", ")")
+        if len(title) > 30:
+            title = title[:27] + "..."
+        icon = NodeType.get_icon(node.node_type)
+        
+        # 节点定义
+        lines.append(f'    {safe_id}["{icon} {title}"]')
+    
+    # 关系定义
+    link_type_labels = {
+        "causes": "导致",
+        "enables": "促成",
+        "leads_to": "引发",
+        "triggers": "触发",
+    }
+    
+    for link in links:
+        source_id = id_map.get(link.source_node_id)
+        target_id = id_map.get(link.target_node_id)
+        
+        if source_id and target_id:
+            label = link_type_labels.get(link.link_type, "影响")
+            if link.description:
+                desc = link.description[:15].replace('"', "'")
+                label = desc
+            lines.append(f'    {source_id} -->|{label}| {target_id}')
+    
+    return "\n".join(lines)
 
 
 # ============================================================
@@ -292,11 +345,15 @@ async def get_event_causal_chain(
                 "description": link.description,
             })
 
+    # 生成Mermaid语法
+    mermaid_code = _generate_causal_mermaid(nodes, links)
+
     response = templates.TemplateResponse(request=request, name="partials/causal_chain.html", context={
         "event_id": event_id,
         "lang": lang,
         "nodes": nodes_data,
         "links": links_data,
+        "mermaid": mermaid_code,
     })
     set_cached(cache_key, response.body.decode(), ttl=600)
     return response

@@ -3,6 +3,7 @@ from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.base import get_session
 from models.event import Event
+from deep_analyst.models.causal_chain import CausalNode, CausalLink, NodeType
 from app.cache import get_cached, set_cached
 from fastapi import Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse
@@ -187,6 +188,9 @@ async def get_event_detail(
                 "update_count": related.update_count,
             })
 
+    # 获取因果链数据
+    causal_chain = await _get_causal_chain(session, event_id)
+
     data = {
         "event_id": event.event_id,
         "title": event.title,
@@ -199,6 +203,129 @@ async def get_event_detail(
         "event_type": event.data.get("event_type") if event.data else None,
         "timeline": articles,
         "related_events": related_events,
+        "causal_chain": causal_chain,
     }
     set_cached(cache_key, data, ttl=300)
     return data
+
+
+async def _get_causal_chain(session: AsyncSession, event_id: str) -> dict:
+    """
+    获取事件的因果链数据
+    
+    Args:
+        session: 数据库会话
+        event_id: 事件ID
+    
+    Returns:
+        因果链数据字典，包含nodes和links
+    """
+    # 查询因果节点
+    nodes_query = (
+        select(CausalNode)
+        .where(CausalNode.event_id == event_id)
+        .order_by(CausalNode.created_at)
+    )
+    nodes_result = await session.execute(nodes_query)
+    nodes = nodes_result.scalars().all()
+    
+    if not nodes:
+        return {"nodes": [], "links": [], "mermaid": ""}
+    
+    # 查询因果关系
+    node_ids = [node.id for node in nodes]
+    links_query = (
+        select(CausalLink)
+        .where(
+            CausalLink.source_node_id.in_(node_ids),
+            CausalLink.target_node_id.in_(node_ids)
+        )
+    )
+    links_result = await session.execute(links_query)
+    links = links_result.scalars().all()
+    
+    # 构建节点数据
+    nodes_data = []
+    for node in nodes:
+        nodes_data.append({
+            "id": node.id,
+            "type": node.node_type,
+            "title": node.title,
+            "description": node.description,
+            "impact_level": node.impact_level,
+            "time_horizon": node.time_horizon,
+            "confidence": node.confidence,
+            "label": NodeType.get_label(node.node_type),
+            "icon": NodeType.get_icon(node.node_type),
+        })
+    
+    # 构建关系数据
+    links_data = []
+    for link in links:
+        links_data.append({
+            "source": link.source_node_id,
+            "target": link.target_node_id,
+            "type": link.link_type,
+            "strength": link.strength,
+            "description": link.description,
+        })
+    
+    # 生成Mermaid语法
+    mermaid_code = _generate_mermaid(nodes, links)
+    
+    return {
+        "nodes": nodes_data,
+        "links": links_data,
+        "mermaid": mermaid_code,
+    }
+
+
+def _generate_mermaid(nodes: list, links: list) -> str:
+    """
+    生成Mermaid流程图语法
+    
+    Args:
+        nodes: 因果节点列表
+        links: 因果关系列表
+    
+    Returns:
+        Mermaid语法字符串
+    """
+    if not nodes:
+        return ""
+    
+    lines = ["graph LR"]
+    
+    # 节点ID映射（避免Mermaid语法问题）
+    id_map = {}
+    for i, node in enumerate(nodes):
+        safe_id = f"N{i}"
+        id_map[node.id] = safe_id
+        
+        # 转义特殊字符
+        title = node.title.replace('"', "'").replace("[", "(").replace("]", ")")
+        icon = NodeType.get_icon(node.node_type)
+        label = NodeType.get_label(node.node_type)
+        
+        # 节点定义
+        lines.append(f'    {safe_id}["{icon} {title}"]')
+    
+    # 关系定义
+    link_type_labels = {
+        "causes": "导致",
+        "enables": "促成",
+        "leads_to": "引发",
+        "triggers": "触发",
+    }
+    
+    for link in links:
+        source_id = id_map.get(link.source_node_id)
+        target_id = id_map.get(link.target_node_id)
+        
+        if source_id and target_id:
+            label = link_type_labels.get(link.link_type, "影响")
+            if link.description:
+                label = link.description[:20].replace('"', "'")
+            lines.append(f'    {source_id} -->|{label}| {target_id}')
+    
+    return "\n".join(lines)

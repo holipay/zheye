@@ -1,5 +1,15 @@
 <!-- 因果链展示 -->
 <div class="causal-chain-view">
+    <!-- Mermaid 因果链图 -->
+    {% if mermaid %}
+    <div class="chain-mermaid">
+        <h4 class="section-title">{{ "Causal Chain Visualization" if lang == "en" else "因果链可视化" }}</h4>
+        <div class="mermaid-container">
+            <pre class="mermaid">{{ mermaid }}</pre>
+        </div>
+    </div>
+    {% endif %}
+    
     <!-- 因果链图示 -->
     <div class="chain-visualization">
         <h4 class="section-title">{{ "Causal Chain Analysis" if lang == "en" else "因果链分析" }}</h4>
@@ -104,6 +114,25 @@
 <style>
 .causal-chain-view {
     padding: 1rem 0;
+}
+.chain-mermaid {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: var(--bg-primary, #ffffff);
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 0.75rem;
+}
+.mermaid-container {
+    overflow-x: auto;
+    padding: 1rem 0;
+}
+.mermaid-container pre.mermaid {
+    display: flex;
+    justify-content: center;
+}
+.mermaid-container svg {
+    max-width: 100%;
+    height: auto;
 }
 .section-title {
     font-size: 1.1rem;
@@ -252,3 +281,12 @@
     color: var(--text-tertiary, #6b7280);
 }
 </style>
+
+<script>
+// 触发 Mermaid 渲染
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof mermaid !== 'undefined') {
+        mermaid.run();
+    }
+});
+</script>
