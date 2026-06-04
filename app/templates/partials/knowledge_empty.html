@@ -1,0 +1,51 @@
+<!-- 知识框架空状态 -->
+<div class="empty-state">
+    <div class="empty-icon">📖</div>
+    <h4 class="empty-title">{{ "No Knowledge Framework" if lang == "en" else "暂无知识框架" }}</h4>
+    <p class="empty-description">
+        {{ "The knowledge framework analysis has not been performed yet." if lang == "en" else "知识框架分析尚未执行。" }}
+    </p>
+    <button class="btn-analyze" 
+            hx-post="/api/deep-analyst/events/{{ event_id }}/knowledge/analyze"
+            hx-headers='{"X-CSRF-Token": document.querySelector("meta[name=csrf-token]")?.content || ""}'
+            hx-target="#tab-knowledge"
+            hx-swap="innerHTML">
+        {{ "Analyze Knowledge Framework" if lang == "en" else "分析知识框架" }}
+    </button>
+</div>
+
+<style>
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+.empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+.empty-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary, #1a1a1a);
+    margin-bottom: 0.5rem;
+}
+.empty-description {
+    font-size: 0.9rem;
+    color: var(--text-secondary, #4b5563);
+    margin-bottom: 1.5rem;
+}
+.btn-analyze {
+    padding: 0.75rem 1.5rem;
+    background: var(--primary-color, #3b82f6);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-analyze:hover {
+    background: var(--primary-dark, #2563eb);
+}
+</style>

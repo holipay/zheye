@@ -61,7 +61,7 @@
 
     <!-- 知识框架 Tab -->
     <div id="tab-knowledge" class="tab-content active">
-        <div hx-get="/api/events/{{ event.event_id }}/knowledge?lang={{ lang }}" 
+        <div hx-get="/api/deep-analyst/events/{{ event.event_id }}/knowledge?lang={{ lang }}" 
              hx-trigger="load" 
              hx-target="#tab-knowledge">
             <div class="loading">{{ "Loading..." if lang == "en" else "加载中..." }}</div>
@@ -70,7 +70,7 @@
 
     <!-- 因果链 Tab -->
     <div id="tab-causal" class="tab-content">
-        <div hx-get="/api/events/{{ event.event_id }}/causal-chain?lang={{ lang }}" 
+        <div hx-get="/api/deep-analyst/events/{{ event.event_id }}/causal-chain?lang={{ lang }}" 
              hx-trigger="load" 
              hx-target="#tab-causal">
             <div class="loading">{{ "Loading..." if lang == "en" else "加载中..." }}</div>
@@ -79,7 +79,7 @@
 
     <!-- 历史类比 Tab -->
     <div id="tab-analogies" class="tab-content">
-        <div hx-get="/api/events/{{ event.event_id }}/analogies?lang={{ lang }}" 
+        <div hx-get="/api/deep-analyst/events/{{ event.event_id }}/analogies?lang={{ lang }}" 
              hx-trigger="load" 
              hx-target="#tab-analogies">
             <div class="loading">{{ "Loading..." if lang == "en" else "加载中..." }}</div>
@@ -88,7 +88,7 @@
 
     <!-- 情景推演 Tab -->
     <div id="tab-scenarios" class="tab-content">
-        <div hx-get="/api/events/{{ event.event_id }}/scenarios?lang={{ lang }}" 
+        <div hx-get="/api/deep-analyst/events/{{ event.event_id }}/scenarios?lang={{ lang }}" 
              hx-trigger="load" 
              hx-target="#tab-scenarios">
             <div class="loading">{{ "Loading..." if lang == "en" else "加载中..." }}</div>

@@ -77,7 +77,10 @@ async def get_event_knowledge(
     knowledge = result.scalar_one_or_none()
     
     if not knowledge:
-        return HTMLResponse(content="<p class='text-muted'>暂无知识分析数据</p>")
+        return templates.TemplateResponse(request=request, name="partials/knowledge_empty.html", context={
+            "event_id": event_id,
+            "lang": lang,
+        })
     
     atoms_query = (
         select(KnowledgeAtom, EventKnowledgeAtom.relevance, EventKnowledgeAtom.position)
@@ -199,6 +202,79 @@ async def trigger_knowledge_analysis(
 # 因果链 API
 # ============================================================
 
+@router.get("/events/{event_id}/causal-chain", response_class=HTMLResponse)
+async def get_event_causal_chain(
+    request: Request,
+    event_id: str,
+    session: AsyncSession = Depends(get_session),
+    lang: str = "zh",
+):
+    """获取事件的因果链"""
+    cache_key = f"deep:causal:{event_id}:{lang}"
+    cached = get_cached(cache_key)
+    if cached:
+        return HTMLResponse(content=cached)
+
+    nodes_result = await session.execute(
+        select(CausalNode)
+        .where(CausalNode.event_id == event_id)
+        .order_by(CausalNode.node_type, CausalNode.id)
+    )
+    nodes = nodes_result.scalars().all()
+
+    if not nodes:
+        return templates.TemplateResponse(request=request, name="partials/causal_chain_empty.html", context={
+            "event_id": event_id,
+            "lang": lang,
+        })
+
+    links_result = await session.execute(
+        select(CausalLink)
+        .join(CausalNode, CausalLink.source_node_id == CausalNode.id)
+        .where(CausalNode.event_id == event_id)
+    )
+    links = links_result.scalars().all()
+
+    node_map = {n.id: n for n in nodes}
+    nodes_data = []
+    for node in nodes:
+        nodes_data.append({
+            "id": node.id,
+            "node_type": node.node_type,
+            "title": node.title,
+            "description": node.description,
+            "probability": node.probability,
+            "impact_level": node.impact_level,
+            "time_horizon": node.time_horizon,
+            "entities": node.entities or [],
+            "confidence": node.confidence,
+        })
+
+    links_data = []
+    for link in links:
+        source = node_map.get(link.source_node_id)
+        target = node_map.get(link.target_node_id)
+        if source and target:
+            links_data.append({
+                "source_id": link.source_node_id,
+                "target_id": link.target_node_id,
+                "source_title": source.title,
+                "target_title": target.title,
+                "link_type": link.link_type,
+                "strength": link.strength,
+                "description": link.description,
+            })
+
+    response = templates.TemplateResponse(request=request, name="partials/causal_chain.html", context={
+        "event_id": event_id,
+        "lang": lang,
+        "nodes": nodes_data,
+        "links": links_data,
+    })
+    set_cached(cache_key, response.body.decode(), ttl=600)
+    return response
+
+
 @router.post("/events/{event_id}/causal-chain/analyze")
 async def trigger_causal_chain_analysis(
     event_id: str,
@@ -266,6 +342,85 @@ async def trigger_causal_chain_analysis(
 # ============================================================
 # 历史类比 API
 # ============================================================
+
+@router.get("/events/{event_id}/analogies", response_class=HTMLResponse)
+async def get_event_analogies(
+    request: Request,
+    event_id: str,
+    session: AsyncSession = Depends(get_session),
+    lang: str = "zh",
+):
+    """获取事件的历史类比"""
+    cache_key = f"deep:analogies:{event_id}:{lang}"
+    cached = get_cached(cache_key)
+    if cached:
+        return HTMLResponse(content=cached)
+
+    representation_result = await session.execute(
+        select(EventRepresentation).where(EventRepresentation.event_id == event_id)
+    )
+    representation = representation_result.scalar_one_or_none()
+
+    if not representation:
+        return templates.TemplateResponse(request=request, name="partials/analogy_empty.html", context={
+            "event_id": event_id,
+            "lang": lang,
+        })
+
+    analogies_result = await session.execute(
+        select(HistoricalAnalogy)
+        .where(HistoricalAnalogy.source_event_id == event_id)
+        .order_by(HistoricalAnalogy.overall_similarity.desc())
+        .limit(10)
+    )
+    analogies = analogies_result.scalars().all()
+
+    if not analogies:
+        return templates.TemplateResponse(request=request, name="partials/analogy_empty.html", context={
+            "event_id": event_id,
+            "lang": lang,
+        })
+
+    analogies_data = []
+    for analogy in analogies:
+        analogies_data.append({
+            "id": analogy.id,
+            "target_event_id": analogy.target_event_id,
+            "causal_similarity": analogy.causal_similarity,
+            "decision_similarity": analogy.decision_similarity,
+            "constraint_similarity": analogy.constraint_similarity,
+            "mechanism_similarity": analogy.mechanism_similarity,
+            "game_similarity": analogy.game_similarity,
+            "overall_similarity": analogy.overall_similarity,
+            "analogy_type": analogy.analogy_type,
+            "analogy_summary": analogy.analogy_summary,
+            "key_insight": analogy.key_insight,
+            "lessons_learned": analogy.lessons_learned,
+            "surface_differences": analogy.surface_differences or [],
+            "structural_differences": analogy.structural_differences or [],
+            "confidence": analogy.confidence,
+        })
+
+    representation_data = {
+        "surface_summary": representation.surface_summary,
+        "surface_entities": representation.surface_entities or [],
+        "causal_pattern": representation.causal_pattern,
+        "causal_pattern_desc": representation.causal_pattern_desc,
+        "decision_logic": representation.decision_logic,
+        "transmission_mechanism": representation.transmission_mechanism,
+        "economic_principle": representation.economic_principle,
+        "economic_principle_desc": representation.economic_principle_desc,
+    }
+
+    response = templates.TemplateResponse(request=request, name="partials/event_analogies.html", context={
+        "event_id": event_id,
+        "lang": lang,
+        "representation": representation_data,
+        "analogies": analogies_data,
+    })
+    set_cached(cache_key, response.body.decode(), ttl=600)
+    return response
+
 
 @router.post("/events/{event_id}/analogies/analyze")
 async def trigger_analogy_analysis(
@@ -426,6 +581,42 @@ async def trigger_analogy_analysis(
 # ============================================================
 # 情景推演 API
 # ============================================================
+
+@router.get("/events/{event_id}/scenarios", response_class=HTMLResponse)
+async def get_event_scenarios(
+    request: Request,
+    event_id: str,
+    session: AsyncSession = Depends(get_session),
+    lang: str = "zh",
+):
+    """获取事件的情景推演"""
+    cache_key = f"deep:scenarios:{event_id}:{lang}"
+    cached = get_cached(cache_key)
+    if cached:
+        return HTMLResponse(content=cached)
+
+    result = await session.execute(
+        select(EventScenario).where(EventScenario.event_id == event_id)
+    )
+    scenario = result.scalar_one_or_none()
+
+    if not scenario:
+        return templates.TemplateResponse(request=request, name="partials/scenario_empty.html", context={
+            "event_id": event_id,
+            "lang": lang,
+        })
+
+    response = templates.TemplateResponse(request=request, name="partials/event_scenarios.html", context={
+        "event_id": event_id,
+        "lang": lang,
+        "key_variables": scenario.key_variables or [],
+        "observation_signals": scenario.observation_signals or [],
+        "scenarios": scenario.scenarios or [],
+        "thinking_questions": scenario.thinking_questions or [],
+    })
+    set_cached(cache_key, response.body.decode(), ttl=600)
+    return response
+
 
 @router.post("/events/{event_id}/scenarios/analyze")
 async def trigger_scenario_analysis(

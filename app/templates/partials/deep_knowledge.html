@@ -1,0 +1,260 @@
+<!-- 知识框架展示 -->
+<div class="deep-knowledge">
+    <!-- 背景概述 -->
+    {% if background_summary %}
+    <div class="knowledge-section">
+        <h4 class="section-title">{{ "Background" if lang == "en" else "背景概述" }}</h4>
+        <div class="section-content">
+            <p>{{ background_summary }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 知识缺口 -->
+    {% if knowledge_gaps %}
+    <div class="knowledge-section">
+        <h4 class="section-title">{{ "Knowledge Gaps" if lang == "en" else "知识缺口" }}</h4>
+        <div class="gaps-list">
+            {% for gap in knowledge_gaps %}
+            <div class="gap-item priority-{{ gap.priority }}">
+                <div class="gap-topic">{{ gap.topic }}</div>
+                <div class="gap-reason">{{ gap.why_needed }}</div>
+                <span class="priority-badge">{{ gap.priority }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 因果链（简化版） -->
+    {% if causal_chain %}
+    <div class="knowledge-section">
+        <h4 class="section-title">{{ "Causal Chain" if lang == "en" else "因果链" }}</h4>
+        <div class="causal-chain-simple">
+            {% for step in causal_chain %}
+            <div class="causal-step">
+                <div class="step-number">{{ step.step }}</div>
+                <div class="step-content">
+                    <div class="step-cause">
+                        <span class="label">{{ "Cause" if lang == "en" else "原因" }}:</span>
+                        {{ step.cause }}
+                    </div>
+                    <div class="step-arrow">→</div>
+                    <div class="step-effect">
+                        <span class="label">{{ "Effect" if lang == "en" else "结果" }}:</span>
+                        {{ step.effect }}
+                    </div>
+                    {% if step.evidence %}
+                    <div class="step-evidence">
+                        <span class="label">{{ "Evidence" if lang == "en" else "证据" }}:</span>
+                        {{ step.evidence }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 关键概念 -->
+    {% if key_concepts %}
+    <div class="knowledge-section">
+        <h4 class="section-title">{{ "Key Concepts" if lang == "en" else "关键概念" }}</h4>
+        <div class="concepts-grid">
+            {% for concept in key_concepts %}
+            <div class="concept-card">
+                <div class="concept-name">{{ concept.concept }}</div>
+                <div class="concept-definition">{{ concept.definition }}</div>
+                {% if concept.relevance %}
+                <div class="concept-relevance">
+                    <span class="label">{{ "Relevance" if lang == "en" else "关联" }}:</span>
+                    {{ concept.relevance }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 知识原子 -->
+    {% if atoms %}
+    <div class="knowledge-section">
+        <h4 class="section-title">{{ "Knowledge Atoms" if lang == "en" else "知识原子" }}</h4>
+        <div class="atoms-list">
+            {% for atom in atoms %}
+            <div class="atom-item">
+                <div class="atom-header">
+                    <span class="atom-type badge">{{ atom.type }}</span>
+                    <span class="atom-title">{{ atom.title }}</span>
+                </div>
+                <div class="atom-content">{{ atom.content }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.deep-knowledge {
+    padding: 1rem 0;
+}
+.knowledge-section {
+    margin-bottom: 1.5rem;
+}
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    color: var(--text-primary, #1a1a1a);
+    border-bottom: 2px solid var(--border-color, #e5e7eb);
+    padding-bottom: 0.5rem;
+}
+.section-content p {
+    line-height: 1.6;
+    color: var(--text-secondary, #4b5563);
+}
+.gaps-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.gap-item {
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    background: var(--bg-secondary, #f9fafb);
+    border-left: 3px solid var(--border-color, #d1d5db);
+}
+.gap-item.priority-high {
+    border-left-color: #ef4444;
+}
+.gap-item.priority-medium {
+    border-left-color: #f59e0b;
+}
+.gap-item.priority-low {
+    border-left-color: #10b981;
+}
+.gap-topic {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+.gap-reason {
+    font-size: 0.9rem;
+    color: var(--text-secondary, #4b5563);
+}
+.priority-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-top: 0.25rem;
+    background: var(--bg-tertiary, #e5e7eb);
+}
+.causal-chain-simple {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.causal-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+}
+.step-number {
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--primary-color, #3b82f6);
+    color: white;
+    font-weight: 600;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+}
+.step-content {
+    flex: 1;
+    padding: 0.75rem;
+    background: var(--bg-secondary, #f9fafb);
+    border-radius: 0.5rem;
+}
+.step-cause, .step-effect, .step-evidence {
+    margin-bottom: 0.25rem;
+}
+.step-arrow {
+    color: var(--primary-color, #3b82f6);
+    font-weight: bold;
+    margin: 0.25rem 0;
+}
+.concepts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+.concept-card {
+    padding: 1rem;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 0.5rem;
+}
+.concept-name {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--primary-color, #3b82f6);
+}
+.concept-definition {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-secondary, #4b5563);
+}
+.concept-relevance {
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+    color: var(--text-tertiary, #6b7280);
+}
+.atoms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.atom-item {
+    padding: 1rem;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 0.5rem;
+}
+.atom-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.atom-type {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    background: var(--primary-light, #dbeafe);
+    color: var(--primary-dark, #1d4ed8);
+}
+.atom-title {
+    font-weight: 600;
+}
+.atom-content {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text-secondary, #4b5563);
+}
+.badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+.label {
+    font-weight: 500;
+    color: var(--text-tertiary, #6b7280);
+}
+</style>

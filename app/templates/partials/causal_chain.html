@@ -1,0 +1,254 @@
+<!-- 因果链展示 -->
+<div class="causal-chain-view">
+    <!-- 因果链图示 -->
+    <div class="chain-visualization">
+        <h4 class="section-title">{{ "Causal Chain Analysis" if lang == "en" else "因果链分析" }}</h4>
+        
+        <!-- 节点列表（按类型分组） -->
+        <div class="nodes-by-type">
+            {% set node_types = ["root_cause", "trigger", "immediate", "short_term", "long_term", "scenario"] %}
+            {% set type_labels = {
+                "root_cause": "Root Cause" if lang == "en" else "根本原因",
+                "trigger": "Trigger" if lang == "en" else "触发因素",
+                "immediate": "Immediate Impact" if lang == "en" else "即时影响",
+                "short_term": "Short-term Effect" if lang == "en" else "短期效应",
+                "long_term": "Long-term Outlook" if lang == "en" else "长期走向",
+                "scenario": "Scenario" if lang == "en" else "可能情景"
+            } %}
+            {% set type_icons = {
+                "root_cause": "🌱",
+                "trigger": "⚡",
+                "immediate": "💥",
+                "short_term": "📈",
+                "long_term": "🔮",
+                "scenario": "🎯"
+            } %}
+            
+            {% for node_type in node_types %}
+                {% set type_nodes = nodes | selectattr("node_type", "equalto", node_type) | list %}
+                {% if type_nodes %}
+                <div class="node-group">
+                    <h5 class="group-title">
+                        <span class="group-icon">{{ type_icons[node_type] }}</span>
+                        {{ type_labels[node_type] }}
+                    </h5>
+                    <div class="nodes-list">
+                        {% for node in type_nodes %}
+                        <div class="node-card" data-node-id="{{ node.id }}">
+                            <div class="node-header">
+                                <span class="node-title">{{ node.title }}</span>
+                                {% if node.impact_level %}
+                                <span class="impact-badge impact-{{ node.impact_level }}">{{ node.impact_level }}</span>
+                                {% endif %}
+                            </div>
+                            {% if node.description %}
+                            <div class="node-description">{{ node.description }}</div>
+                            {% endif %}
+                            <div class="node-meta">
+                                {% if node.time_horizon %}
+                                <span class="meta-item">
+                                    <span class="meta-icon">⏱</span>
+                                    {{ node.time_horizon }}
+                                </span>
+                                {% endif %}
+                                {% if node.probability %}
+                                <span class="meta-item">
+                                    <span class="meta-icon">📊</span>
+                                    {{ "%.0f" | format(node.probability * 100) }}%
+                                </span>
+                                {% endif %}
+                                {% if node.confidence %}
+                                <span class="meta-item">
+                                    <span class="meta-icon">🎯</span>
+                                    {{ "%.0f" | format(node.confidence * 100) }}%
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% if node.entities %}
+                            <div class="node-entities">
+                                {% for entity in node.entities %}
+                                <span class="entity-tag">{{ entity }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- 关系列表 -->
+    {% if links %}
+    <div class="links-section">
+        <h4 class="section-title">{{ "Causal Relationships" if lang == "en" else "因果关系" }}</h4>
+        <div class="links-list">
+            {% for link in links %}
+            <div class="link-item">
+                <div class="link-source">{{ link.source_title }}</div>
+                <div class="link-arrow">
+                    <span class="link-type">{{ link.link_type }}</span>
+                    <span class="arrow">→</span>
+                    <span class="strength">{{ "%.0f" | format(link.strength * 100) }}%</span>
+                </div>
+                <div class="link-target">{{ link.target_title }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.causal-chain-view {
+    padding: 1rem 0;
+}
+.section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-primary, #1a1a1a);
+    border-bottom: 2px solid var(--border-color, #e5e7eb);
+    padding-bottom: 0.5rem;
+}
+.nodes-by-type {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+.node-group {
+    margin-bottom: 0.5rem;
+}
+.group-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary, #374151);
+}
+.group-icon {
+    font-size: 1.2rem;
+}
+.nodes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.node-card {
+    padding: 1rem;
+    border: 1px solid var(--border-color, #e5e7eb);
+    border-radius: 0.5rem;
+    background: var(--bg-primary, #ffffff);
+    transition: box-shadow 0.2s;
+}
+.node-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.node-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+}
+.node-title {
+    font-weight: 600;
+    color: var(--text-primary, #1a1a1a);
+}
+.impact-badge {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-weight: 500;
+}
+.impact-high {
+    background: #fef2f2;
+    color: #dc2626;
+}
+.impact-medium {
+    background: #fffbeb;
+    color: #d97706;
+}
+.impact-low {
+    background: #f0fdf4;
+    color: #16a34a;
+}
+.node-description {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text-secondary, #4b5563);
+    margin-bottom: 0.5rem;
+}
+.node-meta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.5rem;
+}
+.meta-item {
+    font-size: 0.8rem;
+    color: var(--text-tertiary, #6b7280);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.meta-icon {
+    font-size: 0.9rem;
+}
+.node-entities {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+}
+.entity-tag {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    background: var(--bg-secondary, #f3f4f6);
+    border-radius: 9999px;
+    color: var(--text-secondary, #4b5563);
+}
+.links-section {
+    margin-top: 2rem;
+}
+.links-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.link-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--bg-secondary, #f9fafb);
+    border-radius: 0.5rem;
+}
+.link-source, .link-target {
+    flex: 1;
+    font-size: 0.9rem;
+    color: var(--text-primary, #1a1a1a);
+}
+.link-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    min-width: 80px;
+}
+.link-type {
+    font-size: 0.7rem;
+    color: var(--text-tertiary, #6b7280);
+    text-transform: uppercase;
+}
+.arrow {
+    color: var(--primary-color, #3b82f6);
+    font-size: 1.2rem;
+}
+.strength {
+    font-size: 0.75rem;
+    color: var(--text-tertiary, #6b7280);
+}
+</style>
