@@ -17,6 +17,16 @@ class KnowledgeAtom(Base):
     source_article_id = Column(BigInteger, ForeignKey("news.id", ondelete="SET NULL"))
     confidence = Column(Float, default=0.8)
     lang = Column(String(10), default='zh')
+    
+    # 复用统计字段
+    reuse_count = Column(Integer, default=0)  # 被复用次数
+    last_reused_at = Column(DateTime(timezone=True))  # 最后复用时间
+    quality_score = Column(Float, default=1.0)  # 质量评分（考虑复用次数和时间衰减）
+    
+    # 版本管理
+    version = Column(Integer, default=1)  # 版本号
+    previous_version_id = Column(BigInteger, ForeignKey("knowledge_atoms.id", ondelete="SET NULL"))  # 前一版本
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -24,6 +34,8 @@ class KnowledgeAtom(Base):
         Index("idx_knowledge_atoms_type", "atom_type"),
         Index("idx_knowledge_atoms_category", "category"),
         Index("idx_knowledge_atoms_lang", "lang"),
+        Index("idx_knowledge_atoms_quality", "quality_score"),
+        Index("idx_knowledge_atoms_reuse", "reuse_count"),
     )
 
 

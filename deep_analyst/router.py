@@ -757,3 +757,108 @@ async def trigger_scenario_analysis(
         "key_variables_count": len(analysis.get('key_variables', [])),
         "scenarios_count": len(analysis.get('scenarios', [])),
     }
+
+
+# ============================================================
+# 知识原子复用统计 API
+# ============================================================
+
+@router.get("/knowledge/stats")
+async def get_knowledge_stats(
+    session: AsyncSession = Depends(get_session),
+):
+    """获取知识原子复用统计"""
+    from deep_analyst.knowledge import get_reuse_statistics
+    
+    stats = await get_reuse_statistics(session)
+    return stats
+
+
+@router.get("/knowledge/atoms")
+async def get_knowledge_atoms(
+    session: AsyncSession = Depends(get_session),
+    category: str = None,
+    min_quality: float = 0.0,
+    limit: int = 50,
+):
+    """获取知识原子列表"""
+    query = select(KnowledgeAtom).where(KnowledgeAtom.quality_score >= min_quality)
+    
+    if category:
+        query = query.where(KnowledgeAtom.category == category)
+    
+    query = query.order_by(KnowledgeAtom.quality_score.desc()).limit(limit)
+    
+    result = await session.execute(query)
+    atoms = result.scalars().all()
+    
+    return {
+        "atoms": [
+            {
+                "id": atom.id,
+                "atom_type": atom.atom_type,
+                "title": atom.title,
+                "content": atom.content[:200],
+                "category": atom.category,
+                "entities": atom.entities,
+                "keywords": atom.keywords,
+                "confidence": atom.confidence,
+                "quality_score": atom.quality_score,
+                "reuse_count": atom.reuse_count,
+                "version": atom.version,
+                "last_reused_at": atom.last_reused_at.isoformat() if atom.last_reused_at else None,
+                "created_at": atom.created_at.isoformat() if atom.created_at else None,
+            }
+            for atom in atoms
+        ],
+        "total": len(atoms),
+    }
+
+
+@router.post("/knowledge/atoms/{atom_id}/update")
+async def update_atom(
+    atom_id: int,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    _: bool = Depends(verify_admin_credentials),
+    __: bool = Depends(csrf_protect),
+):
+    """更新知识原子（创建新版本）"""
+    from deep_analyst.knowledge import update_knowledge_atom
+    
+    body = await request.json()
+    new_content = body.get("content")
+    new_title = body.get("title")
+    reason = body.get("reason")
+    
+    new_atom = await update_knowledge_atom(session, atom_id, new_content, new_title, reason)
+    
+    if not new_atom:
+        raise HTTPException(status_code=404, detail="知识原子不存在")
+    
+    await session.commit()
+    
+    return {
+        "status": "ok",
+        "old_id": atom_id,
+        "new_id": new_atom.id,
+        "version": new_atom.version,
+    }
+
+
+@router.post("/knowledge/quality/decay")
+async def trigger_quality_decay(
+    session: AsyncSession = Depends(get_session),
+    _: bool = Depends(verify_admin_credentials),
+    __: bool = Depends(csrf_protect),
+):
+    """触发质量衰减计算"""
+    from deep_analyst.knowledge import apply_quality_decay
+    
+    updated = await apply_quality_decay(session)
+    await session.commit()
+    
+    return {
+        "status": "ok",
+        "updated_count": updated,
+    }

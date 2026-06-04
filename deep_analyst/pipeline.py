@@ -18,7 +18,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.event import Event
 from deep_analyst.ai_analysis import DeepSeekClient
-from deep_analyst.knowledge import analyze_event_knowledge, analyze_causal_chain, find_relevant_atoms
+from deep_analyst.knowledge import (
+    analyze_event_knowledge, analyze_causal_chain, find_relevant_atoms,
+    update_reuse_stats, detect_conflicts, apply_quality_decay, get_reuse_statistics
+)
 from deep_analyst.analogy import extract_event_representation, analyze_analogy, compute_structural_similarity
 from deep_analyst.scenario import analyze_scenarios
 from deep_analyst.models.knowledge import EventKnowledge, EventKnowledgeAtom, KnowledgeAtom
@@ -151,18 +154,27 @@ async def analyze_single_event(
     # Step 1: 知识框架（带知识原子复用）
     logger.info(f"  [{event_id}] Step 1/4: 知识框架分析")
     try:
-        # 查找已有相关知识原子
+        # 查找已有相关知识原子（增强版：语义相似度 + 跨category）
         existing_atoms = await find_relevant_atoms(
             session=session,
             category=event_data.get("category"),
             entities=event_data.get("entities"),
             keywords=event_data.get("keywords"),
+            event_description=event_data.get("description"),  # 添加描述用于语义匹配
         )
         if existing_atoms:
             logger.info(f"  [{event_id}] 找到 {len(existing_atoms)} 个相关知识原子")
 
         knowledge = await analyze_event_knowledge(event_data, articles, ai_client, existing_atoms)
         if knowledge:
+            # 检测冲突
+            new_atoms = knowledge.get("knowledge_atoms", [])
+            if new_atoms and existing_atoms:
+                conflicts = await detect_conflicts(session, new_atoms, existing_atoms)
+                if conflicts:
+                    logger.warning(f"  [{event_id}] 检测到 {len(conflicts)} 个潜在冲突")
+                    knowledge["_conflicts"] = conflicts
+            
             # 存储知识框架
             await _save_knowledge(session, event_id, knowledge, event_data.get("category"))
             result.steps_completed.append("knowledge")
@@ -418,6 +430,13 @@ async def _save_knowledge(session: AsyncSession, event_id: str, analysis: dict, 
                 position=999,
             )
             session.add(link)
+    
+    # 更新复用统计
+    if reused_ids:
+        valid_ids = [aid for aid in reused_ids if isinstance(aid, int)]
+        if valid_ids:
+            await update_reuse_stats(session, valid_ids)
+            logger.info(f"  更新了 {len(valid_ids)} 个原子的复用统计")
 
 
 async def _save_causal_chain(session: AsyncSession, event_id: str, analysis: dict):
