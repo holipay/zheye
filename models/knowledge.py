@@ -14,7 +14,7 @@ class KnowledgeAtom(Base):
     category = Column(String(50))
     entities = Column(JSONB)  # ["美联储", "通胀"]
     keywords = Column(JSONB)  # ["加息", "货币政策"]
-    source_article_id = Column(BigInteger)
+    source_article_id = Column(BigInteger, ForeignKey("news.id", ondelete="SET NULL"))
     confidence = Column(Float, default=0.8)
     lang = Column(String(10), default='zh')
     created_at = Column(DateTime(timezone=True), server_default=func.now())

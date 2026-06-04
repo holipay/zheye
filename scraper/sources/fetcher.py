@@ -1,4 +1,5 @@
 import asyncio
+import ipaddress
 import logging
 import random
 from typing import Optional
@@ -34,6 +35,48 @@ def get_random_ua() -> str:
 def get_domain(url: str) -> str:
     parsed = urlparse(url)
     return parsed.netloc or parsed.hostname or url
+
+
+def _is_private_ip(hostname: str) -> bool:
+    """检查是否为内网IP地址"""
+    try:
+        ip = ipaddress.ip_address(hostname)
+        return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved
+    except ValueError:
+        # 不是IP地址，检查常见内网主机名
+        return hostname in ("localhost", "metadata.google.internal", "169.254.169.254")
+
+
+def validate_url(url: str) -> bool:
+    """
+    验证URL是否安全（SSRF防护）
+    
+    拒绝：
+    - 非HTTP/HTTPS协议
+    - 内网IP地址（127.0.0.1, 10.x.x.x, 172.16-31.x.x, 192.168.x.x, 169.254.x.x）
+    - localhost
+    - 元数据服务地址
+    """
+    try:
+        parsed = urlparse(url)
+        
+        # 只允许HTTP和HTTPS协议
+        if parsed.scheme not in ("http", "https"):
+            logger.warning(f"SSRF防护: 拒绝非HTTP协议 {parsed.scheme}")
+            return False
+        
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+        
+        # 检查是否为内网地址
+        if _is_private_ip(hostname):
+            logger.warning(f"SSRF防护: 拒绝内网地址 {hostname}")
+            return False
+        
+        return True
+    except Exception:
+        return False
 
 
 class Fetcher:
@@ -76,6 +119,10 @@ class Fetcher:
         self._domain_last_request[domain] = asyncio.get_event_loop().time()
 
     async def fetch(self, url: str, etag: Optional[str] = None, last_modified: Optional[str] = None) -> dict:
+        # SSRF防护：验证URL
+        if not validate_url(url):
+            return {"status": "error", "url": url, "error": "URL validation failed (SSRF protection)"}
+        
         headers = {"User-Agent": get_random_ua()}
         if etag:
             headers["If-None-Match"] = etag

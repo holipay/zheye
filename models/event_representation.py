@@ -3,7 +3,7 @@
 用于历史类比检索的结构化匹配
 """
 
-from sqlalchemy import Column, BigInteger, String, Text, Float, DateTime, Index, func, UniqueConstraint
+from sqlalchemy import Column, BigInteger, String, Text, Float, DateTime, Index, func, UniqueConstraint, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from models.base import Base
 
@@ -13,7 +13,7 @@ class EventRepresentation(Base):
     __tablename__ = "event_representations"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    event_id = Column(String(100), unique=True, nullable=False)
+    event_id = Column(String(100), ForeignKey("events.event_id", ondelete="CASCADE"), unique=True, nullable=False)
     
     # 表面层
     surface_summary = Column(Text)
@@ -54,8 +54,8 @@ class HistoricalAnalogy(Base):
     __tablename__ = "historical_analogies"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    source_event_id = Column(String(100), nullable=False)  # 当前事件
-    target_event_id = Column(String(100), nullable=False)  # 历史事件
+    source_event_id = Column(String(100), ForeignKey("events.event_id", ondelete="CASCADE"), nullable=False)  # 当前事件
+    target_event_id = Column(String(100), ForeignKey("events.event_id", ondelete="CASCADE"), nullable=False)  # 历史事件
     
     # 匹配维度评分
     causal_similarity = Column(Float)  # 因果模式相似度

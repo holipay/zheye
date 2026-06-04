@@ -13,7 +13,7 @@ class CausalNode(Base):
     __tablename__ = "causal_nodes"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    event_id = Column(String(100), nullable=False)
+    event_id = Column(String(100), ForeignKey("events.event_id", ondelete="CASCADE"), nullable=False)
     
     # 节点信息
     node_type = Column(String(50), nullable=False)

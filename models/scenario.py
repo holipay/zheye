@@ -3,7 +3,7 @@
 提供思考框架，而非预测结论
 """
 
-from sqlalchemy import Column, BigInteger, String, Text, Float, DateTime, Index, func
+from sqlalchemy import Column, BigInteger, String, Text, Float, DateTime, Index, func, ForeignKey
 from sqlalchemy.dialects.postgresql import JSONB
 from models.base import Base
 
@@ -13,7 +13,7 @@ class EventScenario(Base):
     __tablename__ = "event_scenarios"
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    event_id = Column(String(100), unique=True, nullable=False)
+    event_id = Column(String(100), ForeignKey("events.event_id", ondelete="CASCADE"), unique=True, nullable=False)
     
     # 核心框架
     key_variables = Column(JSONB)  # 关键变量列表
