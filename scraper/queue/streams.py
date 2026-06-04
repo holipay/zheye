@@ -19,12 +19,14 @@ import time
 from typing import Optional
 from dataclasses import dataclass, asdict
 
+from app.config import settings
+
 logger = logging.getLogger(__name__)
 
 # Redis 配置
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-STREAM_NAME = os.getenv("REDIS_STREAM_NAME", "zheye:articles")
-CONSUMER_GROUP = os.getenv("REDIS_CONSUMER_GROUP", "zheye:workers")
+REDIS_URL = settings.REDIS_URL
+STREAM_NAME = settings.REDIS_STREAM_NAME
+CONSUMER_GROUP = settings.REDIS_CONSUMER_GROUP
 CONSUMER_NAME = os.getenv("REDIS_CONSUMER_NAME", f"worker-{os.getpid()}")
 
 # Redis 客户端缓存

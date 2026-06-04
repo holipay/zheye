@@ -5,6 +5,7 @@ LLM 分类器模块
 用于处理关键词匹配无法确定的边缘情况
 """
 
+import asyncio
 import json
 import logging
 from typing import Optional
@@ -69,7 +70,7 @@ def _get_client():
 
 def classify_with_llm(title: str, summary: str = "") -> Optional[ClassificationResult]:
     """
-    使用 LLM 对文章进行分类
+    使用 LLM 对文章进行分类（同步版本）
     
     Args:
         title: 文章标题
@@ -114,6 +115,26 @@ def classify_with_llm(title: str, summary: str = "") -> Optional[ClassificationR
         
     except Exception as e:
         logger.warning(f"LLM 分类失败: {e}")
+        return None
+
+
+async def classify_with_llm_async(title: str, summary: str = "") -> Optional[ClassificationResult]:
+    """
+    使用 LLM 对文章进行分类（异步版本）
+    
+    使用 asyncio.to_thread 将同步调用转为异步，避免阻塞事件循环
+    
+    Args:
+        title: 文章标题
+        summary: 文章摘要
+        
+    Returns:
+        ClassificationResult 或 None（如果 API 调用失败）
+    """
+    try:
+        return await asyncio.to_thread(classify_with_llm, title, summary)
+    except Exception as e:
+        logger.warning(f"异步 LLM 分类失败: {e}")
         return None
 
 

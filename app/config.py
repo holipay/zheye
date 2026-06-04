@@ -70,6 +70,20 @@ class Settings:
     RATE_LIMIT_DEFAULT: str = os.getenv("RATE_LIMIT_DEFAULT", "60/minute")
     RATE_LIMIT_API: str = os.getenv("RATE_LIMIT_API", "30/minute")
     RATE_LIMIT_ADMIN: str = os.getenv("RATE_LIMIT_ADMIN", "120/minute")
+    
+    # 分类配置
+    USE_LLM_CLASSIFIER: bool = os.getenv("USE_LLM_CLASSIFIER", "true").lower() == "true"
+    
+    # NER 配置
+    USE_NER: bool = os.getenv("USE_NER", "true").lower() == "true"
+    
+    # 去重配置
+    USE_TFIDF_DEDUP: bool = os.getenv("USE_TFIDF_DEDUP", "true").lower() == "true"
+    
+    # Redis 配置
+    REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    REDIS_STREAM_NAME: str = os.getenv("REDIS_STREAM_NAME", "zheye:articles")
+    REDIS_CONSUMER_GROUP: str = os.getenv("REDIS_CONSUMER_GROUP", "zheye:workers")
 
 
 settings = Settings()

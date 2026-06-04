@@ -1,15 +1,16 @@
 import logging
 import re
-import os
 from pathlib import Path
 from typing import Optional
 from collections import defaultdict
 import yaml
 
+from app.config import settings
+
 logger = logging.getLogger(__name__)
 
 # NER 配置
-USE_NER = os.getenv("USE_NER", "true").lower() == "true"
+USE_NER = settings.USE_NER
 
 _entities_cache: Optional[dict] = None
 

@@ -16,10 +16,12 @@ from scraper.sources.fetcher import Fetcher
 from scraper.sources.rss_parser import parse_feed
 from scraper.sources.article_extractor import extract_article_from_html, extract_date_from_html
 from scraper.pipeline.dedup import get_link_hash, is_duplicate
-from scraper.pipeline.classify import classify_hybrid, detect_article_type
+from app.config import settings
+from scraper.pipeline.classify import classify_hybrid, classify_hybrid_async, detect_article_type
 from scraper.pipeline.regions import extract_regions
 from scraper.pipeline.scheduler import filter_and_sort_sources, get_health_summary
 from scraper.db.writer import save_news, get_existing_hashes, get_existing_titles, update_source_health, get_source_conditional_headers
+from scraper.monitor import get_monitor, reset_monitor
 from scraper.sources.api_fetcher import MarketDataFetcher
 from models.run_metrics import RunMetrics
 from models.market_data import MarketData as MarketDataModel
@@ -39,7 +41,10 @@ ARTICLE_DELAY_MIN = 2.0                 # 文章间最小延迟
 ARTICLE_DELAY_MAX = 5.0                 # 文章间最大延迟
 
 # LLM 分类配置
-USE_LLM_CLASSIFIER = os.getenv("USE_LLM_CLASSIFIER", "true").lower() == "true"
+USE_LLM_CLASSIFIER = settings.USE_LLM_CLASSIFIER
+
+# 共享状态锁
+_shared_lock = asyncio.Lock()
 
 
 def load_config() -> dict:
@@ -74,10 +79,13 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
 
     for item in feed_items:
         link_hash = get_link_hash(item.link)
-        if link_hash in existing_hashes:
-            continue
-        if is_duplicate(item.title, existing_titles):
-            continue
+        
+        # 使用锁保护共享状态
+        async with _shared_lock:
+            if link_hash in existing_hashes:
+                continue
+            if is_duplicate(item.title, existing_titles):
+                continue
 
         content = None
         pub_date = item.date
@@ -127,8 +135,11 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
             "date": pub_date,
         }
         items.append(news_item)
-        existing_hashes.add(link_hash)
-        existing_titles.append(item.title)
+        
+        # 使用锁保护共享状态
+        async with _shared_lock:
+            existing_hashes.add(link_hash)
+            existing_titles.append(item.title)
 
     await update_source_health(
         name,
@@ -141,7 +152,7 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
 
 
 async def fetch_market_data():
-    """获取市场数据并保存到数据库"""
+    """获取市场数据并保存到数据库（批量插入）"""
     try:
         fetcher = MarketDataFetcher()
         if not fetcher.has_any_api:
@@ -156,23 +167,27 @@ async def fetch_market_data():
             logger.info("No market data fetched")
             return
 
-        async with async_session() as session:
-            saved_count = 0
-            for category, items in data.items():
-                for item in items:
-                    market_data = MarketDataModel(
-                        source=item.source,
-                        data_type=item.data_type,
-                        symbol=item.symbol,
-                        value=item.value,
-                        timestamp=item.timestamp,
-                        extra_data=item.metadata or {},
-                    )
-                    session.add(market_data)
-                    saved_count += 1
+        # 收集所有市场数据记录
+        all_records = []
+        for category, items in data.items():
+            for item in items:
+                all_records.append({
+                    "source": item.source,
+                    "data_type": item.data_type,
+                    "symbol": item.symbol,
+                    "value": item.value,
+                    "timestamp": item.timestamp,
+                    "extra_data": item.metadata or {},
+                })
 
-            await session.commit()
-            logger.info(f"Saved {saved_count} market data items")
+        # 批量插入
+        if all_records:
+            from sqlalchemy.dialects.postgresql import insert as pg_insert
+            async with async_session() as session:
+                stmt = pg_insert(MarketDataModel).values(all_records)
+                await session.execute(stmt)
+                await session.commit()
+                logger.info(f"批量插入 {len(all_records)} 条市场数据")
 
     except Exception as e:
         logger.error(f"Failed to fetch market data: {e}")
@@ -182,6 +197,10 @@ async def main():
     config = load_config()
     sources = [s for s in config["sources"] if s.get("enabled", True)]
     settings = config["settings"]
+
+    # 重置监控器
+    reset_monitor()
+    monitor = get_monitor()
 
     # 智能调度：根据健康状态过滤和排序源
     sources = await filter_and_sort_sources(sources)
@@ -205,30 +224,55 @@ async def main():
     items_deduped = 0
 
     async with Fetcher(
-        timeout=settings.get("fetch_timeout", 20),
-        max_retries=settings.get("max_retries", 2),
+        timeout=settings.FETCH_TIMEOUT,
+        max_retries=settings.FETCH_MAX_RETRIES,
         max_concurrent=BATCH_SIZE,
     ) as fetcher:
         batches = [sources[i:i + BATCH_SIZE] for i in range(0, len(sources), BATCH_SIZE)]
 
+        failed_sources = []
+        
         for batch_idx, batch in enumerate(batches):
             logger.info(f"Processing batch {batch_idx + 1}/{len(batches)} ({len(batch)} sources)")
 
             tasks = [process_source(fetcher, src, existing_hashes, existing_titles) for src in batch]
             results = await asyncio.gather(*tasks, return_exceptions=True)
-            for result in results:
+            for i, result in enumerate(results):
                 if isinstance(result, Exception):
                     logger.error(f"Source processing error: {result}")
                     sources_failed += 1
+                    failed_sources.append(batch[i])
+                    monitor.record_source_result(batch[i]["name"], False, error=str(result))
                 elif isinstance(result, list):
                     all_items.extend(result)
                     if len(result) > 0:
                         sources_succeeded += 1
+                        monitor.record_source_result(batch[i]["name"], True, items_count=len(result))
 
             if batch_idx < len(batches) - 1:
                 delay = random.uniform(BATCH_DELAY_MIN, BATCH_DELAY_MAX)
                 logger.info(f"Waiting {delay:.1f}s before next batch")
                 await asyncio.sleep(delay)
+        
+        # 重试失败的源（最多重试1次）
+        if failed_sources:
+            logger.info(f"重试 {len(failed_sources)} 个失败源...")
+            retry_delay = random.uniform(BATCH_DELAY_MIN, BATCH_DELAY_MAX)
+            await asyncio.sleep(retry_delay)
+            
+            for src in failed_sources:
+                try:
+                    result = await process_source(fetcher, src, existing_hashes, existing_titles)
+                    if isinstance(result, list):
+                        all_items.extend(result)
+                        if len(result) > 0:
+                            sources_succeeded += 1
+                            sources_failed -= 1
+                            monitor.record_source_result(src["name"], True, items_count=len(result))
+                            logger.info(f"重试成功: {src['name']}")
+                except Exception as e:
+                    logger.error(f"重试失败 {src['name']}: {e}")
+                    monitor.record_source_result(src["name"], False, error=str(e))
 
     items_fetched = len(all_items)
     items_final = 0
@@ -237,12 +281,17 @@ async def main():
         saved = await save_news(all_items)
         items_final = saved
         items_deduped = items_fetched - saved
+        monitor.record_save_result(saved)
         logger.info(f"Saved {saved} new items to database")
     else:
         logger.info("No new items to save")
 
     # 获取市场数据
     await fetch_market_data()
+
+    # 记录运行摘要
+    monitor.check_alerts()
+    monitor.log_summary()
 
     duration = (datetime.now(timezone.utc) - start_time).total_seconds()
     logger.info(f"Scrape completed in {duration:.1f}s")

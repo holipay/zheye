@@ -1,17 +1,16 @@
 import hashlib
 import logging
-import os
 from collections import defaultdict
 
-from scraper.pipeline.utils import text_similarity
 from app.config import settings
+from scraper.pipeline.utils import text_similarity
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_THRESHOLD = settings.DEDUP_THRESHOLD
 
 # TF-IDF 去重配置
-USE_TFIDF_DEDUP = os.getenv("USE_TFIDF_DEDUP", "true").lower() == "true"
+USE_TFIDF_DEDUP = settings.USE_TFIDF_DEDUP
 
 
 def get_link_hash(link: str) -> str:

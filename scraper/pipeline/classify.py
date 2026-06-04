@@ -124,6 +124,74 @@ def detect_article_type(title: str, summary: str = "", content: str = "") -> str
     return "news"
 
 
+def _classify_by_llm(title: str, summary: str, scores: dict) -> Tuple[Optional[str], float, str]:
+    """内部函数：使用 LLM 进行分类"""
+    try:
+        from scraper.pipeline.llm_classifier import classify_with_llm
+        result = classify_with_llm(title, summary)
+        
+        if result is None:
+            # LLM 调用失败，降级到关键词结果
+            logger.warning(f"LLM 分类失败，降级到关键词结果")
+            if scores:
+                best_category = max(scores, key=scores.get)
+                if best_category in FILTERED_CATEGORIES:
+                    return None, 0.5, "keywords"
+                return best_category, 0.5, "keywords"
+            return "其他资讯", 0.3, "keywords"
+        
+        if result.category == "体育":
+            logger.debug(f"LLM 过滤: '{title[:50]}...' -> 体育 (置信度: {result.confidence})")
+            return None, result.confidence, "llm"
+        
+        logger.debug(f"LLM 分类: '{title[:50]}...' -> {result.category} (置信度: {result.confidence})")
+        return result.category, result.confidence, "llm"
+        
+    except Exception as e:
+        logger.warning(f"LLM 分类异常: {e}")
+        # 降级到关键词结果
+        if scores:
+            best_category = max(scores, key=scores.get)
+            if best_category in FILTERED_CATEGORIES:
+                return None, 0.5, "keywords"
+            return best_category, 0.5, "keywords"
+        return "其他资讯", 0.3, "keywords"
+
+
+async def _classify_by_llm_async(title: str, summary: str, scores: dict) -> Tuple[Optional[str], float, str]:
+    """内部函数：异步使用 LLM 进行分类"""
+    try:
+        from scraper.pipeline.llm_classifier import classify_with_llm_async
+        result = await classify_with_llm_async(title, summary)
+        
+        if result is None:
+            # LLM 调用失败，降级到关键词结果
+            logger.warning(f"LLM 分类失败，降级到关键词结果")
+            if scores:
+                best_category = max(scores, key=scores.get)
+                if best_category in FILTERED_CATEGORIES:
+                    return None, 0.5, "keywords"
+                return best_category, 0.5, "keywords"
+            return "其他资讯", 0.3, "keywords"
+        
+        if result.category == "体育":
+            logger.debug(f"LLM 过滤: '{title[:50]}...' -> 体育 (置信度: {result.confidence})")
+            return None, result.confidence, "llm"
+        
+        logger.debug(f"LLM 分类: '{title[:50]}...' -> {result.category} (置信度: {result.confidence})")
+        return result.category, result.confidence, "llm"
+        
+    except Exception as e:
+        logger.warning(f"LLM 分类异常: {e}")
+        # 降级到关键词结果
+        if scores:
+            best_category = max(scores, key=scores.get)
+            if best_category in FILTERED_CATEGORIES:
+                return None, 0.5, "keywords"
+            return best_category, 0.5, "keywords"
+        return "其他资讯", 0.3, "keywords"
+
+
 def classify_hybrid(title: str, summary: str = "", use_llm: bool = True) -> Tuple[Optional[str], float, str]:
     """
     混合分类方法：关键词快速过滤 + LLM 语义分类
@@ -188,33 +256,65 @@ def classify_hybrid(title: str, summary: str = "", use_llm: bool = True) -> Tupl
             return best_category, 0.5, "keywords"
         return "其他资讯", 0.3, "keywords"
     
-    try:
-        from scraper.pipeline.llm_classifier import classify_with_llm
-        result = classify_with_llm(title, summary)
+    return _classify_by_llm(title, summary, scores)
+
+
+async def classify_hybrid_async(title: str, summary: str = "", use_llm: bool = True) -> Tuple[Optional[str], float, str]:
+    """
+    混合分类方法（异步版本）
+    
+    使用 asyncio.to_thread 将同步 LLM 调用转为异步，避免阻塞事件循环
+    
+    Args:
+        title: 文章标题
+        summary: 文章摘要
+        use_llm: 是否使用 LLM（可关闭）
         
-        if result is None:
-            # LLM 调用失败，降级到关键词结果
-            logger.warning(f"LLM 分类失败，降级到关键词结果")
-            if scores:
-                best_category = max(scores, key=scores.get)
-                if best_category in FILTERED_CATEGORIES:
-                    return None, 0.5, "keywords"
-                return best_category, 0.5, "keywords"
-            return "其他资讯", 0.3, "keywords"
+    Returns:
+        (category, confidence, method) 元组
+    """
+    text = (title + " " + summary).lower()
+    categories_to_use = CATEGORIES if CATEGORIES else DEFAULT_KEYWORDS
+    
+    # 第一层：关键词快速匹配
+    scores = {}
+    for category, config in categories_to_use.items():
+        keywords = config.get("keywords", config) if isinstance(config, dict) else config
+        if not isinstance(keywords, list):
+            continue
+        score = sum(1 for kw in keywords if _match_keyword(kw, text))
+        if score > 0:
+            scores[category] = score
+    
+    # 如果有明确的关键词匹配
+    if scores:
+        best_category = max(scores, key=scores.get)
+        best_score = scores[best_category]
         
-        if result.category == "体育":
-            logger.debug(f"LLM 过滤: '{title[:50]}...' -> 体育 (置信度: {result.confidence})")
-            return None, result.confidence, "llm"
+        # 匹配到过滤分类，直接过滤
+        if best_category in FILTERED_CATEGORIES:
+            logger.debug(f"关键词过滤: '{title[:50]}...' -> {best_category} (得分: {best_score})")
+            return None, 1.0, "keywords"
         
-        logger.debug(f"LLM 分类: '{title[:50]}...' -> {result.category} (置信度: {result.confidence})")
-        return result.category, result.confidence, "llm"
+        # 匹配到有效分类，且得分较高（>=2 个关键词命中），直接通过
+        if best_score >= 2:
+            confidence = min(0.9, 0.6 + best_score * 0.1)
+            logger.debug(f"关键词分类: '{title[:50]}...' -> {best_category} (得分: {best_score}, 置信度: {confidence})")
+            return best_category, confidence, "keywords"
         
-    except Exception as e:
-        logger.warning(f"LLM 分类异常: {e}")
-        # 降级到关键词结果
+        # 得分较低（1 个关键词），需要 LLM 确认
+        logger.debug(f"关键词不确定: '{title[:50]}...' -> {best_category} (得分: {best_score})，需要 LLM 确认")
+    else:
+        logger.debug(f"关键词无匹配: '{title[:50]}...'，需要 LLM 分类")
+    
+    # 第二层：LLM 语义分类（异步）
+    if not use_llm:
+        # 不使用 LLM，返回默认分类
         if scores:
             best_category = max(scores, key=scores.get)
             if best_category in FILTERED_CATEGORIES:
                 return None, 0.5, "keywords"
             return best_category, 0.5, "keywords"
         return "其他资讯", 0.3, "keywords"
+    
+    return await _classify_by_llm_async(title, summary, scores)
