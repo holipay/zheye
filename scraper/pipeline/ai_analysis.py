@@ -286,50 +286,51 @@ class DeepSeekClient:
             from models.base import async_session
             from models.failed_task import FailedAnalysisTask
             from datetime import datetime, timedelta
+            import asyncio
             
             async def _save():
-                async with async_session() as session:
-                    # 检查是否已存在相同任务
-                    existing = await session.query(FailedAnalysisTask).filter(
-                        FailedAnalysisTask.task_type == task_type,
-                        FailedAnalysisTask.target_id == target_id,
-                        FailedAnalysisTask.status.in_(["pending", "retrying"])
-                    ).first()
-                    
-                    if existing:
-                        # 更新现有任务
-                        existing.retry_count += 1
-                        existing.last_retry_at = datetime.utcnow()
-                        existing.error_message = error_message
-                        existing.error_details = error_details
-                        if existing.retry_count >= existing.max_retries:
-                            existing.status = "abandoned"
-                    else:
-                        # 创建新任务
-                        task = FailedAnalysisTask(
-                            task_type=task_type,
-                            target_id=target_id,
-                            input_data=input_data,
-                            failure_reason=failure_reason,
-                            error_message=error_message,
-                            error_details=error_details,
-                            next_retry_at=datetime.utcnow() + timedelta(seconds=settings.AI_RETRY_BASE_DELAY)
-                        )
-                        session.add(task)
-                    
-                    await session.commit()
+                try:
+                    async with async_session() as session:
+                        # 检查是否已存在相同任务
+                        existing = await session.query(FailedAnalysisTask).filter(
+                            FailedAnalysisTask.task_type == task_type,
+                            FailedAnalysisTask.target_id == target_id,
+                            FailedAnalysisTask.status.in_(["pending", "retrying"])
+                        ).first()
+                        
+                        if existing:
+                            # 更新现有任务
+                            existing.retry_count += 1
+                            existing.last_retry_at = datetime.utcnow()
+                            existing.error_message = error_message
+                            existing.error_details = error_details
+                            if existing.retry_count >= existing.max_retries:
+                                existing.status = "abandoned"
+                        else:
+                            # 创建新任务
+                            task = FailedAnalysisTask(
+                                task_type=task_type,
+                                target_id=target_id,
+                                input_data=input_data,
+                                failure_reason=failure_reason,
+                                error_message=error_message,
+                                error_details=error_details,
+                                next_retry_at=datetime.utcnow() + timedelta(seconds=settings.AI_RETRY_BASE_DELAY)
+                            )
+                            session.add(task)
+                        
+                        await session.commit()
+                except Exception as e:
+                    logger.error(f"保存失败任务记录时出错: {e}")
             
-            import asyncio
+            # 创建异步任务，不阻塞当前执行
             try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    asyncio.create_task(_save())
-                else:
-                    loop.run_until_complete(_save())
+                loop = asyncio.get_running_loop()
+                loop.create_task(_save())
             except RuntimeError:
-                # 没有事件循环，同步执行
-                import asyncio
-                asyncio.run(_save())
+                # 没有运行中的事件循环，使用线程执行
+                import threading
+                threading.Thread(target=lambda: asyncio.run(_save())).start()
                 
         except Exception as e:
             logger.error(f"记录失败任务时出错: {e}")
@@ -340,27 +341,30 @@ class DeepSeekClient:
         """异步保存分析结果版本"""
         try:
             from scraper.pipeline.version_manager import get_version_manager
+            import asyncio
             
             async def _save():
-                manager = get_version_manager()
-                await manager.save_version(
-                    analysis_type=analysis_type,
-                    target_id=target_id,
-                    result_data=result_data,
-                    confidence=confidence,
-                    ai_model="deepseek-chat",
-                    analysis_duration_ms=analysis_duration_ms,
-                )
+                try:
+                    manager = get_version_manager()
+                    await manager.save_version(
+                        analysis_type=analysis_type,
+                        target_id=target_id,
+                        result_data=result_data,
+                        confidence=confidence,
+                        ai_model="deepseek-chat",
+                        analysis_duration_ms=analysis_duration_ms,
+                    )
+                except Exception as e:
+                    logger.error(f"保存分析版本时出错: {e}")
             
-            import asyncio
+            # 创建异步任务，不阻塞当前执行
             try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    asyncio.create_task(_save())
-                else:
-                    loop.run_until_complete(_save())
+                loop = asyncio.get_running_loop()
+                loop.create_task(_save())
             except RuntimeError:
-                asyncio.run(_save())
+                # 没有运行中的事件循环，使用线程执行
+                import threading
+                threading.Thread(target=lambda: asyncio.run(_save())).start()
                 
         except Exception as e:
             logger.error(f"保存分析版本时出错: {e}")

@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
 from pathlib import Path
 import logging
+import warnings
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -14,6 +15,26 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# 启动配置检查
+if not settings.ADMIN_PASSWORD:
+    warnings.warn(
+        "ADMIN_PASSWORD is not set. Admin panel will be disabled. "
+        "Set ADMIN_PASSWORD environment variable to enable admin features.",
+        UserWarning,
+        stacklevel=1,
+    )
+    logger.warning("ADMIN_PASSWORD is not set. Admin panel will be disabled.")
+
+if not settings.CSRF_SECRET_KEY and not settings.ADMIN_PASSWORD:
+    warnings.warn(
+        "CSRF_SECRET_KEY and ADMIN_PASSWORD are both not set. "
+        "CSRF protection will not work properly. "
+        "Set at least one of these environment variables.",
+        UserWarning,
+        stacklevel=1,
+    )
+    logger.warning("CSRF_SECRET_KEY and ADMIN_PASSWORD are both not set.")
 
 # 速率限制器
 limiter = Limiter(key_func=get_remote_address)
