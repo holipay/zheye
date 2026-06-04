@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.event import Event
 from deep_analyst.ai_analysis import DeepSeekClient
-from deep_analyst.knowledge import analyze_event_knowledge, analyze_causal_chain
+from deep_analyst.knowledge import analyze_event_knowledge, analyze_causal_chain, find_relevant_atoms
 from deep_analyst.analogy import extract_event_representation, analyze_analogy, compute_structural_similarity
 from deep_analyst.scenario import analyze_scenarios
 from deep_analyst.models.knowledge import EventKnowledge, EventKnowledgeAtom, KnowledgeAtom
@@ -148,15 +148,27 @@ async def analyze_single_event(
 
     articles = event_data.get("related_articles", [])
 
-    # Step 1: 知识框架
+    # Step 1: 知识框架（带知识原子复用）
     logger.info(f"  [{event_id}] Step 1/4: 知识框架分析")
     try:
-        knowledge = await analyze_event_knowledge(event_data, articles, ai_client)
+        # 查找已有相关知识原子
+        existing_atoms = await find_relevant_atoms(
+            session=session,
+            category=event_data.get("category"),
+            entities=event_data.get("entities"),
+            keywords=event_data.get("keywords"),
+        )
+        if existing_atoms:
+            logger.info(f"  [{event_id}] 找到 {len(existing_atoms)} 个相关知识原子")
+
+        knowledge = await analyze_event_knowledge(event_data, articles, ai_client, existing_atoms)
         if knowledge:
             # 存储知识框架
             await _save_knowledge(session, event_id, knowledge, event_data.get("category"))
             result.steps_completed.append("knowledge")
-            logger.info(f"  [{event_id}] 知识框架完成")
+            reused = len(knowledge.get("_reused_atom_ids", []))
+            new_count = len(knowledge.get("knowledge_atoms", []))
+            logger.info(f"  [{event_id}] 知识框架完成 (新: {new_count}, 复用: {reused})")
         else:
             result.steps_failed.append("knowledge")
             logger.warning(f"  [{event_id}] 知识框架返回空结果")
@@ -384,6 +396,26 @@ async def _save_knowledge(session: AsyncSession, event_id: str, analysis: dict, 
                 atom_id=atom.id,
                 relevance=1.0,
                 position=len(analysis.get("knowledge_atoms", [])),
+            )
+            session.add(link)
+
+    # 链接 AI 标记为复用的已有原子
+    reused_ids = analysis.get("_reused_atom_ids", [])
+    for atom_id in reused_ids:
+        if not isinstance(atom_id, int):
+            continue
+        existing_link = await session.execute(
+            select(EventKnowledgeAtom).where(
+                EventKnowledgeAtom.event_id == event_id,
+                EventKnowledgeAtom.atom_id == atom_id,
+            )
+        )
+        if not existing_link.scalar():
+            link = EventKnowledgeAtom(
+                event_id=event_id,
+                atom_id=atom_id,
+                relevance=0.8,  # 复用的原子相关度稍低
+                position=999,
             )
             session.add(link)
 

@@ -88,6 +88,19 @@ def ensure_deep_analyst_imports():
     # Load causal_chain models (needs models.base which is mocked)
     _load_module('deep_analyst.models.causal_chain', 'deep_analyst/models/causal_chain.py')
 
+    # Load knowledge models first
+    _load_module('deep_analyst.models.knowledge', 'deep_analyst/models/knowledge.py')
+
+    # Mock sqlalchemy for knowledge.py imports
+    import sqlalchemy
+    if not hasattr(sqlalchemy, 'or_'):
+        from sqlalchemy import or_
+    if not hasattr(sqlalchemy, 'func'):
+        from sqlalchemy import func
+
+    # Load knowledge module (needs sqlalchemy + models)
+    _load_module('deep_analyst.knowledge', 'deep_analyst/knowledge.py')
+
 
 def ensure_pipeline_imports():
     """Ensure pipeline module is importable (needs more mocks)"""
@@ -101,10 +114,13 @@ def ensure_pipeline_imports():
     mock_ai.DeepSeekClient = type('DeepSeekClient', (), {'enabled': False})
     sys.modules['deep_analyst.ai_analysis'] = mock_ai
 
-    mock_knowledge = types.ModuleType('deep_analyst.knowledge')
-    mock_knowledge.analyze_event_knowledge = None
-    mock_knowledge.analyze_causal_chain = None
-    sys.modules['deep_analyst.knowledge'] = mock_knowledge
+    # Don't replace knowledge module if already loaded by ensure_deep_analyst_imports
+    if 'deep_analyst.knowledge' not in sys.modules:
+        mock_knowledge = types.ModuleType('deep_analyst.knowledge')
+        mock_knowledge.analyze_event_knowledge = None
+        mock_knowledge.analyze_causal_chain = None
+        mock_knowledge.find_relevant_atoms = None
+        sys.modules['deep_analyst.knowledge'] = mock_knowledge
 
     mock_scenario = types.ModuleType('deep_analyst.scenario')
     mock_scenario.analyze_scenarios = None

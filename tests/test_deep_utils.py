@@ -4,6 +4,7 @@ from tests.deep_analyst_test_helper import ensure_deep_analyst_imports
 ensure_deep_analyst_imports()
 
 from deep_analyst.utils import smart_truncate, parse_ai_response, format_article_summaries, text_similarity
+from deep_analyst.knowledge import _format_existing_atoms
 
 
 class TestSmartTruncate:
@@ -138,3 +139,44 @@ class TestTextSimilarity:
     def test_different_strings(self):
         score = text_similarity("hello", "world")
         assert score < 0.5
+
+
+class TestFormatExistingAtoms:
+    def test_basic_formatting(self):
+        atoms = [
+            {"id": 1, "atom_type": "definition", "title": "什么是基点", "content": "基点是利率的计量单位...", "entities": ["美联储"], "keywords": ["利率"], "relevance_score": 0.5},
+        ]
+        result = _format_existing_atoms(atoms)
+        assert "ID:1" in result
+        assert "什么是基点" in result
+        assert "definition" in result
+
+    def test_filters_low_relevance(self):
+        atoms = [
+            {"id": 1, "atom_type": "definition", "title": "高相关", "content": "内容", "entities": [], "keywords": [], "relevance_score": 0.5},
+            {"id": 2, "atom_type": "definition", "title": "低相关", "content": "内容", "entities": [], "keywords": [], "relevance_score": 0.1},
+        ]
+        result = _format_existing_atoms(atoms)
+        assert "高相关" in result
+        assert "低相关" not in result
+
+    def test_empty_list(self):
+        result = _format_existing_atoms([])
+        assert result == "无"
+
+    def test_entities_display(self):
+        atoms = [
+            {"id": 1, "atom_type": "background", "title": "美联储政策", "content": "详细内容...", "entities": ["美联储", "鲍威尔"], "keywords": [], "relevance_score": 0.6},
+        ]
+        result = _format_existing_atoms(atoms)
+        assert "美联储" in result
+        assert "鲍威尔" in result
+
+    def test_content_truncation(self):
+        atoms = [
+            {"id": 1, "atom_type": "context", "title": "标题", "content": "A" * 500, "entities": [], "keywords": [], "relevance_score": 0.5},
+        ]
+        result = _format_existing_atoms(atoms)
+        # Content should be truncated to 150 chars + "..."
+        assert "A" * 200 not in result
+        assert "..." in result
