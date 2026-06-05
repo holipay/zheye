@@ -17,6 +17,5 @@ class Analysis(Base):
     generated_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
-        Index("idx_analyses_date", "date"),
-        Index("idx_analyses_keywords", "hot_keywords"),
+        Index("idx_analyses_keywords", "hot_keywords", postgresql_using="gin"),
     )

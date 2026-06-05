@@ -13,6 +13,5 @@ class ArticleKeyword(Base):
 
     __table_args__ = (
         UniqueConstraint("article_id", "keyword_id", name="uq_article_keyword"),
-        Index("idx_article_keyword_article", "article_id"),
         Index("idx_article_keyword_keyword", "keyword_id"),
     )

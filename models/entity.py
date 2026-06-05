@@ -14,5 +14,4 @@ class Entity(Base):
     __table_args__ = (
         UniqueConstraint("normalized_name", "entity_type", name="uq_entity_normalized"),
         Index("idx_entity_type", "entity_type"),
-        Index("idx_entity_normalized", "normalized_name"),
     )

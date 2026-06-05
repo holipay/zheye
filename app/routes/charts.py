@@ -33,10 +33,10 @@ async def get_daily_trend(
     start_date = date.today() - timedelta(days=days)
 
     result = await session.execute(text("""
-        SELECT DATE(date) as day, COUNT(*) as count
+        SELECT date::date as day, COUNT(*) as count
         FROM news
         WHERE date >= :start_date
-        GROUP BY DATE(date)
+        GROUP BY date::date
         ORDER BY day
     """), {"start_date": start_date})
 
@@ -136,13 +136,13 @@ async def get_sentiment_trend(
 
     result = await session.execute(text("""
         SELECT 
-            DATE(date) as day,
+            date::date as day,
             SUM(CASE WHEN ai_sentiment = 'positive' THEN 1 ELSE 0 END) as positive,
             SUM(CASE WHEN ai_sentiment = 'neutral' THEN 1 ELSE 0 END) as neutral,
             SUM(CASE WHEN ai_sentiment = 'negative' THEN 1 ELSE 0 END) as negative
         FROM news
         WHERE date >= :start_date AND ai_sentiment IS NOT NULL
-        GROUP BY DATE(date)
+        GROUP BY date::date
         ORDER BY day
     """), {"start_date": start_date})
 

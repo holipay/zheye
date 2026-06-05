@@ -1,4 +1,4 @@
-from sqlalchemy import Column, BigInteger, String, DateTime, Index, func
+from sqlalchemy import Column, BigInteger, String, DateTime, func
 from models.base import Base
 
 
@@ -11,7 +11,3 @@ class TranslationCache(Base):
     source_hash = Column(String(64), nullable=False, unique=True)
     provider = Column(String(20))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    __table_args__ = (
-        Index("idx_translation_hash", "source_hash"),
-    )

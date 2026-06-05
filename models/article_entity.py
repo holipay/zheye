@@ -14,6 +14,5 @@ class ArticleEntity(Base):
 
     __table_args__ = (
         UniqueConstraint("article_id", "entity_id", name="uq_article_entity"),
-        Index("idx_article_entity_article", "article_id"),
         Index("idx_article_entity_entity", "entity_id"),
     )

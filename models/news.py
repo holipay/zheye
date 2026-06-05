@@ -14,7 +14,7 @@ class News(Base):
     link_hash = Column(String(64), nullable=False, unique=True)
     source = Column(String(100), nullable=False)
     category = Column(String(50), nullable=False)
-    lang = Column(String(10), default="en")
+    lang = Column(String(10), nullable=False, default="en")
     summary = Column(Text)
     content = Column(Text)
     article_type = Column(String(20), default="news")
@@ -28,7 +28,7 @@ class News(Base):
     ai_summary_zh = Column(Text)  # AI 生成的中文摘要
     ai_key_points = Column(JSONB)  # 关键要点列表
     ai_tags = Column(JSONB)  # AI 生成的标签
-    ai_importance = Column(Float)  # 重要性评分 0-1
+    ai_importance = Column(Float, default=0.0)  # 重要性评分 0-1
     ai_analyzed_at = Column(DateTime(timezone=True))  # 分析时间
 
     __table_args__ = (
@@ -37,4 +37,5 @@ class News(Base):
         Index("idx_news_created", "created_at"),
         Index("idx_news_sentiment", "ai_sentiment"),
         Index("idx_news_importance", "ai_importance"),
+        Index("idx_news_regions", "regions", postgresql_using="gin"),
     )

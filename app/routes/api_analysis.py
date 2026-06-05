@@ -1,5 +1,5 @@
-from datetime import date
-from sqlalchemy import select, func, desc, text, Table, Column, MetaData
+from datetime import date, timedelta
+from sqlalchemy import select, func, desc, text, update, Table, Column, MetaData
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.base import get_session
 from models.trend import Trend
@@ -44,6 +44,9 @@ async def get_sentiment_stats(
     """获取情感分析统计"""
     report_date = parse_date(target_date) if target_date else date.today()
     
+    # 计算日期范围
+    next_day = report_date + timedelta(days=1)
+    
     # 统计情感分布
     stmt = text("""
         SELECT 
@@ -52,11 +55,11 @@ async def get_sentiment_stats(
             AVG(ai_sentiment_score) as avg_score,
             AVG(ai_importance) as avg_importance
         FROM news
-        WHERE DATE(date) = :report_date
+        WHERE date >= :report_date AND date < :next_day
           AND ai_sentiment IS NOT NULL
         GROUP BY ai_sentiment
     """)
-    result = await session.execute(stmt, {"report_date": report_date})
+    result = await session.execute(stmt, {"report_date": report_date, "next_day": next_day})
     sentiments = result.mappings().all()
     
     # 获取重要文章
@@ -64,12 +67,12 @@ async def get_sentiment_stats(
         SELECT id, title, translated_title, ai_sentiment, ai_sentiment_score, 
                ai_summary_zh, ai_importance, category
         FROM news
-        WHERE DATE(date) = :report_date
+        WHERE date >= :report_date AND date < :next_day
           AND ai_importance >= 0.7
         ORDER BY ai_importance DESC
         LIMIT 10
     """)
-    result_important = await session.execute(stmt_important, {"report_date": report_date})
+    result_important = await session.execute(stmt_important, {"report_date": report_date, "next_day": next_day})
     important_articles = result_important.mappings().all()
     
     return {
@@ -417,30 +420,25 @@ async def retry_all_failed_tasks(
     _admin: bool = Depends(verify_admin_credentials),
 ):
     """批量重试所有待重试的失败任务"""
-    from scraper.pipeline.retry_manager import get_retry_manager
-    
-    manager = get_retry_manager()
-    
-    # 获取所有可重试的任务
-    query = select(FailedAnalysisTask).where(
-        FailedAnalysisTask.status.in_(["pending", "retrying", "abandoned"])
+    # 使用批量 UPDATE 替代逐个更新
+    query = (
+        update(FailedAnalysisTask)
+        .where(
+            FailedAnalysisTask.status.in_(["pending", "retrying", "abandoned"]),
+            FailedAnalysisTask.retry_count < FailedAnalysisTask.max_retries
+        )
+        .values(status="pending", next_retry_at=None)
     )
+    
     if task_type:
         query = query.where(FailedAnalysisTask.task_type == task_type)
     
     result = await session.execute(query)
-    tasks = result.scalars().all()
-    
-    reset_count = 0
-    for task in tasks:
-        if task.retry_count < task.max_retries:
-            await manager.update_task_status(task.id, "pending")
-            reset_count += 1
+    await session.commit()
     
     return {
-        "message": f"已重置 {reset_count} 个任务",
-        "total_tasks": len(tasks),
-        "reset_count": reset_count,
+        "message": f"已重置 {result.rowcount} 个任务",
+        "reset_count": result.rowcount,
     }
 
 

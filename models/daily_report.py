@@ -1,4 +1,4 @@
-from sqlalchemy import Column, BigInteger, String, Date, Text, Integer, DateTime, Index, func
+from sqlalchemy import Column, BigInteger, String, Date, Text, Integer, DateTime, func
 from sqlalchemy.dialects.postgresql import JSONB
 from models.base import Base
 
@@ -15,7 +15,3 @@ class DailyReport(Base):
     trend_analysis = Column(Text)
     news_count = Column(Integer, default=0)
     generated_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    __table_args__ = (
-        Index("idx_daily_reports_date", "date"),
-    )

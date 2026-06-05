@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, BigInteger, String, Text, DateTime, Integer, func
+from sqlalchemy import Column, BigInteger, String, Text, DateTime, Integer, Index, func
 from sqlalchemy.dialects.postgresql import JSONB
 from models.base import Base
 
@@ -30,12 +30,31 @@ class FailedAnalysisTask(Base):
     last_retry_at = Column(DateTime(timezone=True))
     
     # 状态
-    status = Column(String(20), default="pending")  # pending, retrying, failed, resolved, abandoned
+    status = Column(String(20), nullable=False, default="pending")  # pending, retrying, failed, resolved, abandoned
     
     # 元数据
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     resolved_at = Column(DateTime(timezone=True))
+
+    __table_args__ = (
+        # 待重试任务查询索引
+        Index(
+            "idx_failed_tasks_pending",
+            "status",
+            "next_retry_at",
+            postgresql_where="status IN ('pending', 'retrying')"
+        ),
+        # 清理旧任务索引
+        Index(
+            "idx_failed_tasks_cleanup",
+            "status",
+            "created_at",
+            postgresql_where="status IN ('resolved', 'abandoned')"
+        ),
+        # 按类型和状态查询索引
+        Index("idx_failed_tasks_type_status", "task_type", "status"),
+    )
 
     def __repr__(self):
         return f"<FailedAnalysisTask(id={self.id}, type={self.task_type}, target={self.target_id}, status={self.status})>"

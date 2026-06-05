@@ -12,10 +12,12 @@ if not DATABASE_URL:
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
-    pool_size=5,
-    max_overflow=10,
-    pool_recycle=3600,  # 1小时回收连接
+    pool_size=10,  # 增加连接池大小
+    max_overflow=15,  # 增加溢出连接数
+    pool_recycle=1800,  # 30分钟回收连接
     pool_pre_ping=True,  # 使用前检测连接是否有效
+    pool_timeout=10,  # 连接超时时间
+    pool_use_lifo=True,  # LIFO 策略，保持连接温热
 )
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 

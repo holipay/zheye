@@ -18,7 +18,5 @@ class Trend(Base):
 
     __table_args__ = (
         UniqueConstraint("date", "keyword", name="uq_trends_date_keyword"),
-        Index("idx_trends_date", "date"),
         Index("idx_trends_keyword", "keyword"),
-        Index("idx_trends_count", "count"),
     )
