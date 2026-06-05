@@ -17,8 +17,8 @@ from datetime import datetime, date, timezone
 from typing import Optional
 from dataclasses import dataclass
 
-from scraper.pipeline.utils import parse_ai_response, smart_truncate, calculate_confidence
-from app.ai_metrics import get_ai_metrics
+from common.ai_client import BaseDeepSeekClient
+from common.utils import parse_ai_response, smart_truncate, calculate_confidence
 from app.config import settings
 from models.schemas import ArticleAnalysisSchema, DailyReportSchema, TrendSchema
 
@@ -48,126 +48,15 @@ class DailyReport:
     news_count: int  # 分析的新闻数量
 
 
-class DeepSeekClient:
+class DeepSeekClient(BaseDeepSeekClient):
     """
-    DeepSeek API 客户端
-    使用 OpenAI SDK 兼容接口
+    DeepSeek API 客户端（scraper 版本）
+    继承基础客户端，添加文章分析和报告生成功能
     """
-    
-    # 可重试的异常类型
-    RETRYABLE_ERRORS = (
-        "RateLimitError",
-        "APITimeoutError", 
-        "APIConnectionError",
-        "APIStatusError",
-    )
     
     def __init__(self, max_retries: int = None, timeout: int = None):
-        self.api_key = settings.DEEPSEEK_API_KEY
-        self.api_base = settings.DEEPSEEK_API_BASE
-        self.enabled = bool(self.api_key)
-        self.max_retries = max_retries or settings.AI_MAX_RETRIES
-        self.timeout = timeout or settings.AI_TIMEOUT_SECONDS
-        
-        if not self.enabled:
-            logger.info("DeepSeek API: 未配置 API Key，AI 分析功能已禁用")
-            self.client = None
-            return
-        
-        try:
-            from openai import OpenAI
-            self.client = OpenAI(
-                api_key=self.api_key,
-                base_url=self.api_base,
-                timeout=self.timeout
-            )
-            logger.info(f"DeepSeek API: 已连接 {self.api_base}")
-        except ImportError:
-            logger.warning("openai 包未安装，无法使用 AI 分析功能")
-            self.enabled = False
-            self.client = None
+        super().__init__(max_retries, timeout)
     
-    async def _call_api(self, messages: list[dict], temperature: float = 0.7, 
-                  max_tokens: int = 2000, function_name: str = "unknown") -> Optional[str]:
-        """
-        调用 API（带重试机制和指标监控）
-        
-        Args:
-            messages: 消息列表
-            temperature: 温度参数
-            max_tokens: 最大 token 数
-            function_name: 调用函数名（用于指标统计）
-        
-        Returns:
-            API 响应内容或 None
-        """
-        if not self.enabled or not self.client:
-            return None
-        
-        metrics = get_ai_metrics()
-        last_error = None
-        
-        for attempt in range(self.max_retries):
-            try:
-                response = self.client.chat.completions.create(
-                    model="deepseek-chat",
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    timeout=self.timeout
-                )
-                
-                # 记录 token 使用量
-                if hasattr(response, 'usage') and response.usage:
-                    usage = response.usage
-                    metrics.record_usage(
-                        prompt_tokens=usage.prompt_tokens,
-                        completion_tokens=usage.completion_tokens,
-                        function_name=function_name
-                    )
-                    logger.debug(f"API 调用: prompt={usage.prompt_tokens}, "
-                               f"completion={usage.completion_tokens}, "
-                               f"total={usage.total_tokens}")
-                
-                return response.choices[0].message.content
-                
-            except Exception as e:
-                error_type = type(e).__name__
-                last_error = e
-                
-                # 检查是否为可重试错误
-                if error_type in self.RETRYABLE_ERRORS:
-                    wait_time = (2 ** attempt) * 1.0  # 指数退避
-                    logger.warning(f"API 调用失败 ({error_type}), {wait_time}s 后重试 "
-                                 f"(第{attempt + 1}/{self.max_retries}次): {e}")
-                    await asyncio.sleep(wait_time)
-                    continue
-                else:
-                    # 不可重试错误，直接失败
-                    logger.error(f"API 调用异常 ({error_type}): {e}")
-                    metrics.record_error(function_name)
-                    return None
-        
-        # 所有重试都失败
-        logger.error(f"API 调用失败，已重试{self.max_retries}次: {last_error}")
-        metrics.record_error(function_name)
-        return None
-    
-    async def chat(self, messages: list[dict], temperature: float = 0.7, 
-             max_tokens: int = 2000, function_name: str = "chat") -> Optional[str]:
-        """
-        公共 API 调用接口
-        
-        Args:
-            messages: 消息列表
-            temperature: 温度参数
-            max_tokens: 最大 token 数
-            function_name: 调用函数名（用于指标统计）
-        
-        Returns:
-            API 响应内容或 None
-        """
-        return await self._call_api(messages, temperature, max_tokens, function_name)
     
     async def analyze_article(self, title: str, content: str = None, summary: str = None, 
                        category: str = None, lang: str = "en") -> Optional[ArticleAnalysis]:
@@ -326,7 +215,12 @@ class DeepSeekClient:
             # 创建异步任务，不阻塞当前执行
             try:
                 loop = asyncio.get_running_loop()
-                loop.create_task(_save())
+                task = loop.create_task(_save())
+                # 添加异常回调，防止异常被静默吞没
+                def _handle_task_result(t: asyncio.Task):
+                    if t.exception():
+                        logger.error(f"保存失败任务记录时异步任务出错: {t.exception()}")
+                task.add_done_callback(_handle_task_result)
             except RuntimeError:
                 # 没有运行中的事件循环，使用线程执行
                 import threading
@@ -360,7 +254,12 @@ class DeepSeekClient:
             # 创建异步任务，不阻塞当前执行
             try:
                 loop = asyncio.get_running_loop()
-                loop.create_task(_save())
+                task = loop.create_task(_save())
+                # 添加异常回调，防止异常被静默吞没
+                def _handle_task_result(t: asyncio.Task):
+                    if t.exception():
+                        logger.error(f"保存分析版本时异步任务出错: {t.exception()}")
+                task.add_done_callback(_handle_task_result)
             except RuntimeError:
                 # 没有运行中的事件循环，使用线程执行
                 import threading
