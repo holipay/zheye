@@ -26,7 +26,7 @@ P1 功能：
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Set
-from sqlalchemy import select, or_, func, update, and_
+from sqlalchemy import select, or_, func, update, and_, Float
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from deep_analyst.utils import parse_ai_response, format_article_summaries, ai_analyze
