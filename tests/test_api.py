@@ -90,15 +90,6 @@ async def test_search_endpoint_short_query():
         assert "text/html" in response.headers["content-type"]
 
 
-@pytest.mark.anyio
-async def test_analysis_daily_invalid_date():
-    from app.main import app
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/api/analysis/daily/invalid-date")
-        assert response.status_code == 400
-
-
 class TestCacheModule:
     def test_get_cached_returns_none_for_missing_key(self):
         from app.cache import get_cached, clear_cache

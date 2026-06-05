@@ -4,8 +4,8 @@ AI 分析服务模块
 
 功能：
 1. 单条文章分析（情感、摘要、标签）
-2. 每日综合分析报告
-3. 趋势分析
+2. 趋势分析
+3. 周期报告生成
 """
 
 import os
@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from common.ai_client import BaseDeepSeekClient
 from common.utils import parse_ai_response, smart_truncate, calculate_confidence
 from app.config import settings
-from models.schemas import ArticleAnalysisSchema, DailyReportSchema, TrendSchema
+from models.schemas import ArticleAnalysisSchema, TrendSchema
 
 logger = logging.getLogger(__name__)
 
@@ -34,18 +34,6 @@ class ArticleAnalysis:
     key_points: list[str]  # 关键要点
     tags: list[str]  # 标签
     importance: float  # 重要性评分 0-1
-
-
-@dataclass
-class DailyReport:
-    """每日分析报告"""
-    date: date
-    overview: str  # 总体概述
-    hot_topics: list[dict]  # 热门话题
-    market_sentiment: str  # 市场情绪
-    key_events: list[dict]  # 关键事件
-    trend_analysis: str  # 趋势分析
-    news_count: int  # 分析的新闻数量
 
 
 class DeepSeekClient(BaseDeepSeekClient):
@@ -267,83 +255,6 @@ class DeepSeekClient(BaseDeepSeekClient):
                 
         except Exception as e:
             logger.error(f"保存分析版本时出错: {e}")
-    
-    async def generate_daily_report(self, articles: list[dict], target_date: date = None) -> Optional[DailyReport]:
-        """
-        生成每日分析报告
-        
-        Args:
-            articles: 当日文章列表，每篇文章包含 title, summary, category 等
-            target_date: 目标日期，默认今天
-        
-        Returns:
-            DailyReport 或 None
-        """
-        if target_date is None:
-            target_date = date.today()
-        
-        # 构建文章摘要列表
-        article_summaries = []
-        for i, article in enumerate(articles[:50], 1):  # 限制最多50篇
-            summary = f"{i}. [{article.get('category', '未分类')}] {article['title']}"
-            if article.get('summary'):
-                summary += f" - {article['summary'][:100]}"
-            article_summaries.append(summary)
-        
-        articles_text = "\n".join(article_summaries)
-        
-        messages = [
-            {
-                "role": "system",
-                "content": """你是一个资深的财经分析师。请根据今日新闻生成专业的财经分析报告。
-
-返回 JSON 格式：
-{
-    "overview": "今日财经形势概述，200字以内",
-    "hot_topics": [
-        {"topic": "话题名称", "count": 5, "sentiment": "positive/negative/neutral", "description": "简要描述"}
-    ],
-    "market_sentiment": "整体市场情绪描述，如：谨慎乐观、悲观、中性等",
-    "key_events": [
-        {"event": "事件描述", "impact": "high/medium/low", "category": "相关分类"}
-    ],
-    "trend_analysis": "趋势分析，150字以内，分析近期动向和未来可能走向"
-}
-
-注意：
-1. overview 要宏观概括今日要点
-2. hot_topics 按重要性排序，列出3-5个
-3. key_events 重点关注央行政策、重大并购、地缘政治等
-4. trend_analysis 要有前瞻性"""
-            },
-            {
-                "role": "user",
-                "content": f"日期: {target_date.isoformat()}\n新闻数量: {len(articles)}\n\n今日新闻列表:\n{articles_text}"
-            }
-        ]
-        
-        result = await self._call_api(messages, temperature=0.5, max_tokens=3000, function_name="generate_daily_report")
-        if not result:
-            return None
-        
-        try:
-            # 使用 Schema 验证
-            data = parse_ai_response(result, schema=DailyReportSchema)
-            if not data:
-                return None
-            
-            return DailyReport(
-                date=target_date,
-                overview=data.get("overview", ""),
-                hot_topics=data.get("hot_topics", []),
-                market_sentiment=data.get("market_sentiment", ""),
-                key_events=data.get("key_events", []),
-                trend_analysis=data.get("trend_analysis", ""),
-                news_count=len(articles)
-            )
-        except (ValueError, TypeError) as e:
-            logger.error(f"解析每日报告失败: {e}")
-            return None
     
     async def analyze_keyword_trend(self, keyword: str, articles: list[dict]) -> Optional[dict]:
         """

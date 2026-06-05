@@ -1,13 +1,12 @@
 """
-每日分析报告脚本
+文章分析脚本
 
 功能：
 1. 分析当日未分析的文章
-2. 生成每日综合报告
-3. 更新趋势数据
+2. 更新趋势数据
 
 使用方法：
-    python scripts/run_daily_analysis.py [--date YYYY-MM-DD] [--analyze-articles] [--generate-report]
+    python scripts/run_daily_analysis.py [--date YYYY-MM-DD]
 """
 
 import os
@@ -84,7 +83,7 @@ async def analyze_articles(articles: list[dict], session: AsyncSession) -> int:
     for article in articles:
         logger.info(f"分析文章: {article['title'][:50]}...")
         
-        result = client.analyze_article(
+        result = await client.analyze_article(
             title=article["title"],
             content=article.get("content"),
             summary=article.get("summary"),
@@ -121,105 +120,10 @@ async def analyze_articles(articles: list[dict], session: AsyncSession) -> int:
     return analyzed_count
 
 
-async def get_articles_for_report(session: AsyncSession, target_date: date = None) -> list[dict]:
-    """获取用于生成报告的文章"""
-    if target_date is None:
-        target_date = date.today()
-    
-    stmt = (
-        select(News)
-        .where(func.date(News.date) == target_date)
-        .order_by(News.ai_importance.desc().nullslast(), News.created_at.desc())
-        .limit(50)
-    )
-    
-    result = await session.execute(stmt)
-    articles = []
-    
-    for row in result.scalars():
-        articles.append({
-            "id": row.id,
-            "title": row.title,
-            "summary": row.ai_summary_zh or row.summary,
-            "category": row.category,
-            "sentiment": row.ai_sentiment,
-            "importance": row.ai_importance,
-            "date": row.date
-        })
-    
-    return articles
-
-
-async def generate_daily_report(target_date: date = None) -> bool:
-    """生成每日分析报告"""
-    if not is_ai_enabled():
-        logger.warning("AI 分析功能未启用，请配置 DEEPSEEK_API_KEY")
-        return False
-    
-    if target_date is None:
-        target_date = date.today()
-    
-    client = get_ai_client()
-    
-    async with async_session() as session:
-        # 获取文章
-        articles = await get_articles_for_report(session, target_date)
-        
-        if not articles:
-            logger.warning(f"没有找到 {target_date} 的文章")
-            return False
-        
-        logger.info(f"正在生成 {target_date} 的分析报告，共 {len(articles)} 篇文章")
-        
-        # 生成报告
-        report = client.generate_daily_report(articles, target_date)
-        
-        if not report:
-            logger.error("生成报告失败")
-            return False
-        
-        # 保存到数据库
-        from sqlalchemy.dialects.postgresql import insert as pg_insert
-        
-        stmt = """
-            INSERT INTO daily_reports (date, overview, hot_topics, market_sentiment, key_events, trend_analysis, news_count)
-            VALUES (:date, :overview, :hot_topics, :market_sentiment, :key_events, :trend_analysis, :news_count)
-            ON CONFLICT (date) DO UPDATE SET
-                overview = EXCLUDED.overview,
-                hot_topics = EXCLUDED.hot_topics,
-                market_sentiment = EXCLUDED.market_sentiment,
-                key_events = EXCLUDED.key_events,
-                trend_analysis = EXCLUDED.trend_analysis,
-                news_count = EXCLUDED.news_count,
-                generated_at = NOW()
-        """
-        
-        import json
-        
-        await session.execute(stmt, {
-            "date": target_date,
-            "overview": report.overview,
-            "hot_topics": json.dumps(report.hot_topics, ensure_ascii=False),
-            "market_sentiment": report.market_sentiment,
-            "key_events": json.dumps(report.key_events, ensure_ascii=False),
-            "trend_analysis": report.trend_analysis,
-            "news_count": report.news_count
-        })
-        
-        await session.commit()
-        
-        logger.info(f"报告已生成并保存")
-        logger.info(f"  概述: {report.overview[:100]}...")
-        logger.info(f"  市场情绪: {report.market_sentiment}")
-        logger.info(f"  热门话题: {len(report.hot_topics)} 个")
-        
-        return True
-
-
-async def run_analysis(target_date: date = None, analyze_articles_flag: bool = True, generate_report_flag: bool = True):
+async def run_analysis(target_date: date = None):
     """运行分析流程"""
     logger.info("=" * 60)
-    logger.info("开始每日分析任务")
+    logger.info("开始文章分析任务")
     logger.info("=" * 60)
     
     if not is_ai_enabled():
@@ -228,27 +132,16 @@ async def run_analysis(target_date: date = None, analyze_articles_flag: bool = T
         return
     
     async with async_session() as session:
-        # 1. 分析未处理的文章
-        if analyze_articles_flag:
-            logger.info("\n📊 步骤 1: 分析文章")
-            articles = await get_unanalyzed_articles(session, target_date)
-            
-            if articles:
-                logger.info(f"找到 {len(articles)} 篇未分析的文章")
-                analyzed = await analyze_articles(articles, session)
-                logger.info(f"成功分析 {analyzed} 篇文章")
-            else:
-                logger.info("没有未分析的文章")
+        # 分析未处理的文章
+        logger.info("\n📊 分析文章")
+        articles = await get_unanalyzed_articles(session, target_date)
         
-        # 2. 生成每日报告
-        if generate_report_flag:
-            logger.info("\n📈 步骤 2: 生成每日报告")
-            success = await generate_daily_report(target_date)
-            
-            if success:
-                logger.info("每日报告生成完成")
-            else:
-                logger.warning("每日报告生成失败")
+        if articles:
+            logger.info(f"找到 {len(articles)} 篇未分析的文章")
+            analyzed = await analyze_articles(articles, session)
+            logger.info(f"成功分析 {analyzed} 篇文章")
+        else:
+            logger.info("没有未分析的文章")
     
     logger.info("\n" + "=" * 60)
     logger.info("分析任务完成")
@@ -256,12 +149,8 @@ async def run_analysis(target_date: date = None, analyze_articles_flag: bool = T
 
 
 def main():
-    parser = argparse.ArgumentParser(description="每日分析报告脚本")
+    parser = argparse.ArgumentParser(description="文章分析脚本")
     parser.add_argument("--date", type=str, help="分析日期 (YYYY-MM-DD)，默认今天")
-    parser.add_argument("--analyze-articles", action="store_true", default=True, help="分析文章")
-    parser.add_argument("--no-analyze-articles", action="store_false", dest="analyze_articles", help="跳过文章分析")
-    parser.add_argument("--generate-report", action="store_true", default=True, help="生成每日报告")
-    parser.add_argument("--no-generate-report", action="store_false", dest="generate_report", help="跳过报告生成")
     
     args = parser.parse_args()
     
@@ -275,11 +164,7 @@ def main():
             sys.exit(1)
     
     # 运行分析
-    asyncio.run(run_analysis(
-        target_date=target_date,
-        analyze_articles_flag=args.analyze_articles,
-        generate_report_flag=args.generate_report
-    ))
+    asyncio.run(run_analysis(target_date=target_date))
 
 
 if __name__ == "__main__":

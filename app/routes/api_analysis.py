@@ -2,7 +2,6 @@ from datetime import date
 from sqlalchemy import select, func, desc, text, Table, Column, MetaData
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.base import get_session
-from models.daily_report import DailyReport
 from models.trend import Trend
 from models.failed_task import FailedAnalysisTask
 from models.analysis_version import AnalysisVersion
@@ -33,81 +32,6 @@ def parse_date(target_date: str) -> date:
         return date.fromisoformat(target_date)
     except ValueError:
         raise HTTPException(status_code=400, detail=Err.INVALID_DATE_FORMAT)
-
-
-def serialize_daily_report(report: DailyReport) -> dict:
-    """
-    序列化每日报告
-    
-    Args:
-        report: DailyReport 对象
-    
-    Returns:
-        序列化后的字典
-    """
-    return {
-        "date": str(report.date),
-        "overview": report.overview,
-        "hot_topics": report.hot_topics,
-        "market_sentiment": report.market_sentiment,
-        "key_events": report.key_events,
-        "trend_analysis": report.trend_analysis,
-        "news_count": report.news_count,
-        "generated_at": report.generated_at.isoformat() if report.generated_at else None,
-    }
-
-
-@router.get("/analysis/daily/{target_date}")
-@limiter.limit(settings.RATE_LIMIT_API)
-async def get_daily_report(
-    request: Request,
-    target_date: str,
-    session: AsyncSession = Depends(get_session),
-):
-    """获取每日分析报告"""
-    cache_key = f"api:analysis:daily:{target_date}"
-    cached = get_cached(cache_key)
-    if cached:
-        return cached
-
-    report_date = parse_date(target_date)
-    
-    result = await session.execute(
-        select(DailyReport).where(DailyReport.date == report_date)
-    )
-    report = result.scalar_one_or_none()
-    
-    if not report:
-        raise HTTPException(status_code=404, detail=f"未找到 {target_date} 的分析报告")
-    
-    data = serialize_daily_report(report)
-    set_cached(cache_key, data, ttl=600)
-    return data
-
-
-@router.get("/analysis/latest")
-@limiter.limit(settings.RATE_LIMIT_API)
-async def get_latest_report(
-    request: Request,
-    session: AsyncSession = Depends(get_session),
-):
-    """获取最新的每日分析报告"""
-    cache_key = "api:analysis:latest"
-    cached = get_cached(cache_key)
-    if cached:
-        return cached
-
-    result = await session.execute(
-        select(DailyReport).order_by(desc(DailyReport.date)).limit(1)
-    )
-    report = result.scalar_one_or_none()
-    
-    if not report:
-        return {"message": "暂无分析报告"}
-    
-    data = serialize_daily_report(report)
-    set_cached(cache_key, data, ttl=300)
-    return data
 
 
 @router.get("/analysis/sentiment")
