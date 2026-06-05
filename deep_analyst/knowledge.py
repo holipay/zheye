@@ -24,7 +24,7 @@ P1 功能：
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Set
 from sqlalchemy import select, or_, func, update, and_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -692,7 +692,7 @@ async def update_reuse_stats(
     if not atom_ids:
         return 0
     
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     
     # 批量更新复用次数和最后复用时间
     stmt = (

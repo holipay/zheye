@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, BigInteger, String, Text, DateTime, Integer, func
 from sqlalchemy.dialects.postgresql import JSONB
 from models.base import Base
@@ -55,4 +55,4 @@ class FailedAnalysisTask(Base):
             return False
         if self.next_retry_at is None:
             return True
-        return datetime.utcnow() >= self.next_retry_at
+        return datetime.now(timezone.utc) >= self.next_retry_at

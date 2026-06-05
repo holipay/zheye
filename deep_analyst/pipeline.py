@@ -9,7 +9,7 @@
 
 import logging
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from dataclasses import dataclass, field
 
@@ -76,7 +76,7 @@ async def get_events_needing_analysis(
     Returns:
         需要分析的事件列表 [{event_id, title, description, category, related_articles}]
     """
-    cooldown_cutoff = datetime.utcnow() - timedelta(hours=cooldown_hours)
+    cooldown_cutoff = datetime.now(timezone.utc) - timedelta(hours=cooldown_hours)
 
     # 子查询：每个事件的最新分析时间
     last_analysis = (
@@ -146,7 +146,7 @@ async def analyze_single_event(
         AnalysisResult
     """
     event_id = event_data["event_id"]
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
     result = AnalysisResult(event_id=event_id, success=False)
 
     articles = event_data.get("related_articles", [])
@@ -246,7 +246,7 @@ async def analyze_single_event(
 
     # 判断整体成功
     result.success = len(result.steps_completed) >= 1  # 至少完成一步算成功
-    result.duration_seconds = (datetime.utcnow() - start_time).total_seconds()
+    result.duration_seconds = (datetime.now(timezone.utc) - start_time).total_seconds()
 
     return result
 
@@ -269,7 +269,7 @@ async def run_deep_analysis(
     Returns:
         PipelineResult
     """
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
     pipeline_result = PipelineResult()
 
     # 初始化 AI 客户端
@@ -338,7 +338,7 @@ async def run_deep_analysis(
         if i < len(events):
             await asyncio.sleep(2)
 
-    pipeline_result.duration_seconds = (datetime.utcnow() - start_time).total_seconds()
+    pipeline_result.duration_seconds = (datetime.now(timezone.utc) - start_time).total_seconds()
     return pipeline_result
 
 

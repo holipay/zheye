@@ -9,7 +9,7 @@
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List, Dict, Any
 from sqlalchemy import select, update, and_, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,7 +39,7 @@ class RetryManager:
             待重试任务列表
         """
         async with async_session() as session:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             query = (
                 select(FailedAnalysisTask)
                 .where(
@@ -113,10 +113,10 @@ class RetryManager:
                 return False
             
             task.status = status
-            task.last_retry_at = datetime.utcnow()
+            task.last_retry_at = datetime.now(timezone.utc)
             
             if status == "resolved":
-                task.resolved_at = datetime.utcnow()
+                task.resolved_at = datetime.now(timezone.utc)
             
             if error_message:
                 task.error_message = error_message
@@ -124,7 +124,7 @@ class RetryManager:
             # 计算下次重试时间（指数退避）
             if status == "retrying":
                 delay = settings.AI_RETRY_BASE_DELAY * (2 ** task.retry_count)
-                task.next_retry_at = datetime.utcnow() + timedelta(seconds=delay)
+                task.next_retry_at = datetime.now(timezone.utc) + timedelta(seconds=delay)
             
             await session.commit()
             return True
@@ -137,7 +137,7 @@ class RetryManager:
                 return False
             
             task.retry_count += 1
-            task.last_retry_at = datetime.utcnow()
+            task.last_retry_at = datetime.now(timezone.utc)
             
             # 检查是否超过最大重试次数
             if task.retry_count >= task.max_retries:
@@ -145,7 +145,7 @@ class RetryManager:
             else:
                 # 计算下次重试时间（指数退避）
                 delay = settings.AI_RETRY_BASE_DELAY * (2 ** task.retry_count)
-                task.next_retry_at = datetime.utcnow() + timedelta(seconds=delay)
+                task.next_retry_at = datetime.now(timezone.utc) + timedelta(seconds=delay)
             
             await session.commit()
             return True
@@ -192,7 +192,7 @@ class RetryManager:
             if existing_task:
                 # 更新现有任务
                 existing_task.retry_count += 1
-                existing_task.last_retry_at = datetime.utcnow()
+                existing_task.last_retry_at = datetime.now(timezone.utc)
                 existing_task.error_message = error_message
                 existing_task.error_details = error_details
                 
@@ -200,7 +200,7 @@ class RetryManager:
                     existing_task.status = "abandoned"
                 else:
                     delay = settings.AI_RETRY_BASE_DELAY * (2 ** existing_task.retry_count)
-                    existing_task.next_retry_at = datetime.utcnow() + timedelta(seconds=delay)
+                    existing_task.next_retry_at = datetime.now(timezone.utc) + timedelta(seconds=delay)
                 
                 await session.commit()
                 return existing_task
@@ -214,7 +214,7 @@ class RetryManager:
                     failure_reason=failure_reason,
                     error_message=error_message,
                     error_details=error_details,
-                    next_retry_at=datetime.utcnow() + timedelta(seconds=settings.AI_RETRY_BASE_DELAY)
+                    next_retry_at=datetime.now(timezone.utc) + timedelta(seconds=settings.AI_RETRY_BASE_DELAY)
                 )
                 session.add(task)
                 await session.commit()
@@ -290,7 +290,7 @@ class RetryManager:
             删除的任务数
         """
         async with async_session() as session:
-            cutoff_date = datetime.utcnow() - timedelta(days=days)
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=days)
             
             # 删除已完成或已放弃的旧任务
             delete_query = (

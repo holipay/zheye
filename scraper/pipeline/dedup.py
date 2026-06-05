@@ -35,6 +35,8 @@ def _get_ngrams(text: str, n: int = 3) -> set[str]:
 
 def _ngram_similarity(a: str, b: str, n: int = 3) -> float:
     """基于 n-gram 的快速相似度估算"""
+    if not a.strip() or not b.strip():
+        return 0.0
     ngrams_a = _get_ngrams(a, n)
     ngrams_b = _get_ngrams(b, n)
     if not ngrams_a or not ngrams_b:
@@ -53,6 +55,8 @@ def _get_tfidf_deduplicator(threshold: float = DEFAULT_THRESHOLD):
             _tfidf_deduplicator = TFIDFDeduplicator(threshold=threshold)
         except Exception as e:
             logger.warning(f"Failed to create TF-IDF deduplicator: {e}")
+    elif _tfidf_deduplicator.threshold != threshold:
+        _tfidf_deduplicator.threshold = threshold
     return _tfidf_deduplicator
 
 
@@ -81,9 +85,11 @@ def is_duplicate(title: str, existing_titles: list[str], threshold: float = DEFA
         try:
             dedup = _get_tfidf_deduplicator(threshold)
             if dedup:
-                # 只在矩阵未构建或标题数量变化较大时重新 fit
-                if not dedup._is_fitted or abs(len(dedup._titles) - len(existing_titles)) > 50:
+                # 检查标题列表是否变化
+                titles_hash = hash(tuple(existing_titles))
+                if not dedup._is_fitted or getattr(dedup, '_titles_hash', None) != titles_hash:
                     dedup.fit(existing_titles)
+                    dedup._titles_hash = titles_hash
                 return dedup.is_duplicate(title)
         except Exception as e:
             logger.warning(f"TF-IDF 去重失败，降级到传统方法: {e}")

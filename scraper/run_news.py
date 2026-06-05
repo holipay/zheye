@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 import random
 import sys
 from datetime import datetime, timezone
@@ -13,6 +12,19 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from app.config import settings
+from scraper.sources import Fetcher, parse_feed, extract_article_from_html, extract_date_from_html
+from scraper.pipeline import get_link_hash, is_duplicate
+from scraper.pipeline.classify import classify_hybrid, detect_article_type
+from scraper.pipeline.regions import extract_regions
+from scraper.pipeline.dedup import add_to_dedup_cache
+from scraper.pipeline.scheduler import filter_and_sort_sources, get_health_summary
+from scraper.db import update_source_health, save_news, get_existing_hashes, get_existing_titles
+from scraper.db.writer import get_source_conditional_headers
+from scraper.sources.api_fetcher import MarketDataFetcher
+from scraper.monitor import reset_monitor, get_monitor
+from models.base import async_session
+from models.run_metrics import RunMetrics
+from models.market_data import MarketData
 
 # 统一日志配置
 logging.basicConfig(
@@ -174,7 +186,7 @@ async def fetch_market_data():
         if all_records:
             from sqlalchemy.dialects.postgresql import insert as pg_insert
             async with async_session() as session:
-                stmt = pg_insert(MarketDataModel).values(all_records)
+                stmt = pg_insert(MarketData).values(all_records)
                 await session.execute(stmt)
                 await session.commit()
                 logger.info(f"批量插入 {len(all_records)} 条市场数据")

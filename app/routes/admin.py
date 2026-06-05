@@ -5,7 +5,6 @@
 
 import os
 import yaml
-import json
 import logging
 from datetime import datetime, date, timedelta
 from pathlib import Path

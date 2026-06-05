@@ -10,9 +10,7 @@ from models.event import Event
 from app.context import get_api_context
 from app.config import settings
 from app.errors import ErrorMessages as Err
-
-# 速率限制器
-limiter = Limiter(key_func=get_remote_address)
+from app.main import limiter
 
 router = APIRouter(prefix="/api")
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))

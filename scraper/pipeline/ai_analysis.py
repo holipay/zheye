@@ -13,7 +13,7 @@ import re
 import time
 import json
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional
 from dataclasses import dataclass
 
@@ -301,7 +301,7 @@ class DeepSeekClient:
                         if existing:
                             # 更新现有任务
                             existing.retry_count += 1
-                            existing.last_retry_at = datetime.utcnow()
+                            existing.last_retry_at = datetime.now(timezone.utc)
                             existing.error_message = error_message
                             existing.error_details = error_details
                             if existing.retry_count >= existing.max_retries:
@@ -315,7 +315,7 @@ class DeepSeekClient:
                                 failure_reason=failure_reason,
                                 error_message=error_message,
                                 error_details=error_details,
-                                next_retry_at=datetime.utcnow() + timedelta(seconds=settings.AI_RETRY_BASE_DELAY)
+                                next_retry_at=datetime.now(timezone.utc) + timedelta(seconds=settings.AI_RETRY_BASE_DELAY)
                             )
                             session.add(task)
                         

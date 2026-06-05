@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 from sqlalchemy import select, func, desc, text, Table, Column, MetaData
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.base import get_session
