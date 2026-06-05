@@ -124,11 +124,11 @@ def detect_article_type(title: str, summary: str = "", content: str = "") -> str
     return "news"
 
 
-def _classify_by_llm(title: str, summary: str, scores: dict) -> Tuple[Optional[str], float, str]:
+async def _classify_by_llm(title: str, summary: str, scores: dict) -> Tuple[Optional[str], float, str]:
     """内部函数：使用 LLM 进行分类"""
     try:
         from scraper.pipeline.llm_classifier import classify_with_llm
-        result = classify_with_llm(title, summary)
+        result = await classify_with_llm(title, summary)
         
         if result is None:
             # LLM 调用失败，降级到关键词结果
@@ -192,7 +192,7 @@ async def _classify_by_llm_async(title: str, summary: str, scores: dict) -> Tupl
         return "其他资讯", 0.3, "keywords"
 
 
-def classify_hybrid(title: str, summary: str = "", use_llm: bool = True) -> Tuple[Optional[str], float, str]:
+async def classify_hybrid(title: str, summary: str = "", use_llm: bool = True) -> Tuple[Optional[str], float, str]:
     """
     混合分类方法：关键词快速过滤 + LLM 语义分类
     
@@ -256,7 +256,7 @@ def classify_hybrid(title: str, summary: str = "", use_llm: bool = True) -> Tupl
             return best_category, 0.5, "keywords"
         return "其他资讯", 0.3, "keywords"
     
-    return _classify_by_llm(title, summary, scores)
+    return await _classify_by_llm(title, summary, scores)
 
 
 async def classify_hybrid_async(title: str, summary: str = "", use_llm: bool = True) -> Tuple[Optional[str], float, str]:

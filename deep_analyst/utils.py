@@ -132,7 +132,7 @@ async def ai_analyze(prompt: str, ai_client, *,
     
     try:
         # 使用公共 chat 方法
-        response = ai_client.chat(
+        response = await ai_client.chat(
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,

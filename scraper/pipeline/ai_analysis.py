@@ -10,7 +10,7 @@ AI 分析服务模块
 
 import os
 import re
-import time
+import asyncio
 import json
 import logging
 from datetime import datetime, date, timezone
@@ -87,7 +87,7 @@ class DeepSeekClient:
             self.enabled = False
             self.client = None
     
-    def _call_api(self, messages: list[dict], temperature: float = 0.7, 
+    async def _call_api(self, messages: list[dict], temperature: float = 0.7, 
                   max_tokens: int = 2000, function_name: str = "unknown") -> Optional[str]:
         """
         调用 API（带重试机制和指标监控）
@@ -140,7 +140,7 @@ class DeepSeekClient:
                     wait_time = (2 ** attempt) * 1.0  # 指数退避
                     logger.warning(f"API 调用失败 ({error_type}), {wait_time}s 后重试 "
                                  f"(第{attempt + 1}/{self.max_retries}次): {e}")
-                    time.sleep(wait_time)
+                    await asyncio.sleep(wait_time)
                     continue
                 else:
                     # 不可重试错误，直接失败
@@ -153,7 +153,7 @@ class DeepSeekClient:
         metrics.record_error(function_name)
         return None
     
-    def chat(self, messages: list[dict], temperature: float = 0.7, 
+    async def chat(self, messages: list[dict], temperature: float = 0.7, 
              max_tokens: int = 2000, function_name: str = "chat") -> Optional[str]:
         """
         公共 API 调用接口
@@ -167,9 +167,9 @@ class DeepSeekClient:
         Returns:
             API 响应内容或 None
         """
-        return self._call_api(messages, temperature, max_tokens, function_name)
+        return await self._call_api(messages, temperature, max_tokens, function_name)
     
-    def analyze_article(self, title: str, content: str = None, summary: str = None, 
+    async def analyze_article(self, title: str, content: str = None, summary: str = None, 
                        category: str = None, lang: str = "en") -> Optional[ArticleAnalysis]:
         """
         分析单条文章
@@ -222,7 +222,7 @@ class DeepSeekClient:
             }
         ]
         
-        result = self._call_api(messages, temperature=0.3, function_name="analyze_article")
+        result = await self._call_api(messages, temperature=0.3, function_name="analyze_article")
         if not result:
             return None
         
@@ -369,7 +369,7 @@ class DeepSeekClient:
         except Exception as e:
             logger.error(f"保存分析版本时出错: {e}")
     
-    def generate_daily_report(self, articles: list[dict], target_date: date = None) -> Optional[DailyReport]:
+    async def generate_daily_report(self, articles: list[dict], target_date: date = None) -> Optional[DailyReport]:
         """
         生成每日分析报告
         
@@ -423,7 +423,7 @@ class DeepSeekClient:
             }
         ]
         
-        result = self._call_api(messages, temperature=0.5, max_tokens=3000, function_name="generate_daily_report")
+        result = await self._call_api(messages, temperature=0.5, max_tokens=3000, function_name="generate_daily_report")
         if not result:
             return None
         
@@ -446,7 +446,7 @@ class DeepSeekClient:
             logger.error(f"解析每日报告失败: {e}")
             return None
     
-    def analyze_keyword_trend(self, keyword: str, articles: list[dict]) -> Optional[dict]:
+    async def analyze_keyword_trend(self, keyword: str, articles: list[dict]) -> Optional[dict]:
         """
         分析关键词趋势
         
@@ -480,14 +480,14 @@ class DeepSeekClient:
             }
         ]
         
-        result = self._call_api(messages, temperature=0.5, function_name="analyze_keyword_trend")
+        result = await self._call_api(messages, temperature=0.5, function_name="analyze_keyword_trend")
         if not result:
             return None
         
         # 使用 Schema 验证
         return parse_ai_response(result, schema=TrendSchema)
     
-    def generate_period_report(self, articles: list[dict], stats_summary: dict, period: str = "weekly") -> Optional[dict]:
+    async def generate_period_report(self, articles: list[dict], stats_summary: dict, period: str = "weekly") -> Optional[dict]:
         """
         生成周报/月报
         
@@ -550,7 +550,7 @@ class DeepSeekClient:
             }
         ]
         
-        result = self._call_api(messages, temperature=0.5, max_tokens=3000)
+        result = await self._call_api(messages, temperature=0.5, max_tokens=3000)
         if not result:
             return None
         

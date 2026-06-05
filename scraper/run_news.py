@@ -110,7 +110,7 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
             logger.warning(f"No publication date for: {item.title} ({item.link})")
 
         # 混合分类：关键词快速过滤 + LLM 语义分类
-        article_category, confidence, method = classify_hybrid(
+        article_category, confidence, method = await classify_hybrid(
             item.title, item.summary or "", use_llm=USE_LLM_CLASSIFIER
         )
         if article_category is None:

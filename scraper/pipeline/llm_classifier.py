@@ -68,9 +68,9 @@ def _get_client():
     return DeepSeekClient(max_retries=2, timeout=15)
 
 
-def classify_with_llm(title: str, summary: str = "") -> Optional[ClassificationResult]:
+async def classify_with_llm(title: str, summary: str = "") -> Optional[ClassificationResult]:
     """
-    使用 LLM 对文章进行分类（同步版本）
+    使用 LLM 对文章进行分类（异步版本）
     
     Args:
         title: 文章标题
@@ -97,7 +97,7 @@ def classify_with_llm(title: str, summary: str = "") -> Optional[ClassificationR
     ]
     
     try:
-        response = client.chat(
+        response = await client.chat(
             messages=messages,
             temperature=0.1,  # 低温度，确保结果稳定
             max_tokens=200,
@@ -122,8 +122,6 @@ async def classify_with_llm_async(title: str, summary: str = "") -> Optional[Cla
     """
     使用 LLM 对文章进行分类（异步版本）
     
-    使用 asyncio.to_thread 将同步调用转为异步，避免阻塞事件循环
-    
     Args:
         title: 文章标题
         summary: 文章摘要
@@ -132,7 +130,7 @@ async def classify_with_llm_async(title: str, summary: str = "") -> Optional[Cla
         ClassificationResult 或 None（如果 API 调用失败）
     """
     try:
-        return await asyncio.to_thread(classify_with_llm, title, summary)
+        return await classify_with_llm(title, summary)
     except Exception as e:
         logger.warning(f"异步 LLM 分类失败: {e}")
         return None
