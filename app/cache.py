@@ -1,86 +1,178 @@
 import threading
+import time
 import logging
 from typing import Any, Optional
-from cachetools import TTLCache
+from dataclasses import dataclass
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# 线程锁
-_lock = threading.RLock()
 
-# 使用线程安全的缓存
-_cache = TTLCache(maxsize=settings.CACHE_MAX_SIZE, ttl=settings.CACHE_TTL_SECONDS)
+@dataclass
+class CacheItem:
+    """缓存项"""
+    value: Any
+    expire_at: float  # 过期时间戳
+    created_at: float  # 创建时间戳
 
-# 缓存统计
-_stats = {
-    "hits": 0,
-    "misses": 0,
-    "sets": 0,
-    "deletes": 0,
-}
+
+class PerItemTTLCache:
+    """
+    支持 per-item TTL 的缓存
+    使用字典存储，惰性清理过期项
+    """
+    
+    def __init__(self, maxsize: int = 1000, default_ttl: int = 300):
+        self.maxsize = maxsize
+        self.default_ttl = default_ttl
+        self._data: dict[str, CacheItem] = {}
+        self._lock = threading.RLock()
+        self._stats = {
+            "hits": 0,
+            "misses": 0,
+            "sets": 0,
+            "deletes": 0,
+            "evictions": 0,
+        }
+    
+    def get(self, key: str) -> Optional[Any]:
+        """获取缓存"""
+        with self._lock:
+            item = self._data.get(key)
+            if item is None:
+                self._stats["misses"] += 1
+                return None
+            
+            # 检查是否过期
+            if time.time() > item.expire_at:
+                del self._data[key]
+                self._stats["misses"] += 1
+                return None
+            
+            self._stats["hits"] += 1
+            return item.value
+    
+    def set(self, key: str, value: Any, ttl: int = None):
+        """设置缓存，支持 per-item TTL"""
+        with self._lock:
+            # 如果达到最大容量，清理过期项
+            if len(self._data) >= self.maxsize:
+                self._cleanup_expired()
+            
+            # 如果仍然达到最大容量，删除最旧的项
+            if len(self._data) >= self.maxsize:
+                self._evict_oldest()
+            
+            ttl = ttl if ttl is not None else self.default_ttl
+            now = time.time()
+            self._data[key] = CacheItem(
+                value=value,
+                expire_at=now + ttl,
+                created_at=now,
+            )
+            self._stats["sets"] += 1
+    
+    def delete(self, key: str) -> bool:
+        """删除缓存"""
+        with self._lock:
+            if key in self._data:
+                del self._data[key]
+                self._stats["deletes"] += 1
+                return True
+            return False
+    
+    def clear(self):
+        """清空缓存"""
+        with self._lock:
+            self._data.clear()
+            logger.info("Cache cleared")
+    
+    def invalidate_by_prefix(self, prefix: str):
+        """清除匹配前缀的缓存"""
+        with self._lock:
+            keys_to_delete = [k for k in self._data.keys() if k.startswith(prefix)]
+            for key in keys_to_delete:
+                del self._data[key]
+                self._stats["deletes"] += 1
+            
+            if keys_to_delete:
+                logger.debug(f"Invalidated {len(keys_to_delete)} cache entries with prefix '{prefix}'")
+    
+    def _cleanup_expired(self):
+        """清理过期项"""
+        now = time.time()
+        expired_keys = [k for k, v in self._data.items() if now > v.expire_at]
+        for key in expired_keys:
+            del self._data[key]
+            self._stats["evictions"] += 1
+    
+    def _evict_oldest(self):
+        """删除最旧的项"""
+        if not self._data:
+            return
+        oldest_key = min(self._data.keys(), key=lambda k: self._data[k].created_at)
+        del self._data[oldest_key]
+        self._stats["evictions"] += 1
+    
+    def get_stats(self) -> dict:
+        """获取缓存统计信息"""
+        with self._lock:
+            total_requests = self._stats["hits"] + self._stats["misses"]
+            hit_rate = self._stats["hits"] / total_requests if total_requests > 0 else 0
+            
+            return {
+                "size": len(self._data),
+                "maxsize": self.maxsize,
+                "default_ttl": self.default_ttl,
+                "hits": self._stats["hits"],
+                "misses": self._stats["misses"],
+                "sets": self._stats["sets"],
+                "deletes": self._stats["deletes"],
+                "evictions": self._stats["evictions"],
+                "hit_rate": f"{hit_rate:.1%}",
+                "total_requests": total_requests,
+            }
+    
+    @property
+    def ttl(self) -> int:
+        """兼容旧接口"""
+        return self.default_ttl
+
+
+# 全局缓存实例
+_cache = PerItemTTLCache(maxsize=settings.CACHE_MAX_SIZE, default_ttl=settings.CACHE_TTL_SECONDS)
 
 
 def get_cached(key: str) -> Optional[Any]:
     """获取缓存（线程安全）"""
-    with _lock:
-        value = _cache.get(key)
-        if value is not None:
-            _stats["hits"] += 1
-        else:
-            _stats["misses"] += 1
-        return value
+    return _cache.get(key)
 
 
 def set_cached(key: str, value: Any, ttl: int = None):
     """
     设置缓存（线程安全）
     
-    注意：cachetools.TTLCache 不支持 per-item TTL，
-    自定义 ttl 参数当前会被忽略，使用全局 TTL。
-    如需 per-item TTL，可考虑使用 Redis 或其他缓存方案。
+    Args:
+        key: 缓存键
+        value: 缓存值
+        ttl: 过期时间（秒），如果不指定则使用全局默认值
     """
-    with _lock:
-        _cache[key] = value
-        _stats["sets"] += 1
+    _cache.set(key, value, ttl)
 
 
 def clear_cache():
     """清空缓存（线程安全）"""
-    with _lock:
-        _cache.clear()
-        logger.info("Cache cleared")
+    _cache.clear()
 
 
 def invalidate_cache(key_prefix: str):
     """清除匹配前缀的缓存（线程安全）"""
-    with _lock:
-        keys_to_delete = [k for k in _cache.keys() if k.startswith(key_prefix)]
-        for key in keys_to_delete:
-            del _cache[key]
-            _stats["deletes"] += 1
-        
-        if keys_to_delete:
-            logger.debug(f"Invalidated {len(keys_to_delete)} cache entries with prefix '{key_prefix}'")
+    _cache.invalidate_by_prefix(key_prefix)
 
 
 def get_cache_stats() -> dict:
     """获取缓存统计信息"""
-    with _lock:
-        total_requests = _stats["hits"] + _stats["misses"]
-        hit_rate = _stats["hits"] / total_requests if total_requests > 0 else 0
-        
-        return {
-            "size": len(_cache),
-            "maxsize": _cache.maxsize,
-            "ttl": _cache.ttl,
-            "hits": _stats["hits"],
-            "misses": _stats["misses"],
-            "sets": _stats["sets"],
-            "deletes": _stats["deletes"],
-            "hit_rate": f"{hit_rate:.1%}",
-            "total_requests": total_requests,
-        }
+    return _cache.get_stats()
 
 
 def log_cache_stats():
@@ -89,7 +181,8 @@ def log_cache_stats():
     logger.info(f"缓存统计: 大小={stats['size']}/{stats['maxsize']}, "
                 f"命中率={stats['hit_rate']}, "
                 f"命中={stats['hits']}, 未命中={stats['misses']}, "
-                f"设置={stats['sets']}, 删除={stats['deletes']}")
+                f"设置={stats['sets']}, 删除={stats['deletes']}, "
+                f"淘汰={stats['evictions']}")
 
 
 def warmup_cache(warmup_func, *args, **kwargs):

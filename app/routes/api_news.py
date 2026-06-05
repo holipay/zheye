@@ -26,7 +26,7 @@ async def get_news(
     sort: str = "date",
     page: int = Query(default=1, ge=1, description="页码"),
 ):
-    page_size = 20
+    page_size = settings.DEFAULT_PAGE_SIZE
     offset = (page - 1) * page_size
 
     if sort == "weight":
@@ -170,7 +170,7 @@ async def get_articles(
     sort: str = "date",
     page: int = 1,
 ):
-    page_size = 15
+    page_size = settings.DEFAULT_PAGE_SIZE
     offset = (page - 1) * page_size
 
     # 只获取有完整内容的文章

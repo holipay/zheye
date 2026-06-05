@@ -13,6 +13,8 @@ from models.daily_report import DailyReport
 from models.trend import Trend
 from models.event import Event
 from models.market_data import MarketData
+from models.analysis_version import AnalysisVersion
+from models.failed_task import FailedAnalysisTask
 
 __all__ = [
     "Base",
@@ -33,4 +35,6 @@ __all__ = [
     "Trend",
     "Event",
     "MarketData",
+    "AnalysisVersion",
+    "FailedAnalysisTask",
 ]
