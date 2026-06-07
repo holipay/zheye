@@ -132,16 +132,21 @@ async def run_analysis(target_date: date = None):
         return
     
     async with async_session() as session:
-        # 分析未处理的文章
-        logger.info("\n📊 分析文章")
-        articles = await get_unanalyzed_articles(session, target_date)
-        
-        if articles:
-            logger.info(f"找到 {len(articles)} 篇未分析的文章")
-            analyzed = await analyze_articles(articles, session)
-            logger.info(f"成功分析 {analyzed} 篇文章")
-        else:
-            logger.info("没有未分析的文章")
+        try:
+            # 分析未处理的文章
+            logger.info("\n📊 分析文章")
+            articles = await get_unanalyzed_articles(session, target_date)
+            
+            if articles:
+                logger.info(f"找到 {len(articles)} 篇未分析的文章")
+                analyzed = await analyze_articles(articles, session)
+                logger.info(f"成功分析 {analyzed} 篇文章")
+            else:
+                logger.info("没有未分析的文章")
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"分析失败: {e}")
+            raise
     
     logger.info("\n" + "=" * 60)
     logger.info("分析任务完成")

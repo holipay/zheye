@@ -335,7 +335,8 @@ def _calculate_content_quality(result: dict, field_validators: dict = None) -> f
                 try:
                     if not validator(result[field]):
                         score -= 0.1
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"字段验证失败 ({field}): {e}")
                     score -= 0.1
     
     return max(0.0, score)

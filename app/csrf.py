@@ -3,11 +3,14 @@ CSRF 保护模块
 提供跨站请求伪造保护
 """
 
+import logging
 import secrets
 import hmac
 from fastapi import Request, HTTPException, status
 from app.config import settings
 from app.errors import ErrorMessages as Err
+
+logger = logging.getLogger(__name__)
 
 # CSRF token 有效期（秒）
 CSRF_TOKEN_MAX_AGE = 3600  # 1 小时
@@ -57,7 +60,8 @@ def verify_signed_token(signed_token: str) -> bool:
         
         # 使用常量时间比较防止时序攻击
         return hmac.compare_digest(signature, expected_signature)
-    except Exception:
+    except Exception as e:
+        logger.debug(f"CSRF验证失败: {e}")
         return False
 
 

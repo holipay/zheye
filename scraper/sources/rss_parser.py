@@ -49,7 +49,8 @@ def parse_date(entry) -> Optional[datetime]:
         if parsed:
             try:
                 return datetime(*parsed[:6])
-            except Exception:
+            except Exception as e:
+                logger.debug(f"日期解析失败 ({field}): {e}")
                 continue
     return None
 

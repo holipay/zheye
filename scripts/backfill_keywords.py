@@ -33,36 +33,41 @@ async def backfill():
 
     while has_more:
         async with async_session() as session:
-            # 分页查询，避免一次性加载所有文章到内存
-            result = await session.execute(
-                select(News)
-                .order_by(News.id)
-                .offset(processed)
-                .limit(BATCH_SIZE)
-            )
-            articles = result.scalars().all()
-            
-            if not articles:
-                has_more = False
-                break
-            
-            for article in articles:
-                matched = match_keywords(
-                    title=article.title,
-                    translated_title=article.translated_title,
-                    summary=article.summary,
-                    category=article.category,
+            try:
+                # 分页查询，避免一次性加载所有文章到内存
+                result = await session.execute(
+                    select(News)
+                    .order_by(News.id)
+                    .offset(processed)
+                    .limit(BATCH_SIZE)
                 )
+                articles = result.scalars().all()
+                
+                if not articles:
+                    has_more = False
+                    break
+                
+                for article in articles:
+                    matched = match_keywords(
+                        title=article.title,
+                        translated_title=article.translated_title,
+                        summary=article.summary,
+                        category=article.category,
+                    )
 
-                if matched:
-                    await save_article_keywords(session, article.id, matched, term_to_id)
-                    total_matches += len(matched)
+                    if matched:
+                        await save_article_keywords(session, article.id, matched, term_to_id)
+                        total_matches += len(matched)
 
-                await calculate_and_save_relations(session, article.id, article.category)
+                    await calculate_and_save_relations(session, article.id, article.category)
 
-            await session.commit()
-            processed += len(articles)
-            print(f"  Processed {processed} articles...")
+                await session.commit()
+                processed += len(articles)
+                print(f"  Processed {processed} articles...")
+            except Exception as e:
+                await session.rollback()
+                print(f"  处理失败 (offset={processed}): {e}")
+                raise
 
     print(f"\nBackfill complete:")
     print(f"  Articles processed: {processed}")

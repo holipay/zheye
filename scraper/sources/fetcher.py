@@ -75,7 +75,8 @@ def validate_url(url: str) -> bool:
             return False
         
         return True
-    except Exception:
+    except Exception as e:
+        logger.debug(f"URL验证失败: {url}, 错误: {e}")
         return False
 
 
@@ -106,7 +107,7 @@ class Fetcher:
 
     async def _wait_domain_delay(self, url: str):
         domain = get_domain(url)
-        now = asyncio.get_event_loop().time()
+        now = asyncio.get_running_loop().time()
         last = self._domain_last_request.get(domain, 0)
         elapsed = now - last
         delay = random.uniform(DOMAIN_MIN_DELAY, DOMAIN_MAX_DELAY)
@@ -116,7 +117,7 @@ class Fetcher:
             logger.debug(f"Domain {domain} rate limit, waiting {wait:.1f}s")
             await asyncio.sleep(wait)
 
-        self._domain_last_request[domain] = asyncio.get_event_loop().time()
+        self._domain_last_request[domain] = asyncio.get_running_loop().time()
 
     async def fetch(self, url: str, etag: Optional[str] = None, last_modified: Optional[str] = None) -> dict:
         # SSRF防护：验证URL

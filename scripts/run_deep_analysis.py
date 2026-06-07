@@ -89,37 +89,42 @@ async def run_analysis(
         return
 
     async with async_session() as session:
-        if event_id:
-            logger.info(f"单事件分析模式: {event_id}")
-        else:
-            logger.info(f"批量分析模式: 最多 {max_events} 个事件, 冷却 {cooldown_hours}h")
+        try:
+            if event_id:
+                logger.info(f"单事件分析模式: {event_id}")
+            else:
+                logger.info(f"批量分析模式: 最多 {max_events} 个事件, 冷却 {cooldown_hours}h")
 
-        result = await run_deep_analysis(
-            session=session,
-            max_events=max_events,
-            cooldown_hours=cooldown_hours,
-            event_id=event_id,
-        )
+            result = await run_deep_analysis(
+                session=session,
+                max_events=max_events,
+                cooldown_hours=cooldown_hours,
+                event_id=event_id,
+            )
 
-        # 输出汇总
-        logger.info("")
-        logger.info("=" * 60)
-        logger.info("分析完成")
-        logger.info("=" * 60)
-        logger.info(f"  总计: {result.total}")
-        logger.info(f"  成功: {result.success}")
-        logger.info(f"  失败: {result.failed}")
-        logger.info(f"  耗时: {result.duration_seconds:.1f}s")
-
-        if result.results:
+            # 输出汇总
             logger.info("")
-            logger.info("详细结果:")
-            for r in result.results:
-                status = "OK" if r.success else "FAIL"
-                steps = ", ".join(r.steps_completed) if r.steps_completed else "none"
+            logger.info("=" * 60)
+            logger.info("分析完成")
+            logger.info("=" * 60)
+            logger.info(f"  总计: {result.total}")
+            logger.info(f"  成功: {result.success}")
+            logger.info(f"  失败: {result.failed}")
+            logger.info(f"  耗时: {result.duration_seconds:.1f}s")
+
+            if result.results:
+                logger.info("")
+                logger.info("详细结果:")
+                for r in result.results:
+                    status = "OK" if r.success else "FAIL"
+                    steps = ", ".join(r.steps_completed) if r.steps_completed else "none"
                 logger.info(f"  [{status}] {r.event_id}: {steps} ({r.duration_seconds:.1f}s)")
                 if r.error:
                     logger.info(f"         错误: {r.error}")
+        except Exception as e:
+            await session.rollback()
+            logger.error(f"深度分析失败: {e}")
+            raise
 
 
 def main():

@@ -205,7 +205,8 @@ async def generate_period_report(target_date: date, period: str) -> bool:
         # 保存报告
         import json
         
-        stmt = f"""
+        # 表名已通过 REPORT_TABLES 白名单验证，安全拼接
+        stmt = text(f"""
             INSERT INTO {table_name} (period_start, period_end, overview, hot_topics, market_sentiment, 
                                       key_events, trend_analysis, category_stats, sentiment_stats, news_count)
             VALUES (:period_start, :period_end, :overview, :hot_topics, :market_sentiment, 
@@ -221,7 +222,7 @@ async def generate_period_report(target_date: date, period: str) -> bool:
                 sentiment_stats = EXCLUDED.sentiment_stats,
                 news_count = EXCLUDED.news_count,
                 generated_at = NOW()
-        """
+        """)
         
         await session.execute(stmt, {
             "period_start": start_date,
@@ -247,11 +248,12 @@ async def generate_period_report(target_date: date, period: str) -> bool:
 
 async def ensure_report_tables(session, table_name: str):
     """确保报告表存在"""
-    # 白名单验证表名，防止 SQL 注入
+    # 白名单验证表名，防止 SQL 注入（表名无法参数化）
     if table_name not in REPORT_TABLES:
         raise ValueError(f"无效的表名: {table_name}")
     
-    create_table_sql = f"""
+    # 表名已通过白名单验证，安全拼接
+    create_table_sql = text(f"""
         CREATE TABLE IF NOT EXISTS {table_name} (
             id BIGSERIAL PRIMARY KEY,
             period_start DATE NOT NULL,
@@ -269,9 +271,9 @@ async def ensure_report_tables(session, table_name: str):
         );
         
         CREATE INDEX IF NOT EXISTS idx_{table_name}_period ON {table_name} (period_start DESC);
-    """
+    """)
     
-    await session.execute(text(create_table_sql))
+    await session.execute(create_table_sql)
     await session.commit()
 
 
