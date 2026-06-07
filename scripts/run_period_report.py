@@ -185,7 +185,7 @@ async def generate_period_report(target_date: date, period: str) -> bool:
         }
         
         # 生成报告
-        report = client.generate_period_report(articles, stats_summary, period)
+        report = await client.generate_period_report(articles, stats_summary, period)
         
         if not report:
             logger.error("生成报告失败")

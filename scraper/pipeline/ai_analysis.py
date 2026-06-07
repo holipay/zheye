@@ -167,13 +167,16 @@ class DeepSeekClient(BaseDeepSeekClient):
             
             async def _save():
                 try:
+                    from sqlalchemy import select
                     async with async_session() as session:
                         # 检查是否已存在相同任务
-                        existing = await session.query(FailedAnalysisTask).filter(
+                        stmt = select(FailedAnalysisTask).filter(
                             FailedAnalysisTask.task_type == task_type,
                             FailedAnalysisTask.target_id == target_id,
                             FailedAnalysisTask.status.in_(["pending", "retrying"])
-                        ).first()
+                        ).limit(1)
+                        result = await session.execute(stmt)
+                        existing = result.scalar_one_or_none()
                         
                         if existing:
                             # 更新现有任务
