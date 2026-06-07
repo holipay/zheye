@@ -174,12 +174,25 @@ async def main():
     parser = argparse.ArgumentParser(description='清理旧数据')
     parser.add_argument('--dry-run', action='store_true', help='仅统计，不实际删除')
     parser.add_argument('--retention-days', type=int, default=None, help='保留天数（默认使用配置）')
+    parser.add_argument('--confirm', action='store_true', help='确认执行删除（必须显式指定）')
     args = parser.parse_args()
     
     retention_days = args.retention_days or settings.RETENTION_DAYS
+    
+    # 安全检查: RETENTION_DAYS=0 表示永不删除
+    if retention_days == 0:
+        logger.info("RETENTION_DAYS=0, 数据永不删除策略已启用，跳过清理")
+        return
+    
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=retention_days)
     
     logger.info(f"开始数据清理 (保留天数: {retention_days}, 截止日期: {cutoff_date.date()})")
+    
+    if not args.confirm and not args.dry_run:
+        logger.error("安全检查: 必须指定 --confirm 或 --dry-run 才能执行")
+        logger.error("示例: python scripts/cleanup_old_data.py --dry-run")
+        logger.error("       python scripts/cleanup_old_data.py --confirm")
+        return
     
     if args.dry_run:
         logger.info("DRY RUN 模式 - 仅统计，不实际删除")

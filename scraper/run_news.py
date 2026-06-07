@@ -33,12 +33,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 抓取配置 - 44个源，包括央行/国际组织等敏感站点
-BATCH_SIZE = 4                          # 每批处理源数量（减少并发）
-BATCH_DELAY_MIN = 20.0                  # 批次间最小延迟（秒）
-BATCH_DELAY_MAX = 45.0                  # 批次间最大延迟（秒）
-ARTICLE_DELAY_MIN = 2.0                 # 文章间最小延迟
-ARTICLE_DELAY_MAX = 5.0                 # 文章间最大延迟
+# 抓取配置 - 37个源，包括央行/国际组织等敏感站点
+BATCH_SIZE = 3                          # 每批处理源数量（减少并发）
+BATCH_DELAY_MIN = 30.0                  # 批次间最小延迟（秒）
+BATCH_DELAY_MAX = 60.0                  # 批次间最大延迟（秒）
+ARTICLE_DELAY_MIN = 3.0                 # 文章间最小延迟
+ARTICLE_DELAY_MAX = 7.0                 # 文章间最大延迟
 
 # LLM 分类配置
 USE_LLM_CLASSIFIER = settings.USE_LLM_CLASSIFIER
@@ -58,7 +58,11 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
     url = source["url"]
     lang = source.get("lang", "en")
     category = source.get("category", "其他")
+    skip_html_fetch = source.get("skip_html_fetch", False)
     items = []
+
+    if skip_html_fetch:
+        logger.info(f"{name}: skip_html_fetch enabled, will use RSS summary only")
 
     headers = await get_source_conditional_headers(name)
     logger.info(f"Fetching {name} from {url}")
@@ -89,7 +93,7 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
 
         content = None
         pub_date = item.date
-        if extract_content:
+        if extract_content and not skip_html_fetch:
             html = await fetcher.fetch_html(item.link)
             if html:
                 content = extract_article_from_html(item.link, html)

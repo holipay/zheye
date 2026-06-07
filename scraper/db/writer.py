@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, date, timezone
-from typing import Optional
-from sqlalchemy import select
+from typing import Optional, List, Dict, Any
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from models.base import async_session
@@ -24,6 +24,7 @@ async def save_news(items: list[dict[str, any]]) -> int:
     keywords_data = load_keywords()
     saved = 0
     events_saved = 0
+    entity_records_to_insert = []
 
     async with async_session() as session:
         term_to_id = await sync_keywords_to_db(session, keywords_data)
@@ -123,7 +124,8 @@ async def save_news(items: list[dict[str, any]]) -> int:
                 except Exception as e:
                     logger.warning(f"关系计算失败 (article_id={article_id}): {e}")
 
-        # ========== 阶段4: 批量同步实体并插入关联 ==========
+        # ========== 阶段4: 批量同步实体并收集关联记录 ==========
+        entity_records_to_insert = []
         if all_entities:
             try:
                 # 合并所有实体，一次性同步到数据库
@@ -141,26 +143,36 @@ async def save_news(items: list[dict[str, any]]) -> int:
                     for ent in entities:
                         entity_id = entity_name_to_id.get(ent["name"])
                         if entity_id:
-                            all_entity_records.append({
+                            entity_records_to_insert.append({
                                 "article_id": article_id,
                                 "entity_id": entity_id,
                                 "context": ent.get("context", ""),
                             })
 
-                # 批量插入实体关联
-                if all_entity_records:
-                    from models.article_entity import ArticleEntity
-                    ent_stmt = (
-                        pg_insert(ArticleEntity)
-                        .values(all_entity_records)
-                        .on_conflict_do_nothing()
-                    )
-                    await session.execute(ent_stmt)
-                    logger.debug(f"批量插入 {len(all_entity_records)} 条实体关联")
+                logger.debug(f"收集了 {len(entity_records_to_insert)} 条实体关联记录")
             except Exception as e:
-                logger.warning(f"批量插入实体关联失败: {e}")
+                logger.warning(f"实体同步失败: {e}")
 
+        # 提交第一个事务（新闻、关键词、实体同步）
         await session.commit()
+
+        # 提交后校验：确认数据实际写入数据库
+        verify_result = await session.execute(
+            select(func.count(News.id)).where(News.link_hash.in_(list(hash_to_id.keys())))
+        )
+        verified_count = verify_result.scalar()
+        if verified_count != saved:
+            logger.error(f"数据校验失败: 预期 {saved} 条, 实际入库 {verified_count} 条")
+        else:
+            logger.debug(f"数据校验通过: {verified_count} 条已确认入库")
+
+    # 在单独的事务中分批插入实体关联
+    if entity_records_to_insert:
+        try:
+            inserted_count = await batch_insert_entity_relations(entity_records_to_insert)
+            logger.info(f"实体关联插入完成: {inserted_count}/{len(entity_records_to_insert)} 条")
+        except Exception as e:
+            logger.warning(f"实体关联插入失败: {e}")
 
     # 清除相关缓存
     if saved > 0:
@@ -170,7 +182,7 @@ async def save_news(items: list[dict[str, any]]) -> int:
         _invalidate_events_cache()
         logger.info(f"Processed {events_saved} events")
     
-    logger.info(f"批量插入完成: {saved} 篇新闻, {len(all_keyword_records)} 条关键词, {len(all_entity_records)} 条实体")
+    logger.info(f"批量插入完成: {saved} 篇新闻, {len(all_keyword_records)} 条关键词, {len(entity_records_to_insert)} 条实体关联待插入")
     return saved
 
 
@@ -364,3 +376,44 @@ async def get_source_conditional_headers(source_name: str) -> dict:
                 "last_modified": health.last_rss_modified,
             }
         return {"etag": None, "last_modified": None}
+
+
+async def batch_insert_entity_relations(records: List[Dict[str, Any]], batch_size: int = 500) -> int:
+    """
+    分批插入实体关联记录，避免 SQL 语句过于复杂
+    
+    Args:
+        records: 实体关联记录列表
+        batch_size: 每批插入的记录数
+    
+    Returns:
+        成功插入的记录数
+    """
+    if not records:
+        return 0
+    
+    from models.article_entity import ArticleEntity
+    inserted = 0
+    
+    async with async_session() as session:
+        for i in range(0, len(records), batch_size):
+            batch = records[i:i + batch_size]
+            try:
+                stmt = (
+                    pg_insert(ArticleEntity)
+                    .values(batch)
+                    .on_conflict_do_nothing()
+                )
+                await session.execute(stmt)
+                inserted += len(batch)
+            except Exception as e:
+                logging.getLogger(__name__).warning(f"实体关联批次插入失败 (batch {i//batch_size + 1}): {e}")
+                # 继续尝试下一批
+        
+        try:
+            await session.commit()
+        except Exception as e:
+            logging.getLogger(__name__).error(f"实体关联事务提交失败: {e}")
+            return 0
+    
+    return inserted
