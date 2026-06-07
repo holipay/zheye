@@ -8,12 +8,9 @@ AI 分析服务模块
 3. 周期报告生成
 """
 
-import os
-import re
-import asyncio
 import json
 import logging
-from datetime import datetime, date, timezone
+from datetime import datetime, timezone
 from typing import Optional
 from dataclasses import dataclass
 
@@ -125,7 +122,7 @@ class DeepSeekClient(BaseDeepSeekClient):
             if settings.AI_CONFIDENCE_ENABLED and confidence < settings.AI_CONFIDENCE_THRESHOLD:
                 logger.warning(f"AI 分析置信度过低 ({confidence:.2f} < {settings.AI_CONFIDENCE_THRESHOLD}): {title[:50]}...")
                 # 记录失败任务
-                self._record_failed_task(
+                await self._record_failed_task(
                     task_type="article_analysis",
                     target_id=title[:200],
                     input_data={"title": title, "content": content, "summary": summary, "category": category},
@@ -136,7 +133,7 @@ class DeepSeekClient(BaseDeepSeekClient):
                 return None
             
             # 保存分析版本
-            self._save_analysis_version(
+            await self._save_analysis_version(
                 analysis_type="article",
                 target_id=title[:200],
                 result_data=data,
@@ -155,7 +152,7 @@ class DeepSeekClient(BaseDeepSeekClient):
             logger.error(f"解析 AI 返回结果失败: {e}")
             return None
     
-    def _record_failed_task(self, task_type: str, target_id: str, input_data: dict,
+    async def _record_failed_task(self, task_type: str, target_id: str, input_data: dict,
                            failure_reason: str, error_message: str = None, 
                            error_details: dict = None):
         """记录失败的分析任务到数据库"""
@@ -163,99 +160,59 @@ class DeepSeekClient(BaseDeepSeekClient):
             from models.base import async_session
             from models.failed_task import FailedAnalysisTask
             from datetime import datetime, timedelta
-            import asyncio
+            from sqlalchemy import select
             
-            async def _save():
-                try:
-                    from sqlalchemy import select
-                    async with async_session() as session:
-                        # 检查是否已存在相同任务
-                        stmt = select(FailedAnalysisTask).filter(
-                            FailedAnalysisTask.task_type == task_type,
-                            FailedAnalysisTask.target_id == target_id,
-                            FailedAnalysisTask.status.in_(["pending", "retrying"])
-                        ).limit(1)
-                        result = await session.execute(stmt)
-                        existing = result.scalar_one_or_none()
-                        
-                        if existing:
-                            # 更新现有任务
-                            existing.retry_count += 1
-                            existing.last_retry_at = datetime.now(timezone.utc)
-                            existing.error_message = error_message
-                            existing.error_details = error_details
-                            if existing.retry_count >= existing.max_retries:
-                                existing.status = "abandoned"
-                        else:
-                            # 创建新任务
-                            task = FailedAnalysisTask(
-                                task_type=task_type,
-                                target_id=target_id,
-                                input_data=input_data,
-                                failure_reason=failure_reason,
-                                error_message=error_message,
-                                error_details=error_details,
-                                next_retry_at=datetime.now(timezone.utc) + timedelta(seconds=settings.AI_RETRY_BASE_DELAY)
-                            )
-                            session.add(task)
-                        
-                        await session.commit()
-                except Exception as e:
-                    logger.error(f"保存失败任务记录时出错: {e}")
-            
-            # 创建异步任务，不阻塞当前执行
-            try:
-                loop = asyncio.get_running_loop()
-                task = loop.create_task(_save())
-                # 添加异常回调，防止异常被静默吞没
-                def _handle_task_result(t: asyncio.Task):
-                    if t.exception():
-                        logger.error(f"保存失败任务记录时异步任务出错: {t.exception()}")
-                task.add_done_callback(_handle_task_result)
-            except RuntimeError:
-                # 没有运行中的事件循环，使用线程执行
-                import threading
-                threading.Thread(target=lambda: asyncio.run(_save())).start()
+            async with async_session() as session:
+                # 检查是否已存在相同任务
+                stmt = select(FailedAnalysisTask).filter(
+                    FailedAnalysisTask.task_type == task_type,
+                    FailedAnalysisTask.target_id == target_id,
+                    FailedAnalysisTask.status.in_(["pending", "retrying"])
+                ).limit(1)
+                result = await session.execute(stmt)
+                existing = result.scalar_one_or_none()
                 
+                if existing:
+                    # 更新现有任务
+                    existing.retry_count += 1
+                    existing.last_retry_at = datetime.now(timezone.utc)
+                    existing.error_message = error_message
+                    existing.error_details = error_details
+                    if existing.retry_count >= existing.max_retries:
+                        existing.status = "abandoned"
+                else:
+                    # 创建新任务
+                    task = FailedAnalysisTask(
+                        task_type=task_type,
+                        target_id=target_id,
+                        input_data=input_data,
+                        failure_reason=failure_reason,
+                        error_message=error_message,
+                        error_details=error_details,
+                        next_retry_at=datetime.now(timezone.utc) + timedelta(seconds=settings.AI_RETRY_BASE_DELAY)
+                    )
+                    session.add(task)
+                
+                await session.commit()
         except Exception as e:
             logger.error(f"记录失败任务时出错: {e}")
     
-    def _save_analysis_version(self, analysis_type: str, target_id: str, 
+    async def _save_analysis_version(self, analysis_type: str, target_id: str, 
                               result_data: dict, confidence: float = None,
                               analysis_duration_ms: int = None):
         """异步保存分析结果版本"""
         try:
             from scraper.pipeline.version_manager import get_version_manager
-            import asyncio
             
-            async def _save():
-                try:
-                    manager = get_version_manager()
-                    await manager.save_version(
-                        analysis_type=analysis_type,
-                        target_id=target_id,
-                        result_data=result_data,
-                        confidence=confidence,
-                        ai_model="deepseek-chat",
-                        analysis_duration_ms=analysis_duration_ms,
-                    )
-                except Exception as e:
-                    logger.error(f"保存分析版本时出错: {e}")
-            
-            # 创建异步任务，不阻塞当前执行
-            try:
-                loop = asyncio.get_running_loop()
-                task = loop.create_task(_save())
-                # 添加异常回调，防止异常被静默吞没
-                def _handle_task_result(t: asyncio.Task):
-                    if t.exception():
-                        logger.error(f"保存分析版本时异步任务出错: {t.exception()}")
-                task.add_done_callback(_handle_task_result)
-            except RuntimeError:
-                # 没有运行中的事件循环，使用线程执行
-                import threading
-                threading.Thread(target=lambda: asyncio.run(_save())).start()
-                
+            manager = get_version_manager()
+            await manager.save_version(
+                analysis_type=analysis_type,
+                target_id=target_id,
+                result_data=result_data,
+                confidence=confidence,
+                ai_model="deepseek-chat",
+                analysis_duration_ms=analysis_duration_ms,
+            )
         except Exception as e:
             logger.error(f"保存分析版本时出错: {e}")
     

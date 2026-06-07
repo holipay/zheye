@@ -1,14 +1,10 @@
-from fastapi import APIRouter, Request, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from models.base import get_session
 from models.event import Event
 from app.context import get_api_context
-from app.config import settings
 from app.errors import ErrorMessages as Err
 from app.main import limiter
 

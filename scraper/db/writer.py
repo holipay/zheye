@@ -8,10 +8,10 @@ from models.base import async_session
 from models.news import News
 from models.event import Event
 from models.source_health import SourceHealth
-from scraper.pipeline.keywords import match_keywords, sync_keywords_to_db, save_article_keywords, load_keywords
-from scraper.pipeline.entities import extract_entities, sync_entities_to_db, save_article_entities
+from scraper.pipeline.keywords import match_keywords, sync_keywords_to_db, load_keywords
+from scraper.pipeline.entities import extract_entities, sync_entities_to_db
 from scraper.pipeline.relations import calculate_and_save_relations
-from scraper.pipeline.events import detect_event_from_article, update_event_with_article
+from scraper.pipeline.events import detect_event_from_article
 from app.cache import invalidate_cache
 
 logger = logging.getLogger(__name__)

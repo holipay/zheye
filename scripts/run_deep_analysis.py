@@ -23,7 +23,6 @@
     python scripts/run_deep_analysis.py --dry-run
 """
 
-import os
 import sys
 import asyncio
 import argparse
@@ -36,11 +35,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from dotenv import load_dotenv
 load_dotenv()
 
-from sqlalchemy import select, func
 from models.base import async_session
-from models.event import Event
-from deep_analyst.models.knowledge import EventKnowledge
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

@@ -11,12 +11,11 @@
     python scripts/run_period_report.py --period monthly [--date 2026-06-01]
 """
 
-import os
 import sys
 import asyncio
 import argparse
 import logging
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))

@@ -9,12 +9,11 @@
     python scripts/run_daily_analysis.py [--date YYYY-MM-DD]
 """
 
-import os
 import sys
 import asyncio
 import argparse
 import logging
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 from pathlib import Path
 
 # 添加项目根目录到路径

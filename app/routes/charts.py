@@ -6,12 +6,10 @@
 import logging
 from datetime import date, timedelta
 from fastapi import APIRouter, Query, Request, Depends
-from sqlalchemy import select, func, desc, text
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.base import get_session
-from models.news import News
-from models.trend import Trend
 from app.cache import get_cached, set_cached
 from app.i18n import get_text, get_language_from_request
 

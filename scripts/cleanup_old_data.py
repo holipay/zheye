@@ -15,7 +15,6 @@
     0 2 * * * cd /opt/zheye && python scripts/cleanup_old_data.py
 """
 
-import os
 import sys
 import asyncio
 import argparse
@@ -32,7 +31,6 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.base import async_session
 from models.news import News
-from models.translation_cache import TranslationCache
 from models.run_metrics import RunMetrics
 from models.failed_task import FailedAnalysisTask
 from models.market_data import MarketData
