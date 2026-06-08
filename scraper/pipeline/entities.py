@@ -208,7 +208,7 @@ def _extract_regex_entities(text: str) -> list[dict]:
 
 async def sync_entities_to_db(session, entities: list[dict]) -> dict:
     """
-    同步实体到数据库（优化版本，使用批量查询）
+    同步实体到数据库（分批查询，避免 SQL 过于复杂导致 stack depth limit exceeded）
     """
     from sqlalchemy import select, tuple_
     from models.entity import Entity
@@ -231,17 +231,19 @@ async def sync_entities_to_db(session, entities: list[dict]) -> dict:
                 "entity_type": entity_type,
             }
     
-    # 批量查询已有实体
+    # 分批查询已有实体（每批 100 个，避免 PostgreSQL stack depth limit）
     keys = [(v["normalized"], v["entity_type"]) for v in unique_entities.values()]
-    if keys:
+    existing = {}
+    batch_size = 100
+    for i in range(0, len(keys), batch_size):
+        batch = keys[i:i + batch_size]
         result = await session.execute(
             select(Entity).where(
-                tuple_(Entity.normalized_name, Entity.entity_type).in_(keys)
+                tuple_(Entity.normalized_name, Entity.entity_type).in_(batch)
             )
         )
-        existing = {(e.normalized_name, e.entity_type): e.id for e in result.scalars()}
-    else:
-        existing = {}
+        for e in result.scalars():
+            existing[(e.normalized_name, e.entity_type)] = e.id
     
     # 处理每个实体
     new_entities = []

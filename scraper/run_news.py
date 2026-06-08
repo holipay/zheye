@@ -18,7 +18,7 @@ from scraper.pipeline.classify import classify_hybrid, detect_article_type
 from scraper.pipeline.regions import extract_regions
 from scraper.pipeline.dedup import add_to_dedup_cache
 from scraper.pipeline.scheduler import filter_and_sort_sources, get_health_summary
-from scraper.db import update_source_health, save_news, get_existing_hashes, get_existing_titles
+from scraper.db import update_source_health, save_news_core, enrich_news, get_existing_hashes, get_existing_titles
 from scraper.db.writer import get_source_conditional_headers
 from scraper.sources.api_fetcher import MarketDataFetcher
 from scraper.monitor import reset_monitor, get_monitor
@@ -284,11 +284,22 @@ async def main():
     items_final = 0
 
     if all_items:
-        saved = await save_news(all_items)
+        # Phase 1: 原子插入新闻（核心数据，必须成功）
+        saved, hash_to_id = await save_news_core(all_items)
         items_final = saved
         items_deduped = items_fetched - saved
         monitor.record_save_result(saved)
-        logger.info(f"Saved {saved} new items to database")
+        logger.info(f"Phase 1: {saved} 篇新闻已入库")
+
+        # Phase 2: 独立富化（best effort，失败不影响新闻数据）
+        if hash_to_id:
+            enrich_stats = await enrich_news(hash_to_id, all_items)
+            logger.info(
+                f"Phase 2: 关键词={enrich_stats['keywords']}, "
+                f"实体={enrich_stats['entities']}, "
+                f"事件={enrich_stats['events']}, "
+                f"关系={enrich_stats['relations']}"
+            )
     else:
         logger.info("No new items to save")
 
