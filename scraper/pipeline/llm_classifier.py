@@ -5,7 +5,6 @@ LLM 分类器模块
 用于处理关键词匹配无法确定的边缘情况
 """
 
-import asyncio
 import json
 import logging
 from typing import Optional
@@ -166,29 +165,3 @@ def _parse_response(response: str) -> Optional[ClassificationResult]:
     except (json.JSONDecodeError, ValueError, KeyError) as e:
         logger.warning(f"解析 LLM 响应失败: {response[:200]}..., 错误: {e}")
         return None
-
-
-def is_relevant(title: str, summary: str = "") -> tuple[bool, Optional[str], float]:
-    """
-    判断文章是否与财经金融相关
-    
-    Args:
-        title: 文章标题
-        summary: 文章摘要
-        
-    Returns:
-        (is_relevant, category, confidence) 元组
-        - is_relevant: 是否相关
-        - category: 分类名（如果相关）
-        - confidence: 置信度
-    """
-    result = classify_with_llm(title, summary)
-    
-    if result is None:
-        # API 调用失败，默认保留文章
-        return True, None, 0.0
-    
-    if result.category == "体育":
-        return False, None, result.confidence
-    
-    return True, result.category, result.confidence

@@ -7,7 +7,6 @@ from scraper.pipeline.events import (
     is_same_event,
     find_related_event,
     detect_event_from_article,
-    EventTracker
 )
 
 
@@ -112,54 +111,3 @@ class TestDetectEvent:
         )
         assert result is not None
         assert result["event_type"] == "market_move"
-
-
-class TestEventTracker:
-    def test_process_new_article(self):
-        tracker = EventTracker()
-        result = tracker.process_article(
-            "Fed raises interest rates",
-            "Rate hike announced",
-            category="央行与利率"
-        )
-        assert result is not None
-        assert result["event_type"] == "rate_decision"
-
-    def test_process_related_article(self):
-        tracker = EventTracker()
-        # 第一篇文章
-        tracker.process_article(
-            "Fed raises interest rates by 25 basis points",
-            category="央行与利率"
-        )
-        # 相关文章
-        result = tracker.process_article(
-            "Fed raises interest rates by 25 bps",
-            category="央行与利率"
-        )
-        assert result is not None
-        assert result["update_count"] >= 1
-
-    def test_get_event(self):
-        tracker = EventTracker()
-        event = tracker.process_article(
-            "Fed raises interest rates",
-            category="央行与利率"
-        )
-        if event:
-            retrieved = tracker.get_event(event["event_id"])
-            assert retrieved is not None
-
-    def test_get_all_events(self):
-        tracker = EventTracker()
-        tracker.process_article("Fed raises rates", category="央行与利率")
-        tracker.process_article("Apple reports earnings", category="股市与市场")
-        events = tracker.get_all_events()
-        assert len(events) >= 0  # 可能为0如果检测不到事件
-
-    def test_clear_cache(self):
-        tracker = EventTracker()
-        tracker.process_article("Fed raises rates", category="央行与利率")
-        tracker.clear_cache()
-        events = tracker.get_all_events()
-        assert len(events) == 0

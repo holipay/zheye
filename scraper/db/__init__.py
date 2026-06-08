@@ -1,5 +1,4 @@
 from scraper.db.writer import (
-    save_news,
     save_news_core,
     enrich_news,
     get_existing_hashes,
@@ -8,7 +7,6 @@ from scraper.db.writer import (
 )
 
 __all__ = [
-    "save_news",
     "save_news_core",
     "enrich_news",
     "get_existing_hashes",

@@ -605,7 +605,6 @@ async def search_news(
     )
     
     # 使用 @@ 运算符进行全文搜索匹配
-    from sqlalchemy import cast, Boolean
     base_filter = ts_vector.op('@@')(ts_query)
 
     count_query = select(func.count(News.id)).where(base_filter)

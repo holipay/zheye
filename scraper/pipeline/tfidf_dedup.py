@@ -160,28 +160,3 @@ class TFIDFDeduplicator:
 
 # 全局实例
 _deduplicator: Optional[TFIDFDeduplicator] = None
-
-
-def get_deduplicator(threshold: float = 0.8) -> TFIDFDeduplicator:
-    """获取全局 TF-IDF 去重器实例"""
-    global _deduplicator
-    if _deduplicator is None:
-        _deduplicator = TFIDFDeduplicator(threshold=threshold)
-    return _deduplicator
-
-
-def is_duplicate_tfidf(title: str, existing_titles: list[str], threshold: float = 0.8) -> bool:
-    """
-    使用 TF-IDF 检查标题是否重复
-    
-    Args:
-        title: 待检查的标题
-        existing_titles: 已有标题列表
-        threshold: 相似度阈值
-        
-    Returns:
-        是否重复
-    """
-    dedup = get_deduplicator(threshold)
-    dedup.fit(existing_titles)
-    return dedup.is_duplicate(title)

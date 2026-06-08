@@ -75,7 +75,6 @@ app.include_router(admin.router)
 app.include_router(charts.router)
 
 # 深度分析模块（可选）
-from app.config import settings
 if settings.ENABLE_DEEP_ANALYST:
     try:
         from deep_analyst.router import router as deep_analyst_router

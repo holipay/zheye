@@ -1,37 +1,31 @@
 """
-AI 响应数据验证 Schema
-使用 Pydantic 验证 AI 返回的数据结构
+深度分析 Schema
+复用 models.schemas 中的基础定义，添加深度分析特有的 Schema。
 """
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from enum import Enum
 
+# 复用基础 Schema
+from models.schemas import (
+    SentimentType,
+    Priority,
+    TrendType,
+    KeyPoint,
+    HotTopic,
+    KeyEvent,
+    ArticleAnalysisSchema,
+    DailyReportSchema,
+    TrendSchema,
+    SCHEMA_MAP as BASE_SCHEMA_MAP,
+    get_schema as base_get_schema,
+)
+
 
 # ============================================================
-# 枚举类型
+# 深度分析特有枚举
 # ============================================================
-
-class SentimentType(str, Enum):
-    """情感类型"""
-    positive = "positive"
-    negative = "negative"
-    neutral = "neutral"
-
-
-class Priority(str, Enum):
-    """优先级"""
-    high = "high"
-    medium = "medium"
-    low = "low"
-
-
-class TrendType(str, Enum):
-    """趋势类型"""
-    rising = "rising"
-    stable = "stable"
-    declining = "declining"
-
 
 class NodeType(str, Enum):
     """因果节点类型"""
@@ -55,85 +49,6 @@ class AnalogyType(str, Enum):
     structural = "structural"
     pattern = "pattern"
     principle = "principle"
-
-
-# ============================================================
-# 基础 Schema
-# ============================================================
-
-class KeyPoint(BaseModel):
-    """关键要点"""
-    point: str = Field(max_length=500)
-    importance: Optional[float] = Field(None, ge=0.0, le=1.0)
-
-
-class HotTopic(BaseModel):
-    """热门话题"""
-    topic: str = Field(max_length=200)
-    count: Optional[int] = Field(None, ge=0)
-    sentiment: Optional[SentimentType] = None
-    description: Optional[str] = Field(None, max_length=500)
-    impact: Optional[str] = Field(None, max_length=200)
-
-
-class KeyEvent(BaseModel):
-    """关键事件"""
-    event: str = Field(max_length=500)
-    impact: Optional[str] = Field(None, max_length=200)
-    significance: Optional[str] = Field(None, max_length=200)
-    category: Optional[str] = Field(None, max_length=100)
-
-
-# ============================================================
-# 文章分析 Schema
-# ============================================================
-
-class ArticleAnalysisSchema(BaseModel):
-    """单条文章分析结果"""
-    sentiment: SentimentType = Field(default=SentimentType.neutral)
-    sentiment_score: float = Field(default=0.0, ge=-1.0, le=1.0)
-    summary_zh: str = Field(default="", max_length=1000)
-    key_points: List[str] = Field(default_factory=list, max_length=10)
-    tags: List[str] = Field(default_factory=list, max_length=20)
-    importance: float = Field(default=0.5, ge=0.0, le=1.0)
-
-    @field_validator('key_points', 'tags', mode='before')
-    @classmethod
-    def ensure_list(cls, v):
-        if isinstance(v, str):
-            return [v]
-        return v or []
-
-
-# ============================================================
-# 每日报告 Schema
-# ============================================================
-
-class DailyReportSchema(BaseModel):
-    """每日分析报告"""
-    overview: str = Field(default="", max_length=2000)
-    hot_topics: List[HotTopic] = Field(default_factory=list, max_length=10)
-    market_sentiment: str = Field(default="neutral", max_length=100)
-    key_events: List[KeyEvent] = Field(default_factory=list, max_length=10)
-    trend_analysis: str = Field(default="", max_length=2000)
-
-    @field_validator('hot_topics', 'key_events', mode='before')
-    @classmethod
-    def ensure_list(cls, v):
-        return v or []
-
-
-# ============================================================
-# 趋势分析 Schema
-# ============================================================
-
-class TrendSchema(BaseModel):
-    """趋势分析"""
-    keyword: str = Field(max_length=100)
-    trend: TrendType = Field(default=TrendType.stable)
-    analysis: str = Field(default="", max_length=1000)
-    related_topics: List[str] = Field(default_factory=list, max_length=10)
-    prediction: Optional[str] = Field(None, max_length=500)
 
 
 # ============================================================
@@ -315,13 +230,11 @@ class ScenarioAnalysisSchema(BaseModel):
 
 
 # ============================================================
-# Schema 映射表
+# Schema 映射表（合并基础和深度分析）
 # ============================================================
 
 SCHEMA_MAP = {
-    "article_analysis": ArticleAnalysisSchema,
-    "daily_report": DailyReportSchema,
-    "trend": TrendSchema,
+    **BASE_SCHEMA_MAP,
     "knowledge": KnowledgeAnalysisSchema,
     "causal_chain": CausalChainSchema,
     "representation": EventRepresentationSchema,

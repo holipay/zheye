@@ -1,10 +1,9 @@
 """
-公共工具模块
-从共享模块导入，保持向后兼容
+公共工具模块（deep_analyst 版本）
+复用 scraper.pipeline.utils 中的定义，避免重复。
 """
 
-# 从共享模块导入所有公共函数
-from common.utils import (
+from scraper.pipeline.utils import (
     smart_truncate,
     parse_ai_response,
     ai_analyze,

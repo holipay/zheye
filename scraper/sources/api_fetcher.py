@@ -9,7 +9,7 @@ API 数据源获取模块
 import os
 import asyncio
 import logging
-from datetime import datetime, date
+from datetime import datetime
 from typing import Optional
 from dataclasses import dataclass
 

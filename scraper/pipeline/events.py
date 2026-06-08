@@ -10,12 +10,10 @@
 
 import hashlib
 import logging
-import re
-from datetime import date, datetime
+from datetime import date
 from typing import Optional
 
 from scraper.pipeline.utils import text_similarity
-from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -173,28 +171,6 @@ def find_related_event(title: str, category: str, existing_events: list[dict],
     return None
 
 
-def extract_event_summary(title: str, summary: str = None, content: str = None) -> str:
-    """
-    提取事件摘要
-    
-    Args:
-        title: 标题
-        summary: RSS 摘要
-        content: 正文
-    
-    Returns:
-        事件摘要
-    """
-    if summary:
-        # 取摘要前200字
-        return summary[:200]
-    elif content:
-        # 取正文前200字
-        return content[:200]
-    else:
-        return title
-
-
 def detect_event_from_article(title: str, summary: str = None, content: str = None, 
                               category: str = "其他", pub_date: date = None) -> Optional[dict]:
     """
@@ -219,7 +195,7 @@ def detect_event_from_article(title: str, summary: str = None, content: str = No
     event_id = generate_event_id(title, category, pub_date)
     
     # 提取事件摘要
-    event_summary = extract_event_summary(title, summary, content)
+    event_summary = (summary or content or title)[:200]
     
     return {
         "event_id": event_id,
@@ -233,149 +209,3 @@ def detect_event_from_article(title: str, summary: str = None, content: str = No
         "status": "active",
         "related_articles": []
     }
-
-
-def update_event_with_article(event: dict, title: str, pub_date: date = None, 
-                              summary: str = None) -> dict:
-    """
-    用新文章更新事件
-    
-    Args:
-        event: 原事件
-        title: 新文章标题
-        pub_date: 发布日期
-        summary: 摘要
-    
-    Returns:
-        更新后的事件
-    """
-    # 添加到关联文章
-    related = event.get("related_articles", [])
-    if not isinstance(related, list):
-        related = []
-    
-    related.insert(0, {
-        "title": title,
-        "date": str(pub_date) if pub_date else str(date.today()),
-        "summary": summary[:100] if summary else None
-    })
-    
-    # 只保留最近20篇
-    related = related[:20]
-    
-    # 更新事件
-    event["related_articles"] = related
-    event["update_count"] = event.get("update_count", 0) + 1
-    event["last_updated"] = pub_date or date.today()
-    
-    # 如果标题更长或更新，更新事件标题
-    if len(title) > len(event.get("title", "")):
-        event["title"] = title
-    
-    return event
-
-
-class EventTracker:
-    """
-    事件追踪器（带 LRU 缓存）
-    
-    使用 OrderedDict 实现 LRU 缓存，自动淘汰最久未使用的事件。
-    """
-    
-    def __init__(self, max_size: int = None):
-        """
-        Args:
-            max_size: 缓存最大容量，默认从配置读取
-        """
-        from collections import OrderedDict
-        self._events_cache: OrderedDict[str, dict] = OrderedDict()
-        self._max_size = max_size or settings.EVENT_CACHE_SIZE
-    
-    def _evict_if_needed(self):
-        """如果超过容量，淘汰最久未使用的事件"""
-        while len(self._events_cache) >= self._max_size:
-            self._events_cache.popitem(last=False)  # 移除最旧的
-    
-    def _touch(self, event_id: str):
-        """更新事件的访问顺序"""
-        if event_id in self._events_cache:
-            self._events_cache.move_to_end(event_id)
-    
-    def process_article(self, title: str, summary: str = None, content: str = None,
-                       category: str = "其他", pub_date: date = None) -> Optional[dict]:
-        """
-        处理文章，检测或更新事件
-        
-        Args:
-            title: 标题
-            summary: 摘要
-            content: 正文
-            category: 分类
-            pub_date: 发布日期
-        
-        Returns:
-            新建或更新的事件，或 None
-        """
-        # 检测事件
-        event_info = detect_event_from_article(title, summary, content, category, pub_date)
-        if not event_info:
-            return None
-        
-        event_id = event_info["event_id"]
-        
-        # 检查是否已有此事件
-        if event_id in self._events_cache:
-            # 更新已有事件
-            self._events_cache[event_id] = update_event_with_article(
-                self._events_cache[event_id], title, pub_date, summary
-            )
-            self._touch(event_id)
-            return self._events_cache[event_id]
-        else:
-            # 新建事件（检查容量）
-            self._evict_if_needed()
-            self._events_cache[event_id] = event_info
-            return event_info
-    
-    def get_event(self, event_id: str) -> Optional[dict]:
-        """获取事件"""
-        self._touch(event_id)
-        return self._events_cache.get(event_id)
-    
-    def get_all_events(self, category: str = None, status: str = None, 
-                       limit: int = 50) -> list[dict]:
-        """获取所有事件"""
-        events = list(self._events_cache.values())
-        
-        if category:
-            events = [e for e in events if e.get("category") == category]
-        if status:
-            events = [e for e in events if e.get("status") == status]
-        
-        # 按更新时间排序
-        events.sort(key=lambda x: x.get("last_updated", ""), reverse=True)
-        
-        return events[:limit]
-    
-    @property
-    def size(self) -> int:
-        """当前缓存大小"""
-        return len(self._events_cache)
-    
-    @property
-    def capacity(self) -> int:
-        """缓存容量"""
-        return self._max_size
-    
-    def clear_cache(self):
-        """清空缓存"""
-        self._events_cache.clear()
-
-
-# 全局事件追踪器实例
-_event_tracker = EventTracker()
-
-
-def get_event_tracker() -> EventTracker:
-    """获取事件追踪器实例"""
-    return _event_tracker
