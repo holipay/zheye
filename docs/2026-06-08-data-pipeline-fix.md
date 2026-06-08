@@ -332,3 +332,239 @@ SHOW max_stack_depth;
 | `scraper/run_news.py` | RSS 抓取主流程 |
 | `scripts/check_pipeline.py` | 数据管道健康检查 |
 | `docs/2026-06-07-rss-troubleshooting.md` | 上一次 RSS 故障排查记录 |
+
+---
+
+## 10. 全项目 Session 管理修复（同日追加）
+
+在修复 `save_news()` 后，对项目进行了全面扫描，发现多处相同的 session 管理问题。提交 `f691ffa`。
+
+### 10.1 问题扫描结果
+
+使用代码分析工具扫描 `app/`、`scraper/`、`deep_analyst/`、`common/` 四个目录，发现 **16 处** 问题代码：
+
+| 风险 | 数量 | 问题类型 |
+|------|------|----------|
+| 高 | 5 | 事务/session 管理：异常后继续使用可能损坏的 session |
+| 中 | 5 | N+1 查询：循环中逐条执行数据库查询 |
+| 低 | 6 | 大型函数 + 代码重复 |
+
+### 10.2 高风险修复
+
+#### `scraper/db/writer.py` — `_enrich_events` / `_enrich_relations`
+
+**问题**：循环中逐条处理文章，单个失败后 session 可能处于脏状态，后续文章继续使用同一 session。
+
+**修复**：每个文章使用 `begin_nested()` savepoint 隔离。
+
+```python
+# 修复前
+for link_hash, article_id in hash_to_id.items():
+    try:
+        await process_article_event(session, item)  # 失败后 session 脏
+    except Exception as e:
+        logger.warning(...)
+
+# 修复后
+for link_hash, article_id in hash_to_id.items():
+    try:
+        async with session.begin_nested():  # SAVEPOINT
+            await process_article_event(session, item)
+    except Exception as e:  # ROLLBACK TO SAVEPOINT
+        logger.warning(...)  # session 仍然干净
+```
+
+#### `scraper/db/writer.py` — `batch_insert_entity_relations`
+
+**问题**：某批次插入失败后，脏状态影响后续批次和最终 commit。
+
+**修复**：每批使用 savepoint 隔离。
+
+```python
+# 修复前
+for batch in batches:
+    try:
+        await session.execute(stmt)  # 失败后脏状态扩散
+    except:
+        pass  # 继续下一批，但 session 已坏
+
+# 修复后
+for batch in batches:
+    try:
+        async with session.begin_nested():
+            await session.execute(stmt)
+    except:
+        pass  # savepoint 回滚，session 干净
+```
+
+#### `scraper/db/writer.py` — `process_article_event`
+
+**问题**：内部 try/except 吞掉异常，`session.add()` 的脏状态不会回滚，调用方无法感知失败。
+
+**修复**：移除内部 try/except，异常由调用方的 savepoint 处理。
+
+```python
+# 修复前
+try:
+    session.add(new_event)
+    return {...}
+except Exception as e:
+    logger.error(...)  # session.add 的脏状态留在 session 中
+    return None
+
+# 修复后
+session.add(new_event)
+return {...}
+# 异常自然传播到调用方的 begin_nested()，由 savepoint 回滚
+```
+
+#### `deep_analyst/pipeline.py` — `run_deep_analysis`
+
+**问题**：多个事件共享同一 session，前一个事件失败后 session 状态不确定，后续事件继续使用。
+
+**修复**：每个事件使用 savepoint，统一 commit。
+
+```python
+# 修复前
+for event_data in events:
+    result = await analyze_single_event(session, event_data, ai_client)
+    if result.success:
+        await session.commit()  # 每个事件单独 commit，失败后下一个继续用脏 session
+
+# 修复后
+for event_data in events:
+    try:
+        async with session.begin_nested():
+            result = await analyze_single_event(session, event_data, ai_client)
+    except Exception as e:
+        ...  # savepoint 回滚，session 干净
+await session.commit()  # 统一提交所有成功的分析
+```
+
+#### `deep_analyst/pipeline.py` — `analyze_single_event`
+
+**问题**：4 个分析步骤（知识框架→因果链→历史类比→情景推演）共享同一 session，任一步骤部分写入失败会污染后续步骤。
+
+**修复**：每个步骤使用独立 savepoint。
+
+```python
+# 修复后
+try:
+    async with session.begin_nested():
+        knowledge = await analyze_event_knowledge(...)
+        await _save_knowledge(session, ...)
+        result.steps_completed.append("knowledge")
+except Exception as e:
+    result.steps_failed.append("knowledge")
+
+try:
+    async with session.begin_nested():
+        causal = await analyze_causal_chain(...)
+        await _save_causal_chain(session, ...)
+        result.steps_completed.append("causal_chain")
+except Exception as e:
+    result.steps_failed.append("causal_chain")
+# ... Step 3, Step 4 同理
+```
+
+### 10.3 中风险修复
+
+#### N+1 查询 → 批量查询
+
+**问题**：`_save_knowledge` 和 `trigger_knowledge_analysis` 中，对每个知识原子执行：
+1. `SELECT` 检查原子是否存在
+2. `INSERT` + `flush`（如果不存在）
+3. `SELECT` 检查关联是否存在
+4. `INSERT` 关联（如果不存在）
+
+756 篇文章 × 每篇 N 个原子 = 数千次数据库查询。
+
+**修复**：改为批量查询 + 批量插入。
+
+```python
+# 修复前：N+1
+for atom_data in atoms_data:
+    existing = await session.execute(select(...).where(title == atom_data["title"]))  # N 次 SELECT
+    if not existing:
+        session.add(atom)
+        await session.flush()
+    link_exists = await session.execute(select(...).where(atom_id == atom.id))  # N 次 SELECT
+
+# 修复后：批量
+atom_titles = [(a["title"], "zh") for a in atoms_data]
+result = await session.execute(
+    select(KnowledgeAtom).where(
+        tuple_(KnowledgeAtom.title, KnowledgeAtom.lang).in_(atom_titles)  # 1 次 SELECT
+    )
+)
+existing_atoms = {(a.title, a.lang): a for a in result.scalars()}
+
+# 批量检查关联
+result = await session.execute(
+    select(EventKnowledgeAtom.atom_id).where(
+        EventKnowledgeAtom.event_id == event_id,
+        EventKnowledgeAtom.atom_id.in_(atom_ids),  # 1 次 SELECT
+    )
+)
+existing_link_ids = {row[0] for row in result.fetchall()}
+```
+
+#### `trigger_analogy_analysis` — 循环中 AI 调用隔离
+
+**问题**：循环中逐个候选事件调用 AI API，单个失败可能污染 session 中已写入的 EventRepresentation。
+
+**修复**：每个候选事件使用 savepoint 隔离。
+
+```python
+# 修复后
+for candidate in candidates:
+    try:
+        async with session.begin_nested():
+            analogy_result = await analyze_analogy(source_data, target_data, ai_client)
+            if analogy_result:
+                session.add(HistoricalAnalogy(...))
+    except Exception as e:
+        logger.warning(f"类比分析失败 (candidate={candidate.event_id}): {e}")
+```
+
+### 10.4 修改文件清单
+
+| 文件 | 改动 |
+|------|------|
+| `scraper/db/writer.py` | `_enrich_events` / `_enrich_relations` / `batch_insert_entity_relations` / `process_article_event` |
+| `deep_analyst/pipeline.py` | `run_deep_analysis` / `analyze_single_event` / `_save_knowledge` |
+| `deep_analyst/router.py` | `trigger_knowledge_analysis` / `trigger_analogy_analysis` |
+
+### 10.5 统一修复模式
+
+所有修复遵循同一模式：**savepoint 隔离**。
+
+```python
+# 原则：每个可能失败的独立操作用 savepoint 包裹
+for item in items:
+    try:
+        async with session.begin_nested():  # SAVEPOINT
+            await process(session, item)
+    except Exception:  # ROLLBACK TO SAVEPOINT
+        logger.warning(...)
+        # session 仍然干净，下一个 item 正常处理
+
+await session.commit()  # 统一提交所有成功的操作
+```
+
+**适用场景**：
+- 循环中处理多个独立项目（文章、事件、候选类比）
+- 多步骤流水线（知识框架→因果链→类比→推演）
+- 分批插入（每批独立）
+
+**不适用场景**：
+- 操作之间有依赖关系（后一步依赖前一步的结果）
+- 需要原子性的批量操作（要么全成功要么全失败）
+
+### 10.6 测试验证
+
+```
+200 passed, 1 warning in 2.55s
+```
+
+所有现有测试通过，无回归。
