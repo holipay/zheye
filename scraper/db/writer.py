@@ -262,7 +262,7 @@ async def _enrich_events(
     hash_to_id: dict[str, int],
     hash_to_item: dict[str, dict],
 ) -> int:
-    """事件检测：每篇文章独立处理，单个失败不影响其他"""
+    """事件检测：每篇文章独立处理，使用 savepoint 隔离失败"""
     events_saved = 0
 
     try:
@@ -272,9 +272,10 @@ async def _enrich_events(
                 if not item:
                     continue
                 try:
-                    event_result = await process_article_event(session, item)
-                    if event_result:
-                        events_saved += 1
+                    async with session.begin_nested():
+                        event_result = await process_article_event(session, item)
+                        if event_result:
+                            events_saved += 1
                 except Exception as e:
                     logger.warning(f"事件检测失败 (article_id={article_id}): {e}")
 
@@ -290,7 +291,7 @@ async def _enrich_relations(
     hash_to_id: dict[str, int],
     hash_to_item: dict[str, dict],
 ) -> int:
-    """关系计算：每篇文章独立处理"""
+    """关系计算：每篇文章独立处理，使用 savepoint 隔离失败"""
     relations_saved = 0
 
     try:
@@ -300,10 +301,11 @@ async def _enrich_relations(
                 if not item:
                     continue
                 try:
-                    await calculate_and_save_relations(
-                        session, article_id, item.get("category", "")
-                    )
-                    relations_saved += 1
+                    async with session.begin_nested():
+                        await calculate_and_save_relations(
+                            session, article_id, item.get("category", "")
+                        )
+                        relations_saved += 1
                 except Exception as e:
                     logger.warning(f"关系计算失败 (article_id={article_id}): {e}")
 
@@ -361,7 +363,8 @@ def _invalidate_events_cache():
 
 async def process_article_event(session: AsyncSession, item: dict[str, any]) -> Optional[dict[str, any]]:
     """
-    处理文章的事件检测和关联
+    处理文章的事件检测和关联。
+    异常由调用方处理（调用方应使用 savepoint 隔离失败）。
 
     Args:
         session: 数据库会话
@@ -388,63 +391,58 @@ async def process_article_event(session: AsyncSession, item: dict[str, any]) -> 
 
     event_id = event_info["event_id"]
 
-    try:
-        # 查找已有事件
-        result = await session.execute(
-            select(Event).where(Event.event_id == event_id)
+    # 查找已有事件
+    result = await session.execute(
+        select(Event).where(Event.event_id == event_id)
+    )
+    existing_event = result.scalar_one_or_none()
+
+    if existing_event:
+        # 更新已有事件
+        related = existing_event.related_articles or []
+        if not isinstance(related, list):
+            related = []
+
+        related.insert(0, {
+            "title": title,
+            "date": str(pub_date),
+            "summary": summary[:100] if summary else None
+        })
+        related = related[:20]  # 只保留最近20篇
+
+        existing_event.related_articles = related
+        existing_event.update_count = (existing_event.update_count or 0) + 1
+        existing_event.last_updated = pub_date
+
+        # 如果标题更长，更新标题
+        if len(title) > len(existing_event.title or ""):
+            existing_event.title = title
+
+        return {
+            "event_id": event_id,
+            "action": "updated",
+            "update_count": existing_event.update_count
+        }
+    else:
+        # 创建新事件
+        new_event = Event(
+            event_id=event_id,
+            title=title,
+            description=event_info["description"],
+            category=category,
+            first_seen=pub_date,
+            last_updated=pub_date,
+            update_count=1,
+            status="active",
+            related_articles=[],
+            data={"event_type": event_info.get("event_type")}
         )
-        existing_event = result.scalar_one_or_none()
+        session.add(new_event)
 
-        if existing_event:
-            # 更新已有事件
-            related = existing_event.related_articles or []
-            if not isinstance(related, list):
-                related = []
-
-            related.insert(0, {
-                "title": title,
-                "date": str(pub_date),
-                "summary": summary[:100] if summary else None
-            })
-            related = related[:20]  # 只保留最近20篇
-
-            existing_event.related_articles = related
-            existing_event.update_count = (existing_event.update_count or 0) + 1
-            existing_event.last_updated = pub_date
-
-            # 如果标题更长，更新标题
-            if len(title) > len(existing_event.title or ""):
-                existing_event.title = title
-
-            return {
-                "event_id": event_id,
-                "action": "updated",
-                "update_count": existing_event.update_count
-            }
-        else:
-            # 创建新事件
-            new_event = Event(
-                event_id=event_id,
-                title=title,
-                description=event_info["description"],
-                category=category,
-                first_seen=pub_date,
-                last_updated=pub_date,
-                update_count=1,
-                status="active",
-                related_articles=[],
-                data={"event_type": event_info.get("event_type")}
-            )
-            session.add(new_event)
-
-            return {
-                "event_id": event_id,
-                "action": "created"
-            }
-
-    except Exception as e:
-        logger.error(f"Error processing event for article '{title}': {e}")
-        return None
+        return {
+            "event_id": event_id,
+            "action": "created"
+        }
 
 
 async def get_existing_hashes(days: int = 7, limit: int = 50000) -> set[str]:
@@ -529,7 +527,7 @@ async def get_source_conditional_headers(source_name: str) -> dict:
 
 async def batch_insert_entity_relations(records: List[Dict[str, Any]], batch_size: int = 500) -> int:
     """
-    分批插入实体关联记录，避免 SQL 语句过于复杂
+    分批插入实体关联记录，每批使用 savepoint 隔离失败
 
     Args:
         records: 实体关联记录列表
@@ -548,16 +546,16 @@ async def batch_insert_entity_relations(records: List[Dict[str, Any]], batch_siz
         for i in range(0, len(records), batch_size):
             batch = records[i:i + batch_size]
             try:
-                stmt = (
-                    pg_insert(ArticleEntity)
-                    .values(batch)
-                    .on_conflict_do_nothing()
-                )
-                await session.execute(stmt)
-                inserted += len(batch)
+                async with session.begin_nested():
+                    stmt = (
+                        pg_insert(ArticleEntity)
+                        .values(batch)
+                        .on_conflict_do_nothing()
+                    )
+                    await session.execute(stmt)
+                    inserted += len(batch)
             except Exception as e:
                 logging.getLogger(__name__).warning(f"实体关联批次插入失败 (batch {i//batch_size + 1}): {e}")
-                # 继续尝试下一批
 
         try:
             await session.commit()

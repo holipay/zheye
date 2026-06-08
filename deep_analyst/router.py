@@ -4,7 +4,7 @@
 """
 
 import logging
-from sqlalchemy import select
+from sqlalchemy import select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.base import get_session
 from models.event import Event
@@ -156,62 +156,72 @@ async def trigger_knowledge_analysis(
         )
         session.add(ek)
     
-    for atom_data in analysis.get('knowledge_atoms', []):
-        existing_atom = await session.execute(
+    atoms_data = analysis.get('knowledge_atoms', [])
+    if atoms_data:
+        # 批量查询已有的知识原子
+        atom_titles = [(a['title'], 'zh') for a in atoms_data]
+        result = await session.execute(
             select(KnowledgeAtom).where(
-                KnowledgeAtom.title == atom_data['title'],
-                KnowledgeAtom.lang == 'zh'
+                tuple_(KnowledgeAtom.title, KnowledgeAtom.lang).in_(atom_titles)
             )
         )
-        atom = existing_atom.scalar_one_or_none()
-        
-        if not atom:
-            atom = KnowledgeAtom(
-                atom_type=atom_data['atom_type'],
-                title=atom_data['title'],
-                content=atom_data['content'],
-                category=event.category,
-                entities=atom_data.get('entities'),
-                keywords=atom_data.get('keywords'),
-                lang='zh',
-            )
-            session.add(atom)
-            await session.flush()
-        
-        existing_link = await session.execute(
-            select(EventKnowledgeAtom).where(
-                EventKnowledgeAtom.event_id == event_id,
-                EventKnowledgeAtom.atom_id == atom.id
-            )
-        )
-        if not existing_link.scalar():
-            link = EventKnowledgeAtom(
-                event_id=event_id,
-                atom_id=atom.id,
-                relevance=1.0,
-                position=len(analysis.get('knowledge_atoms', [])),
-            )
-            session.add(link)
+        existing_atoms = {(a.title, a.lang): a for a in result.scalars()}
 
-    # 链接 AI 标记为复用的已有原子
-    reused_ids = analysis.get('_reused_atom_ids', [])
-    for atom_id in reused_ids:
-        if not isinstance(atom_id, int):
-            continue
-        existing_link = await session.execute(
-            select(EventKnowledgeAtom).where(
-                EventKnowledgeAtom.event_id == event_id,
-                EventKnowledgeAtom.atom_id == atom_id,
+        # 创建新原子 + 收集所有 atom_id
+        atom_ids = []
+        for atom_data in atoms_data:
+            key = (atom_data['title'], 'zh')
+            atom = existing_atoms.get(key)
+
+            if not atom:
+                atom = KnowledgeAtom(
+                    atom_type=atom_data['atom_type'],
+                    title=atom_data['title'],
+                    content=atom_data['content'],
+                    category=event.category,
+                    entities=atom_data.get('entities'),
+                    keywords=atom_data.get('keywords'),
+                    lang='zh',
+                )
+                session.add(atom)
+                await session.flush()
+                existing_atoms[key] = atom
+
+            atom_ids.append(atom.id)
+
+        # 添加复用的原子 ID
+        reused_ids = [aid for aid in analysis.get('_reused_atom_ids', []) if isinstance(aid, int)]
+        atom_ids.extend(reused_ids)
+
+        # 批量查询已有的关联
+        if atom_ids:
+            result = await session.execute(
+                select(EventKnowledgeAtom.atom_id).where(
+                    EventKnowledgeAtom.event_id == event_id,
+                    EventKnowledgeAtom.atom_id.in_(atom_ids),
+                )
             )
-        )
-        if not existing_link.scalar():
-            link = EventKnowledgeAtom(
-                event_id=event_id,
-                atom_id=atom_id,
-                relevance=0.8,
-                position=999,
-            )
-            session.add(link)
+            existing_link_ids = {row[0] for row in result.fetchall()}
+
+            # 批量创建新关联
+            for atom_data in atoms_data:
+                atom = existing_atoms.get((atom_data['title'], 'zh'))
+                if atom and atom.id not in existing_link_ids:
+                    session.add(EventKnowledgeAtom(
+                        event_id=event_id,
+                        atom_id=atom.id,
+                        relevance=1.0,
+                        position=len(atoms_data),
+                    ))
+
+            for atom_id in reused_ids:
+                if atom_id not in existing_link_ids:
+                    session.add(EventKnowledgeAtom(
+                        event_id=event_id,
+                        atom_id=atom_id,
+                        relevance=0.8,
+                        position=999,
+                    ))
     
     await session.commit()
     invalidate_cache(f"deep:knowledge:{event_id}")
@@ -552,45 +562,50 @@ async def trigger_analogy_analysis(
         if rule_scores['overall'] < 0.3:
             continue
         
-        source_data = {
-            'title': event.title,
-            'causal_pattern_desc': structural.get('causal_pattern_desc'),
-            'decision_logic': structural.get('decision_logic'),
-            'transmission_mechanism': structural.get('transmission_mechanism'),
-            'economic_principle_desc': abstract.get('economic_principle_desc'),
-        }
-        target_data = {
-            'title': candidate.surface_summary,
-            'causal_pattern_desc': candidate.causal_pattern_desc,
-            'decision_logic': candidate.decision_logic,
-            'transmission_mechanism': candidate.transmission_mechanism,
-            'economic_principle_desc': candidate.economic_principle_desc,
-        }
-        
-        analogy_result = await analyze_analogy(source_data, target_data, ai_client)
-        if not analogy_result:
-            continue
-        
-        analogy = HistoricalAnalogy(
-            source_event_id=event_id,
-            target_event_id=candidate.event_id,
-            causal_similarity=analogy_result.get('causal_similarity'),
-            decision_similarity=analogy_result.get('decision_similarity'),
-            constraint_similarity=analogy_result.get('constraint_similarity'),
-            mechanism_similarity=analogy_result.get('mechanism_similarity'),
-            game_similarity=analogy_result.get('game_similarity'),
-            overall_similarity=analogy_result.get('overall_similarity'),
-            analogy_type=analogy_result.get('analogy_type'),
-            analogy_summary=analogy_result.get('analogy_summary'),
-            key_insight=analogy_result.get('key_insight'),
-            lessons_learned=analogy_result.get('lessons_learned'),
-            surface_differences=analogy_result.get('surface_differences'),
-            structural_differences=analogy_result.get('structural_differences'),
-            confidence=analogy_result.get('confidence'),
-            ai_model=analogy_result.get('ai_model'),
-        )
-        session.add(analogy)
-        analogies_created += 1
+        # 使用 savepoint 隔离每个候选事件的分析，单个失败不影响其他
+        try:
+            async with session.begin_nested():
+                source_data = {
+                    'title': event.title,
+                    'causal_pattern_desc': structural.get('causal_pattern_desc'),
+                    'decision_logic': structural.get('decision_logic'),
+                    'transmission_mechanism': structural.get('transmission_mechanism'),
+                    'economic_principle_desc': abstract.get('economic_principle_desc'),
+                }
+                target_data = {
+                    'title': candidate.surface_summary,
+                    'causal_pattern_desc': candidate.causal_pattern_desc,
+                    'decision_logic': candidate.decision_logic,
+                    'transmission_mechanism': candidate.transmission_mechanism,
+                    'economic_principle_desc': candidate.economic_principle_desc,
+                }
+                
+                analogy_result = await analyze_analogy(source_data, target_data, ai_client)
+                if not analogy_result:
+                    continue
+                
+                analogy = HistoricalAnalogy(
+                    source_event_id=event_id,
+                    target_event_id=candidate.event_id,
+                    causal_similarity=analogy_result.get('causal_similarity'),
+                    decision_similarity=analogy_result.get('decision_similarity'),
+                    constraint_similarity=analogy_result.get('constraint_similarity'),
+                    mechanism_similarity=analogy_result.get('mechanism_similarity'),
+                    game_similarity=analogy_result.get('game_similarity'),
+                    overall_similarity=analogy_result.get('overall_similarity'),
+                    analogy_type=analogy_result.get('analogy_type'),
+                    analogy_summary=analogy_result.get('analogy_summary'),
+                    key_insight=analogy_result.get('key_insight'),
+                    lessons_learned=analogy_result.get('lessons_learned'),
+                    surface_differences=analogy_result.get('surface_differences'),
+                    structural_differences=analogy_result.get('structural_differences'),
+                    confidence=analogy_result.get('confidence'),
+                    ai_model=analogy_result.get('ai_model'),
+                )
+                session.add(analogy)
+                analogies_created += 1
+        except Exception as e:
+            logger.warning(f"类比分析失败 (candidate={candidate.event_id}): {e}")
     
     await session.commit()
     invalidate_cache(f"deep:analogies:{event_id}")

@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 from dataclasses import dataclass, field
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.event import Event
@@ -154,36 +154,37 @@ async def analyze_single_event(
     # Step 1: 知识框架（带知识原子复用）
     logger.info(f"  [{event_id}] Step 1/4: 知识框架分析")
     try:
-        # 查找已有相关知识原子（增强版：语义相似度 + 跨category）
-        existing_atoms = await find_relevant_atoms(
-            session=session,
-            category=event_data.get("category"),
-            entities=event_data.get("entities"),
-            keywords=event_data.get("keywords"),
-            event_description=event_data.get("description"),  # 添加描述用于语义匹配
-        )
-        if existing_atoms:
-            logger.info(f"  [{event_id}] 找到 {len(existing_atoms)} 个相关知识原子")
+        async with session.begin_nested():
+            # 查找已有相关知识原子（增强版：语义相似度 + 跨category）
+            existing_atoms = await find_relevant_atoms(
+                session=session,
+                category=event_data.get("category"),
+                entities=event_data.get("entities"),
+                keywords=event_data.get("keywords"),
+                event_description=event_data.get("description"),  # 添加描述用于语义匹配
+            )
+            if existing_atoms:
+                logger.info(f"  [{event_id}] 找到 {len(existing_atoms)} 个相关知识原子")
 
-        knowledge = await analyze_event_knowledge(event_data, articles, ai_client, existing_atoms)
-        if knowledge:
-            # 检测冲突
-            new_atoms = knowledge.get("knowledge_atoms", [])
-            if new_atoms and existing_atoms:
-                conflicts = await detect_conflicts(session, new_atoms, existing_atoms)
-                if conflicts:
-                    logger.warning(f"  [{event_id}] 检测到 {len(conflicts)} 个潜在冲突")
-                    knowledge["_conflicts"] = conflicts
-            
-            # 存储知识框架
-            await _save_knowledge(session, event_id, knowledge, event_data.get("category"))
-            result.steps_completed.append("knowledge")
-            reused = len(knowledge.get("_reused_atom_ids", []))
-            new_count = len(knowledge.get("knowledge_atoms", []))
-            logger.info(f"  [{event_id}] 知识框架完成 (新: {new_count}, 复用: {reused})")
-        else:
-            result.steps_failed.append("knowledge")
-            logger.warning(f"  [{event_id}] 知识框架返回空结果")
+            knowledge = await analyze_event_knowledge(event_data, articles, ai_client, existing_atoms)
+            if knowledge:
+                # 检测冲突
+                new_atoms = knowledge.get("knowledge_atoms", [])
+                if new_atoms and existing_atoms:
+                    conflicts = await detect_conflicts(session, new_atoms, existing_atoms)
+                    if conflicts:
+                        logger.warning(f"  [{event_id}] 检测到 {len(conflicts)} 个潜在冲突")
+                        knowledge["_conflicts"] = conflicts
+                
+                # 存储知识框架
+                await _save_knowledge(session, event_id, knowledge, event_data.get("category"))
+                result.steps_completed.append("knowledge")
+                reused = len(knowledge.get("_reused_atom_ids", []))
+                new_count = len(knowledge.get("knowledge_atoms", []))
+                logger.info(f"  [{event_id}] 知识框架完成 (新: {new_count}, 复用: {reused})")
+            else:
+                result.steps_failed.append("knowledge")
+                logger.warning(f"  [{event_id}] 知识框架返回空结果")
     except Exception as e:
         result.steps_failed.append("knowledge")
         logger.error(f"  [{event_id}] 知识框架失败: {e}")
@@ -191,14 +192,15 @@ async def analyze_single_event(
     # Step 2: 因果链（依赖知识框架的背景信息）
     logger.info(f"  [{event_id}] Step 2/4: 因果链分析")
     try:
-        causal = await analyze_causal_chain(event_data, articles, ai_client)
-        if causal:
-            await _save_causal_chain(session, event_id, causal)
-            result.steps_completed.append("causal_chain")
-            logger.info(f"  [{event_id}] 因果链完成 ({len(causal.get('nodes', []))} 节点)")
-        else:
-            result.steps_failed.append("causal_chain")
-            logger.warning(f"  [{event_id}] 因果链返回空结果")
+        async with session.begin_nested():
+            causal = await analyze_causal_chain(event_data, articles, ai_client)
+            if causal:
+                await _save_causal_chain(session, event_id, causal)
+                result.steps_completed.append("causal_chain")
+                logger.info(f"  [{event_id}] 因果链完成 ({len(causal.get('nodes', []))} 节点)")
+            else:
+                result.steps_failed.append("causal_chain")
+                logger.warning(f"  [{event_id}] 因果链返回空结果")
     except Exception as e:
         result.steps_failed.append("causal_chain")
         logger.error(f"  [{event_id}] 因果链失败: {e}")
@@ -206,16 +208,17 @@ async def analyze_single_event(
     # Step 3: 历史类比
     logger.info(f"  [{event_id}] Step 3/4: 历史类比分析")
     try:
-        repr_result = await extract_event_representation(event_data, articles, ai_client)
-        if repr_result:
-            await _save_representation(session, event_id, repr_result)
-            # 尝试匹配历史类比
-            analogy_count = await _find_and_save_analogies(session, event_id, event_data, repr_result, ai_client)
-            result.steps_completed.append("analogy")
-            logger.info(f"  [{event_id}] 历史类比完成 ({analogy_count} 条类比)")
-        else:
-            result.steps_failed.append("analogy")
-            logger.warning(f"  [{event_id}] 表征提取返回空结果")
+        async with session.begin_nested():
+            repr_result = await extract_event_representation(event_data, articles, ai_client)
+            if repr_result:
+                await _save_representation(session, event_id, repr_result)
+                # 尝试匹配历史类比
+                analogy_count = await _find_and_save_analogies(session, event_id, event_data, repr_result, ai_client)
+                result.steps_completed.append("analogy")
+                logger.info(f"  [{event_id}] 历史类比完成 ({analogy_count} 条类比)")
+            else:
+                result.steps_failed.append("analogy")
+                logger.warning(f"  [{event_id}] 表征提取返回空结果")
     except Exception as e:
         result.steps_failed.append("analogy")
         logger.error(f"  [{event_id}] 历史类比失败: {e}")
@@ -223,23 +226,24 @@ async def analyze_single_event(
     # Step 4: 情景推演（依赖因果链的 causal_pattern_desc）
     logger.info(f"  [{event_id}] Step 4/4: 情景推演分析")
     try:
-        # 获取 causal_pattern_desc 作为输入
-        causal_pattern = None
-        repr_row = await session.execute(
-            select(EventRepresentation).where(EventRepresentation.event_id == event_id)
-        )
-        repr_obj = repr_row.scalar_one_or_none()
-        if repr_obj:
-            causal_pattern = repr_obj.causal_pattern_desc
+        async with session.begin_nested():
+            # 获取 causal_pattern_desc 作为输入
+            causal_pattern = None
+            repr_row = await session.execute(
+                select(EventRepresentation).where(EventRepresentation.event_id == event_id)
+            )
+            repr_obj = repr_row.scalar_one_or_none()
+            if repr_obj:
+                causal_pattern = repr_obj.causal_pattern_desc
 
-        scenarios = await analyze_scenarios(event_data, articles, ai_client, causal_pattern)
-        if scenarios:
-            await _save_scenarios(session, event_id, scenarios)
-            result.steps_completed.append("scenario")
-            logger.info(f"  [{event_id}] 情景推演完成")
-        else:
-            result.steps_failed.append("scenario")
-            logger.warning(f"  [{event_id}] 情景推演返回空结果")
+            scenarios = await analyze_scenarios(event_data, articles, ai_client, causal_pattern)
+            if scenarios:
+                await _save_scenarios(session, event_id, scenarios)
+                result.steps_completed.append("scenario")
+                logger.info(f"  [{event_id}] 情景推演完成")
+            else:
+                result.steps_failed.append("scenario")
+                logger.warning(f"  [{event_id}] 情景推演返回空结果")
     except Exception as e:
         result.steps_failed.append("scenario")
         logger.error(f"  [{event_id}] 情景推演失败: {e}")
@@ -316,14 +320,14 @@ async def run_deep_analysis(
         logger.info(f"[{i}/{len(events)}] 开始分析: {event_data['title'][:50]}...")
 
         try:
-            result = await analyze_single_event(session, event_data, ai_client)
-            pipeline_result.results.append(result)
+            async with session.begin_nested():
+                result = await analyze_single_event(session, event_data, ai_client)
+                pipeline_result.results.append(result)
 
-            if result.success:
-                pipeline_result.success += 1
-                await session.commit()
-            else:
-                pipeline_result.failed += 1
+                if result.success:
+                    pipeline_result.success += 1
+                else:
+                    pipeline_result.failed += 1
 
         except Exception as e:
             logger.error(f"[{i}/{len(events)}] 分析异常: {e}")
@@ -338,6 +342,9 @@ async def run_deep_analysis(
         if i < len(events):
             await asyncio.sleep(2)
 
+    # 统一提交所有成功的分析结果
+    await session.commit()
+
     pipeline_result.duration_seconds = (datetime.now(timezone.utc) - start_time).total_seconds()
     return pipeline_result
 
@@ -347,7 +354,7 @@ async def run_deep_analysis(
 # ============================================================
 
 async def _save_knowledge(session: AsyncSession, event_id: str, analysis: dict, category: str = None):
-    """存储知识框架分析结果"""
+    """存储知识框架分析结果（批量查询优化）"""
     existing = await session.execute(
         select(EventKnowledge).where(EventKnowledge.event_id == event_id)
     )
@@ -373,15 +380,24 @@ async def _save_knowledge(session: AsyncSession, event_id: str, analysis: dict, 
         )
         session.add(ek)
 
-    # 存储知识原子
-    for atom_data in analysis.get("knowledge_atoms", []):
-        existing_atom = await session.execute(
-            select(KnowledgeAtom).where(
-                KnowledgeAtom.title == atom_data["title"],
-                KnowledgeAtom.lang == "zh",
-            )
+    atoms_data = analysis.get("knowledge_atoms", [])
+    if not atoms_data:
+        return
+
+    # 批量查询已有的知识原子
+    atom_titles = [(a["title"], "zh") for a in atoms_data]
+    result = await session.execute(
+        select(KnowledgeAtom).where(
+            tuple_(KnowledgeAtom.title, KnowledgeAtom.lang).in_(atom_titles)
         )
-        atom = existing_atom.scalar_one_or_none()
+    )
+    existing_atoms = {(a.title, a.lang): a for a in result.scalars()}
+
+    # 创建新原子 + 收集所有 atom_id
+    atom_ids = []
+    for atom_data in atoms_data:
+        key = (atom_data["title"], "zh")
+        atom = existing_atoms.get(key)
 
         if not atom:
             atom = KnowledgeAtom(
@@ -395,48 +411,48 @@ async def _save_knowledge(session: AsyncSession, event_id: str, analysis: dict, 
             )
             session.add(atom)
             await session.flush()
+            existing_atoms[key] = atom
 
-        existing_link = await session.execute(
-            select(EventKnowledgeAtom).where(
+        atom_ids.append(atom.id)
+
+    # 添加复用的原子 ID
+    reused_ids = [aid for aid in analysis.get("_reused_atom_ids", []) if isinstance(aid, int)]
+    atom_ids.extend(reused_ids)
+
+    # 批量查询已有的关联
+    if atom_ids:
+        result = await session.execute(
+            select(EventKnowledgeAtom.atom_id).where(
                 EventKnowledgeAtom.event_id == event_id,
-                EventKnowledgeAtom.atom_id == atom.id,
+                EventKnowledgeAtom.atom_id.in_(atom_ids),
             )
         )
-        if not existing_link.scalar():
-            link = EventKnowledgeAtom(
-                event_id=event_id,
-                atom_id=atom.id,
-                relevance=1.0,
-                position=len(analysis.get("knowledge_atoms", [])),
-            )
-            session.add(link)
+        existing_link_ids = {row[0] for row in result.fetchall()}
 
-    # 链接 AI 标记为复用的已有原子
-    reused_ids = analysis.get("_reused_atom_ids", [])
-    for atom_id in reused_ids:
-        if not isinstance(atom_id, int):
-            continue
-        existing_link = await session.execute(
-            select(EventKnowledgeAtom).where(
-                EventKnowledgeAtom.event_id == event_id,
-                EventKnowledgeAtom.atom_id == atom_id,
-            )
-        )
-        if not existing_link.scalar():
-            link = EventKnowledgeAtom(
-                event_id=event_id,
-                atom_id=atom_id,
-                relevance=0.8,  # 复用的原子相关度稍低
-                position=999,
-            )
-            session.add(link)
-    
-    # 更新复用统计
-    if reused_ids:
-        valid_ids = [aid for aid in reused_ids if isinstance(aid, int)]
-        if valid_ids:
-            await update_reuse_stats(session, valid_ids)
-            logger.info(f"  更新了 {len(valid_ids)} 个原子的复用统计")
+        # 批量创建新关联
+        for i, atom_data in enumerate(atoms_data):
+            atom = existing_atoms.get((atom_data["title"], "zh"))
+            if atom and atom.id not in existing_link_ids:
+                session.add(EventKnowledgeAtom(
+                    event_id=event_id,
+                    atom_id=atom.id,
+                    relevance=1.0,
+                    position=len(atoms_data),
+                ))
+
+        for atom_id in reused_ids:
+            if atom_id not in existing_link_ids:
+                session.add(EventKnowledgeAtom(
+                    event_id=event_id,
+                    atom_id=atom_id,
+                    relevance=0.8,
+                    position=999,
+                ))
+
+        # 更新复用统计
+        if reused_ids:
+            await update_reuse_stats(session, reused_ids)
+            logger.info(f"  更新了 {len(reused_ids)} 个原子的复用统计")
 
 
 async def _save_causal_chain(session: AsyncSession, event_id: str, analysis: dict):
