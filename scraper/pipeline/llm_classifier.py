@@ -118,24 +118,6 @@ async def classify_with_llm(title: str, summary: str = "") -> Optional[Classific
         return None
 
 
-async def classify_with_llm_async(title: str, summary: str = "") -> Optional[ClassificationResult]:
-    """
-    使用 LLM 对文章进行分类（异步版本）
-    
-    Args:
-        title: 文章标题
-        summary: 文章摘要
-        
-    Returns:
-        ClassificationResult 或 None（如果 API 调用失败）
-    """
-    try:
-        return await classify_with_llm(title, summary)
-    except Exception as e:
-        logger.warning(f"异步 LLM 分类失败: {e}")
-        return None
-
-
 def _parse_response(response: str) -> Optional[ClassificationResult]:
     """
     解析 LLM 返回的 JSON 响应
