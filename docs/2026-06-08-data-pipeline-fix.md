@@ -568,3 +568,156 @@ await session.commit()  # 统一提交所有成功的操作
 ```
 
 所有现有测试通过，无回归。
+
+---
+
+## 11. 历史遗留代码清理（同日追加）
+
+在修复 session 管理问题后，对项目进行全面扫描，清理历史遗留代码。提交 `63c1763` 和 `8b20f6f`。
+
+### 11.1 问题扫描结果
+
+使用代码分析工具扫描 `app/`、`scraper/`、`deep_analyst/`、`common/` 四个目录，发现 **36 处** 问题代码：
+
+| 问题类型 | 数量 |
+|---------|------|
+| 未使用的 import | 9 处 |
+| 未使用的函数/方法/类 | 18 处 |
+| 重复代码 | 5 组（~200 行重复） |
+| 过时的兼容代码 | 4 处 |
+
+### 11.2 未使用 import 清理
+
+| 文件 | 删除的 import |
+|------|--------------|
+| `deep_analyst/ai_analysis.py` | `os`, `re`, `asyncio`, `datetime`, `date`, `settings` |
+| `scraper/pipeline/llm_classifier.py` | `asyncio` |
+| `scraper/sources/api_fetcher.py` | `date` |
+| `app/routes/api_news.py` | `cast`, `Boolean` |
+| `app/main.py` | 重复导入 `settings` |
+
+### 11.3 未使用函数/类删除
+
+| 文件 | 删除内容 | 行数 |
+|------|---------|------|
+| `scraper/pipeline/events.py` | `EventTracker` 类 + `update_event_with_article` + `extract_event_summary` + `get_event_tracker` | ~170 行 |
+| `scraper/pipeline/llm_classifier.py` | `is_relevant()`（未使用且有 bug：同步调用异步函数） | 27 行 |
+| `scraper/pipeline/tfidf_dedup.py` | `is_duplicate_tfidf()` / `get_deduplicator()` | 25 行 |
+| `scraper/db/writer.py` | `save_news()` 兼容接口（已无调用方） | 16 行 |
+| `scraper/db/__init__.py` | `save_news` 导出 | 2 行 |
+
+**EventTracker 说明**：
+- 早期内存事件追踪器，使用 OrderedDict 实现 LRU 缓存
+- 已被数据库方案完全替代（`scraper/db/writer.py` 的 `process_article_event`）
+- 相关测试一并删除（5 个测试用例）
+
+**is_relevant() bug**：
+```python
+# 问题代码：同步调用异步函数，缺少 await
+def is_relevant(title: str, summary: str = "") -> tuple[bool, Optional[str], float]:
+    result = classify_with_llm(title, summary)  # ← 缺少 await
+```
+
+### 11.4 重复代码消除
+
+#### DeepSeekClient 合并
+
+**问题**：`scraper/pipeline/ai_analysis.py` 和 `deep_analyst/ai_analysis.py` 中的 `DeepSeekClient` 类几乎完全相同（~140 行重复代码）。
+
+**修复**：`deep_analyst/ai_analysis.py` 改为从 `scraper/pipeline/ai_analysis.py` 导入。
+
+```python
+# deep_analyst/ai_analysis.py（修复后）
+from scraper.pipeline.ai_analysis import (
+    ArticleAnalysis,
+    DeepSeekClient,
+    get_ai_client,
+    is_ai_enabled,
+)
+```
+
+#### schemas.py 合并
+
+**问题**：`models/schemas.py` 和 `deep_analyst/schemas.py` 中有大量相同的定义（枚举、模型、Schema）。
+
+**修复**：`deep_analyst/schemas.py` 改为从 `models/schemas.py` 导入基础定义，只定义深度分析特有的 Schema。
+
+```python
+# deep_analyst/schemas.py（修复后）
+from models.schemas import (
+    SentimentType, Priority, TrendType,
+    KeyPoint, HotTopic, KeyEvent,
+    ArticleAnalysisSchema, DailyReportSchema, TrendSchema,
+    SCHEMA_MAP as BASE_SCHEMA_MAP,
+)
+# 只定义深度分析特有的 Schema...
+```
+
+#### utils.py 统一
+
+**问题**：`scraper/pipeline/utils.py` 和 `deep_analyst/utils.py` 内容完全相同，都是从 `common.utils` 重新导出。
+
+**修复**：`deep_analyst/utils.py` 改为从 `scraper/pipeline/utils.py` 导入。
+
+#### classify.py 重复函数删除
+
+**问题**：`_classify_by_llm` 和 `_classify_by_llm_async` 逻辑完全相同，`classify_hybrid` 和 `classify_hybrid_async` 也完全相同。
+
+**原因**：最初可能只写了同步版本，后来改成异步但没有清理旧代码。实际上 `classify_with_llm` 本身就是异步的，`_async` 版本完全是多余的。
+
+**修复**：删除 `_classify_by_llm_async` 和 `classify_hybrid_async`，保留 `classify_hybrid`（已经是异步的）。
+
+### 11.5 修改文件清单
+
+| 文件 | 改动 |
+|------|------|
+| `deep_analyst/ai_analysis.py` | 246→22 行，改为导入复用 |
+| `deep_analyst/schemas.py` | 335→250 行，消除重复定义 |
+| `deep_analyst/utils.py` | 改为从 scraper.pipeline.utils 导入 |
+| `scraper/pipeline/events.py` | 381→213 行，删除 EventTracker 等 |
+| `scraper/pipeline/classify.py` | 320→226 行，删除重复函数 |
+| `scraper/pipeline/llm_classifier.py` | 193→170 行，删除 is_relevant |
+| `scraper/pipeline/tfidf_dedup.py` | 187→162 行，删除未使用函数 |
+| `scraper/db/writer.py` | 删除 save_news 兼容接口 |
+| `scraper/db/__init__.py` | 删除 save_news 导出 |
+| `scraper/sources/api_fetcher.py` | 清理 import |
+| `app/main.py` | 删除重复导入 |
+| `app/routes/api_news.py` | 清理 import |
+| `tests/test_events.py` | 删除 EventTracker 测试 |
+
+### 11.6 统计
+
+```
+12 files changed, 43 insertions(+), 656 deletions(-)
+```
+
+净删除 **613 行**代码。
+
+### 11.7 测试验证
+
+```
+195 passed, 1 warning in 2.54s
+```
+
+移除了 5 个 EventTracker 测试，其余 195 个测试通过。
+
+### 11.8 额外修复：.env 配置问题
+
+在部署过程中发现 uvicorn 服务崩溃循环，原因是 `.env` 文件中的行内注释导致 Pydantic 解析失败：
+
+```bash
+# 问题配置
+RETENTION_DAYS=0  # 0 = 永不删除，数据永久保留用于分析
+
+# 修复后
+RETENTION_DAYS=0
+```
+
+**错误信息**：
+```
+pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+RETENTION_DAYS
+  Input should be a valid integer, unable to parse string as an integer
+```
+
+**教训**：`.env` 文件不支持行内注释（不同于 shell 脚本），注释必须单独一行。
