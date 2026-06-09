@@ -113,9 +113,9 @@ async def run_analysis(
                 for r in result.results:
                     status = "OK" if r.success else "FAIL"
                     steps = ", ".join(r.steps_completed) if r.steps_completed else "none"
-                logger.info(f"  [{status}] {r.event_id}: {steps} ({r.duration_seconds:.1f}s)")
-                if r.error:
-                    logger.info(f"         错误: {r.error}")
+                    logger.info(f"  [{status}] {r.event_id}: {steps} ({r.duration_seconds:.1f}s)")
+                    if r.error:
+                        logger.info(f"         错误: {r.error}")
         except Exception as e:
             await session.rollback()
             logger.error(f"深度分析失败: {e}")

@@ -40,8 +40,8 @@ class BaseDeepSeekClient:
             return
         
         try:
-            from openai import OpenAI
-            self.client = OpenAI(
+            from openai import AsyncOpenAI
+            self.client = AsyncOpenAI(
                 api_key=self.api_key,
                 base_url=self.api_base,
                 timeout=self.timeout

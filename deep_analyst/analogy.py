@@ -302,6 +302,6 @@ def get_analogy_type_label(analogy_type: str, lang: str = 'zh') -> str:
 
 def get_dimension_label(dimension: str, lang: str = 'zh') -> str:
     """获取匹配维度标签"""
-    from models.event_representation import MATCH_DIMENSIONS
+    from deep_analyst.models.event_representation import MATCH_DIMENSIONS
     dim_info = MATCH_DIMENSIONS.get(dimension, {})
     return dim_info.get(f'label_{lang}' if lang == 'en' else 'label', dimension)
