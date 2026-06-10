@@ -267,12 +267,15 @@ async def ensure_report_tables(session, table_name: str):
             news_count INT DEFAULT 0,
             generated_at TIMESTAMPTZ DEFAULT NOW(),
             UNIQUE(period_start)
-        );
-        
-        CREATE INDEX IF NOT EXISTS idx_{table_name}_period ON {table_name} (period_start DESC);
+        )
+    """)
+    
+    create_index_sql = text(f"""
+        CREATE INDEX IF NOT EXISTS idx_{table_name}_period ON {table_name} (period_start DESC)
     """)
     
     await session.execute(create_table_sql)
+    await session.execute(create_index_sql)
     await session.commit()
 
 

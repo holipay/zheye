@@ -74,7 +74,7 @@ class BaseDeepSeekClient:
         
         for attempt in range(self.max_retries):
             try:
-                response = self.client.chat.completions.create(
+                response = await self.client.chat.completions.create(
                     model="deepseek-chat",
                     messages=messages,
                     temperature=temperature,
