@@ -2,7 +2,7 @@
 <div class="event-detail">
     <div class="event-detail-header">
         <div class="event-breadcrumb">
-            <a href="/{{ lang }}/events" hx-get="/api/events?lang={{ lang }}" hx-target="#main-content" hx-push-url="true">{{ t("events.title") }}</a>
+            <a href="/{{ lang }}/events">{{ t("events.title") }}</a>
             <span class="separator">/</span>
             <span>{{ t("category." + event.category) }}</span>
         </div>
@@ -131,7 +131,7 @@
                     <span class="related-date">{{ related.last_updated }}</span>
                 </div>
                 <h4>
-                    <a href="/{{ lang }}/events/{{ related.event_id }}" hx-get="/api/events/{{ related.event_id }}?lang={{ lang }}" hx-target="#main-content" hx-push-url="true">
+                    <a href="/{{ lang }}/events/{{ related.event_id }}">
                         {{ related.title }}
                     </a>
                 </h4>

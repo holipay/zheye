@@ -85,7 +85,7 @@
                     <a href="/{{ lang }}" class="sort-btn active" 
                        hx-get="/api/latest?limit=10&lang={{ lang }}" hx-target="#news-feed" hx-swap="innerHTML">{{ t("home.latest") }}</a>
                     <a href="/{{ lang }}" class="sort-btn"
-                       hx-get="/api/news?sort=weight&limit=10&lang={{ lang }}" hx-target="#news-feed" hx-swap="innerHTML">{{ t("home.important") }}</a>
+                       hx-get="/api/news?sort=weight&lang={{ lang }}" hx-target="#news-feed" hx-swap="innerHTML">{{ t("home.important") }}</a>
                 </div>
             </div>
             <div class="news-list" id="news-feed"

@@ -66,9 +66,6 @@
     <button onclick="switchTab('monthly')" id="tab-monthly" class="report-tab">
         {{ t("analysis.monthly_report") }}
     </button>
-    <button onclick="switchTab('daily')" id="tab-daily" class="report-tab">
-        {{ t("analysis.daily_report") }}
-    </button>
 </div>
 
 <!-- 分析状态 -->
@@ -312,7 +309,7 @@ async function loadReportsList() {
                         <span class="news-time">${report.news_count || 0} {{ t("news.articles") }}</span>
                     </div>
                     <div class="news-title">
-                        <a href="#">${report.overview ? report.overview.substring(0, 80) + '...' : '{{ t("analysis.no_overview") }}'}</a>
+                        <span style="cursor:pointer;">${report.overview ? report.overview.substring(0, 80) + '...' : '{{ t("analysis.no_overview") }}'}</span>
                     </div>
                     <div class="news-meta">
                         <span class="badge ${
@@ -347,9 +344,6 @@ async function loadReport() {
             if (response.ok) reportData = await response.json();
         } else if (currentTab === 'monthly') {
             const response = await fetch(`/api/analysis/monthly/${dateInput}`);
-            if (response.ok) reportData = await response.json();
-        } else {
-            const response = await fetch(`/api/analysis/daily/${dateInput}`);
             if (response.ok) reportData = await response.json();
         }
         
@@ -402,7 +396,7 @@ function displayReport(report) {
     if (report.key_events && report.key_events.length > 0) {
         keyEventsContainer.innerHTML = report.key_events.map(event => `
             <div class="news-item">
-                <div class="news-title"><a href="#">${escapeHtml(event.event || event)}</a></div>
+                <div class="news-title"><span>${escapeHtml(event.event || event)}</span></div>
                 <div class="news-meta">
                     <span>${escapeHtml(event.category || '')}</span>
                     <span>${escapeHtml(event.significance || '')}</span>
