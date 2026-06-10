@@ -5,6 +5,7 @@ from pathlib import Path
 from datetime import date
 from app.i18n import get_text, DEFAULT_LANGUAGE
 from app.context import get_template_context
+from app.config import settings
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
@@ -80,5 +81,6 @@ async def events(request: Request, lang: str):
 @router.get("/{lang}/events/{event_id}")
 async def event_detail(request: Request, lang: str, event_id: str):
     lang = validate_lang(lang)
-    ctx = get_template_context(request, title=get_text(lang, "nav.events"), event_id=event_id)
+    ctx = get_template_context(request, title=get_text(lang, "nav.events"), event_id=event_id,
+                              deep_analyst_enabled=settings.ENABLE_DEEP_ANALYST)
     return templates.TemplateResponse(request=request, name="event_detail.html", context=ctx)

@@ -27,7 +27,6 @@
                 <span class="market-tag">{{ t("top_bar.realtime") }}</span>
             </div>
             <div class="top-bar-right">
-                <a href="/{{ lang }}/login">{{ t("nav.user_login") }}</a>
                 <a href="/{{ lang }}/admin">{{ t("nav.admin_dashboard") }}</a>
             </div>
         </div>
@@ -50,14 +49,16 @@
             </nav>
             <div class="header-right">
                 <div class="search-box">
-                    <input type="text" id="search-input" placeholder="{{ t('search.placeholder') }}" 
-                           hx-get="/api/search" hx-trigger="keyup changed delay:500ms" hx-target="#search-results">
+                    <input type="text" id="search-input" name="q" placeholder="{{ t('search.placeholder') }}" 
+                           hx-get="/api/search" hx-trigger="keyup changed delay:500ms" hx-target="#search-results" hx-indicator="#search-indicator">
                     <button class="search-btn">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="11" cy="11" r="8"></circle>
                             <path d="m21 21-4.35-4.35"></path>
                         </svg>
                     </button>
+                    <div id="search-indicator" class="htmx-indicator" style="display:none;"></div>
+                    <div id="search-results" class="search-results-dropdown"></div>
                 </div>
                 <div class="language-switcher">
                     {% if lang == "zh" %}
@@ -119,6 +120,55 @@
         </div>
     </footer>
 
+    <style>
+    .search-box {
+        position: relative;
+    }
+    .search-results-dropdown {
+        display: none;
+        position: absolute;
+        top: 100%;
+        right: 0;
+        width: 400px;
+        max-height: 400px;
+        overflow-y: auto;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        z-index: 1000;
+        margin-top: 0.25rem;
+    }
+    .search-results-dropdown:not(:empty) {
+        display: block;
+    }
+    .search-results-dropdown .news-list {
+        padding: 0.5rem;
+    }
+    .search-results-dropdown .news-item {
+        padding: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .search-results-dropdown .news-item:last-child {
+        border-bottom: none;
+    }
+    .search-results-dropdown .news-title {
+        font-size: 0.875rem;
+        line-height: 1.4;
+    }
+    .search-results-dropdown .news-title a {
+        color: #1e293b;
+        text-decoration: none;
+    }
+    .search-results-dropdown .news-title a:hover {
+        color: #3b82f6;
+    }
+    .search-results-dropdown .news-meta {
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-top: 0.25rem;
+    }
+    </style>
 
 </body>
 </html>
