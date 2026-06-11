@@ -32,7 +32,7 @@ def _build_keyword_patterns(keywords: list[dict]) -> dict[str, list[tuple[re.Pat
         
         try:
             if lang == "en":
-                if len(term) < 3:
+                if len(term) < 2:
                     continue
                 # 短词使用严格边界（前后不能是字母）
                 if len(term) <= 3:

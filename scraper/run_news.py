@@ -247,9 +247,8 @@ async def main():
                     monitor.record_source_result(batch[i]["name"], False, error=str(result))
                 elif isinstance(result, list):
                     all_items.extend(result)
-                    if len(result) > 0:
-                        sources_succeeded += 1
-                        monitor.record_source_result(batch[i]["name"], True, items_count=len(result))
+                    sources_succeeded += 1
+                    monitor.record_source_result(batch[i]["name"], True, items_count=len(result))
 
             if batch_idx < len(batches) - 1:
                 delay = random.uniform(BATCH_DELAY_MIN, BATCH_DELAY_MAX)
@@ -267,11 +266,10 @@ async def main():
                     result = await process_source(fetcher, src, existing_hashes, existing_titles)
                     if isinstance(result, list):
                         all_items.extend(result)
-                        if len(result) > 0:
-                            sources_succeeded += 1
-                            sources_failed -= 1
-                            monitor.record_source_result(src["name"], True, items_count=len(result))
-                            logger.info(f"重试成功: {src['name']}")
+                        sources_succeeded += 1
+                        sources_failed -= 1
+                        monitor.record_source_result(src["name"], True, items_count=len(result))
+                        logger.info(f"重试成功: {src['name']}")
                 except Exception as e:
                     logger.error(f"重试失败 {src['name']}: {e}")
                     monitor.record_source_result(src["name"], False, error=str(e))

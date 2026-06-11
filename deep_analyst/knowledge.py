@@ -279,34 +279,35 @@ async def find_relevant_atoms(
     Returns:
         匹配的知识原子列表 [{id, atom_type, title, content, entities, keywords, relevance_score, quality_score}]
     """
-    conditions = [
+    # 必须同时满足的条件
+    base_conditions = [
         KnowledgeAtom.lang == lang,
-        KnowledgeAtom.quality_score >= min_quality,  # 只返回质量足够的原子
+        KnowledgeAtom.quality_score >= min_quality,
     ]
 
     # 获取相关 category 列表
     related_categories = _get_related_categories(category)
     all_categories = [category] + related_categories if category else []
-    
-    # category 条件（包括原category和相关category）
-    if all_categories:
-        conditions.append(KnowledgeAtom.category.in_(all_categories))
 
-    # entities 重叠：JSONB 数组有交集
+    # category 或 entity 重叠的可选条件（至少满足一个）
+    filter_conditions = []
+    if all_categories:
+        filter_conditions.append(KnowledgeAtom.category.in_(all_categories))
     if entities:
-        for entity in entities[:5]:  # 限制数量避免查询过慢
-            conditions.append(
+        for entity in entities[:5]:
+            filter_conditions.append(
                 KnowledgeAtom.entities.op("@>")(f'["{entity}"]')
             )
 
-    if len(conditions) <= 2:  # 只有 lang 和 quality 条件
+    if not filter_conditions:
         return []
 
+    from sqlalchemy import and_
     stmt = (
         select(KnowledgeAtom)
-        .where(or_(*conditions))
+        .where(and_(*base_conditions, or_(*filter_conditions)))
         .order_by(KnowledgeAtom.quality_score.desc(), KnowledgeAtom.created_at.desc())
-        .limit(limit * 3)  # 获取更多候选，后续排序
+        .limit(limit * 3)
     )
 
     result = await session.execute(stmt)

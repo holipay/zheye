@@ -535,9 +535,10 @@ async def batch_insert_entity_relations(records: List[Dict[str, Any]], batch_siz
                         pg_insert(ArticleEntity)
                         .values(batch)
                         .on_conflict_do_nothing()
+                        .returning(ArticleEntity.id)
                     )
-                    await session.execute(stmt)
-                    inserted += len(batch)
+                    result = await session.execute(stmt)
+                    inserted += len(result.fetchall())
             except Exception as e:
                 logging.getLogger(__name__).warning(f"实体关联批次插入失败 (batch {i//batch_size + 1}): {e}")
 

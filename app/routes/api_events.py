@@ -3,7 +3,6 @@ from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.base import get_session
 from models.event import Event
-from deep_analyst.models.causal_chain import CausalNode, CausalLink, NodeType
 from app.cache import get_cached, set_cached
 from app.errors import ErrorMessages as Err
 from fastapi import Request, HTTPException, Depends
@@ -211,16 +210,8 @@ async def get_event_detail(
 
 
 async def _get_causal_chain(session: AsyncSession, event_id: str) -> dict:
-    """
-    获取事件的因果链数据
-    
-    Args:
-        session: 数据库会话
-        event_id: 事件ID
-    
-    Returns:
-        因果链数据字典，包含nodes和links
-    """
+    from deep_analyst.models.causal_chain import CausalNode, CausalLink, NodeType
+
     # 查询因果节点
     nodes_query = (
         select(CausalNode)

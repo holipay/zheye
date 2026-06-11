@@ -96,8 +96,10 @@ async def get_sentiment_distribution(
     """), {"start_date": start_date})
 
     sentiment_map = {"positive": 0, "neutral": 0, "negative": 0, "unknown": 0}
+    known = {"positive", "neutral", "negative"}
     for row in result:
-        sentiment_map[row[0]] = row[1]
+        key = row[0] if row[0] in known else "unknown"
+        sentiment_map[key] = row[1]
 
     # 根据语言返回标签
     if lang == "zh":

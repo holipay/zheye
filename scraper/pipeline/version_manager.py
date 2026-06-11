@@ -96,10 +96,10 @@ class VersionManager:
             )
             
             session.add(version)
-            await session.commit()
-            
-            # 清理旧版本
+
+            # 清理旧版本（在同一事务中）
             await self._cleanup_old_versions(session, analysis_type, target_id)
+            await session.commit()
             
             logger.info(f"保存分析版本: {analysis_type}/{target_id} v{new_version_number}")
             return version
@@ -276,7 +276,6 @@ class VersionManager:
         
         result = await session.execute(delete_query)
         if result.rowcount > 0:
-            await session.commit()
             logger.info(f"清理了 {result.rowcount} 个旧版本: {analysis_type}/{target_id}")
     
     async def get_statistics(self) -> Dict[str, Any]:
