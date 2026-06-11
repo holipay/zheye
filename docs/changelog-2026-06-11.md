@@ -120,16 +120,75 @@ Phase 3（功能增强，5-7 天）
 
 ---
 
-## 六、后续任务
+## 七、Phase 2 完成情况
 
-### Phase 2
+### ✅ DI 容器
+- 新增 `app/deps.py` 统一管理 AI 客户端依赖
+- `deep_analyst/router.py` 4 个 POST 路由改用 `Depends(get_ai_client_dependency)`
+- `deep_analyst/pipeline.py` 支持可选 `ai_client` 参数
+- `llm_classifier.py` 使用共享单例
 
-- [ ] DI 容器 (`fastapi.Depends`)
-- [ ] Phase 2 并行化 (`asyncio.gather`)
-- [ ] 智能调度
+### ✅ Phase 2 并行化
+- `scraper/db/writer.py`: `enrich_news` 使用 `asyncio.gather` 并行执行 4 个富化步骤
 
-### Phase 3
+### ✅ 智能调度
+- 按健康度分层：健康源并发 10，不健康源并发 3
+- 健康源批次延迟 2s，不健康源 15s
 
-- [ ] 事件检测升级
-- [ ] APScheduler 集成
-- [ ] 翻译集成 + 数据清理
+---
+
+## 八、Phase 3 完成情况
+
+### ✅ 事件检测升级
+- 3级匹配：精确匹配 → 关键实体匹配 → 语义相似度
+- 实体归一化：25bp = 25 basis points = 0.25%
+
+### ✅ APScheduler 集成
+- 每天 0:00 和 12:00 自动抓取新闻
+- 每天凌晨 2:00 执行 AI 分析
+- 每天凌晨 3:00 清理旧数据
+
+### ✅ 翻译集成
+- 英文标题自动翻译为中文（MyMemory API）
+
+---
+
+## 九、文件变更汇总
+
+### 新增文件
+| 文件 | 说明 |
+|------|------|
+| `alembic.ini` | Alembic 配置 |
+| `alembic/env.py` | 异步 PostgreSQL 环境 |
+| `alembic/versions/000_legacy.py` | 基础 revision |
+| `app/lifespan.py` | 应用生命周期管理 |
+| `app/deps.py` | FastAPI 依赖注入 |
+| `scripts/stamp_migrations.py` | 版本标记脚本 |
+| `docs/2026-06-11-architecture-refactor.md` | 架构分析文档 |
+| `docs/changelog-2026-06-11.md` | 会话记录 |
+
+### 修改文件
+| 文件 | 变更 |
+|------|------|
+| `app/main.py` | 添加 lifespan 参数 |
+| `deep_analyst/router.py` | 4 个路由改用 Depends |
+| `deep_analyst/pipeline.py` | 支持可选 ai_client 参数 |
+| `deep_analyst/utils.py` | 直接导入 common.utils |
+| `scraper/pipeline/ai_analysis.py` | 移除死方法 |
+| `scraper/pipeline/utils.py` | 简化 re-export |
+| `scraper/pipeline/events.py` | 3级匹配 + 实体归一化 |
+| `scraper/pipeline/llm_classifier.py` | 使用共享单例 |
+| `scraper/pipeline/scheduler.py` | 分层调度 |
+| `scraper/db/writer.py` | 并行化富化步骤 |
+| `scraper/run_news.py` | 分层调度 + 翻译集成 |
+| `docs/DESIGN.md` | 更新目录结构和部署步骤 |
+
+---
+
+## 十、提交记录
+
+| 提交哈希 | 说明 |
+|----------|------|
+| `7cdec99` | refactor: Phase 1（Alembic + 死代码 + Lifespan） |
+| `cc81314` | refactor: Phase 2（DI + 并行化 + 智能调度） |
+| `5cc7a08` | feat: Phase 3（事件检测 + APScheduler + 翻译） |
