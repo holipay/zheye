@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from common.ai_client import BaseDeepSeekClient
 from common.utils import parse_ai_response, smart_truncate, calculate_confidence
 from app.config import settings
-from models.schemas import ArticleAnalysisSchema, TrendSchema
+from models.schemas import ArticleAnalysisSchema
 
 logger = logging.getLogger(__name__)
 
@@ -215,47 +215,6 @@ class DeepSeekClient(BaseDeepSeekClient):
             )
         except Exception as e:
             logger.error(f"保存分析版本时出错: {e}")
-    
-    async def analyze_keyword_trend(self, keyword: str, articles: list[dict]) -> Optional[dict]:
-        """
-        分析关键词趋势
-        
-        Args:
-            keyword: 关键词
-            articles: 相关文章列表
-        
-        Returns:
-            趋势分析结果
-        """
-        articles_text = "\n".join([
-            f"- {a['title']} ({a.get('date', 'N/A')})" 
-            for a in articles[:20]
-        ])
-        
-        messages = [
-            {
-                "role": "system",
-                "content": """分析关键词在近期新闻中的趋势。返回 JSON 格式：
-{
-    "keyword": "关键词",
-    "trend": "rising/stable/declining",
-    "analysis": "趋势分析，100字以内",
-    "related_topics": ["相关话题1", "相关话题2"],
-    "prediction": "未来可能走势，50字以内"
-}"""
-            },
-            {
-                "role": "user",
-                "content": f"关键词: {keyword}\n相关文章:\n{articles_text}"
-            }
-        ]
-        
-        result = await self._call_api(messages, temperature=0.5, function_name="analyze_keyword_trend")
-        if not result:
-            return None
-        
-        # 使用 Schema 验证
-        return parse_ai_response(result, schema=TrendSchema)
     
     async def generate_period_report(self, articles: list[dict], stats_summary: dict, period: str = "weekly") -> Optional[dict]:
         """

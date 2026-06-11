@@ -1,9 +1,9 @@
 """
 公共工具模块（deep_analyst 版本）
-复用 scraper.pipeline.utils 中的定义，避免重复。
+直接从共享模块导入，避免间接引用链。
 """
 
-from scraper.pipeline.utils import (
+from common.utils import (
     smart_truncate,
     parse_ai_response,
     ai_analyze,

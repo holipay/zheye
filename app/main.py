@@ -8,6 +8,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from app.config import settings
+from app.lifespan import lifespan
 
 # 统一日志配置
 logging.basicConfig(
@@ -39,7 +40,7 @@ if not settings.CSRF_SECRET_KEY and not settings.ADMIN_PASSWORD:
 # 速率限制器
 limiter = Limiter(key_func=get_remote_address)
 
-app = FastAPI(title="zheye", description="全球新闻聚合与 AI 分析平台")
+app = FastAPI(title="zheye", description="全球新闻聚合与 AI 分析平台", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 

@@ -71,82 +71,103 @@ Web 层    FastAPI + Jinja2 (服务端渲染) + HTMX (前端交互)
 zheye/
 │
 ├── app/                                (Web 应用)
-│   ├── __init__.py
 │   ├── main.py                         (FastAPI 入口)
-│   ├── config.py                       (配置管理)
+│   ├── config.py                       (Pydantic Settings 配置)
+│   ├── auth.py                         (Admin HTTP Basic Auth)
+│   ├── csrf.py                         (CSRF 保护)
+│   ├── cache.py                        (内存 TTL 缓存)
+│   ├── i18n.py                         (国际化 zh/en)
+│   ├── ai_metrics.py                   (AI 成本追踪)
 │   ├── routes/
-│   │   ├── __init__.py
-│   │   ├── pages.py                    (页面路由: / /news /articles)
-│   │   └── api.py                      (HTMX API: /api/news /api/analysis)
+│   │   ├── api_news.py                 (新闻 CRUD、搜索、关键词)
+│   │   ├── api_analysis.py             (情感、趋势、报告)
+│   │   ├── api_events.py               (事件列表、详情、时间线)
+│   │   ├── charts.py                   (图表数据)
+│   │   ├── pages.py                    (SSR 页面路由)
+│   │   └── admin.py                    (管理后台)
 │   ├── templates/                      (Jinja2 模板)
-│   │   ├── base.html                   (公共布局)
-│   │   ├── index.html                  (AI 分析页)
-│   │   ├── news.html                   (新闻列表页)
-│   │   ├── articles.html               (文章页)
-│   │   └── partials/                   (HTMX 片段)
-│   │       ├── news_list.html
-│   │       ├── news_sidebar.html
-│   │       └── analysis_card.html
-│   ├── static/
-│   │   ├── css/
-│   │   │   └── style.css
-│   │   └── js/
-│   │       └── htmx.min.js
-│   └── cache.py                        (内存缓存)
+│   └── static/                         (JS, CSS, 图片)
 │
-├── scraper/                            (数据管道)
-│   ├── __init__.py
-│   ├── run_news.py                     (抓取入口)
-│   ├── run_analyze.py                  (分析入口)
+├── scraper/                            (数据抓取管道)
+│   ├── run_news.py                     (主入口：编排完整管道)
+│   ├── monitor.py                      (运行时监控)
 │   ├── sources/
-│   │   ├── __init__.py
-│   │   ├── config.yaml                 (源列表配置)
-│   │   ├── fetcher.py                  (HTTP 抓取)
-│   │   ├── rss_parser.py              (RSS/Atom 解析)
-│   │   └── article_extractor.py       (正文提取)
+│   │   ├── config.yaml                 (44+ RSS 源配置)
+│   │   ├── fetcher.py                  (httpx 异步抓取，SSRF 防护)
+│   │   ├── rss_parser.py              (feedparser 解析)
+│   │   ├── article_extractor.py       (trafilatura 正文提取)
+│   │   └── api_fetcher.py             (市场数据 API)
 │   ├── pipeline/
-│   │   ├── __init__.py
-│   │   ├── translate.py                (翻译管道)
-│   │   ├── dedup.py                    (去重: URL + 标题相似度)
-│   │   ├── classify.py                 (分类: 关键词 + LLM)
-│   │   └── analyze.py                  (AI 深度分析)
+│   │   ├── classify.py                 (混合分类：关键词 + LLM)
+│   │   ├── dedup.py                    (去重：link hash + n-gram + TF-IDF)
+│   │   ├── keywords.py                 (关键词匹配，预编译正则)
+│   │   ├── entities.py                 (实体抽取：正则 + spaCy NER)
+│   │   ├── relations.py                (文章关联计算 Jaccard)
+│   │   ├── events.py                   (事件检测)
+│   │   ├── translate.py                (翻译 API)
+│   │   ├── regions.py                  (地域提取)
+│   │   ├── ai_analysis.py             (DeepSeek AI 分析)
+│   │   ├── version_manager.py          (分析版本管理)
+│   │   ├── retry_manager.py            (失败任务重试)
+│   │   └── scheduler.py               (智能源调度)
 │   └── db/
-│       ├── __init__.py
-│       └── writer.py                   (数据写入)
+│       └── writer.py                   (两阶段写入)
 │
-├── models/                             (数据模型)
-│   ├── __init__.py
-│   ├── base.py                         (SQLAlchemy 引擎)
-│   ├── news.py                         (新闻表)
-│   ├── analysis.py                     (分析表)
-│   ├── translation_cache.py            (翻译缓存)
+├── deep_analyst/                       (深度分析模块，可选)
+│   ├── pipeline.py                     (4步分析管道)
+│   ├── knowledge.py                    (知识框架 + 因果链)
+│   ├── analogy.py                      (历史类比)
+│   ├── scenario.py                     (情景推演)
+│   └── models/                         (知识原子、因果节点等)
+│
+├── models/                             (SQLAlchemy ORM 模型)
+│   ├── base.py                         (异步引擎、会话)
+│   ├── news.py                         (新闻表，18+ 字段)
+│   ├── keyword.py                      (关键词词库)
+│   ├── article_keyword.py              (文章-关键词 M2M)
+│   ├── entity.py                       (命名实体)
+│   ├── article_entity.py               (文章-实体 M2M)
+│   ├── article_relation.py             (文章自关联)
+│   ├── event.py                        (事件追踪)
+│   ├── analysis.py                     (每日分析)
+│   ├── daily_report.py                 (每日报告)
+│   ├── trend.py                        (关键词趋势)
 │   ├── source_health.py                (源健康监控)
-│   └── run_metrics.py                  (运行指标)
+│   ├── run_metrics.py                  (运行指标)
+│   ├── market_data.py                  (市场数据)
+│   ├── translation_cache.py            (翻译缓存)
+│   ├── analysis_version.py             (分析版本历史)
+│   ├── failed_task.py                  (失败任务队列)
+│   └── schemas.py                      (Pydantic 验证)
 │
-├── migrations/                         (数据库迁移)
+├── common/                             (共享模块)
+│   ├── ai_client.py                    (BaseDeepSeekClient 基类)
+│   ├── mermaid.py                      (Mermaid 图表生成)
+│   └── utils.py                        (文本工具、置信度计算)
+│
+├── alembic/                            (数据库迁移)
+│   ├── env.py                          (异步 PostgreSQL 配置)
+│   ├── script.py.mako                  (迁移模板)
 │   └── versions/
-│       └── 001_init.sql
+│       └── 000_legacy.py               (基础 revision)
+│
+├── migrations/versions/                (Legacy SQL 迁移，历史参考)
+│   ├── 001_init.sql ~ 018_seed_historical_events.sql
+│
+├── scripts/                            (CLI 脚本)
+│   ├── stamp_migrations.py             (首次部署标记版本)
+│   └── run_daily_analysis.py           (批量文章分析)
 │
 ├── configs/                            (配置文件)
-│   ├── daily_perspectives.json         (每日分析视角)
-│   ├── noise_keywords.json             (噪音关键词)
-│   ├── domain_keywords.json            (领域关键词)
-│   ├── source_weights.json             (源权重)
-│   └── stopwords.json                  (停用词)
+│   ├── keywords.yaml                   (1000+ 关键词，14 分类)
+│   └── entities.yaml                   (实体字典)
 │
-├── tests/                              (测试)
-│   ├── test_scraper.py
-│   ├── test_dedup.py
-│   └── test_api.py
-│
-├── logs/                               (日志，不进 Git)
-│
-├── .env                                (环境变量，不进 Git)
-├── .env.example
-├── .gitignore
-├── requirements.txt
-├── Dockerfile                          (可选)
-├── docker-compose.yml                  (可选)
+├── tests/                              (测试套件)
+├── docs/                               (文档)
+├── alembic.ini                         (Alembic 配置)
+├── pyproject.toml                      (项目配置 + 工具配置)
+├── requirements.txt                    (依赖清单)
+├── .env.example                        (环境变量示例)
 └── README.md
 ```
 
@@ -389,17 +410,62 @@ pytest, pytest-asyncio
 # 初始部署
 git clone https://github.com/holipay/zheye.git
 cd zheye
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 createdb zheye
-psql zheye < migrations/001_init.sql
+
+# 创建表结构（legacy SQL 迁移）
+for f in migrations/versions/*.sql; do psql -U zheye -d zheye -f "$f"; done
+
+# 标记 Alembic 版本（标记为已应用）
+DATABASE_URL=postgresql+asyncpg://zheye:password@localhost:5432/zheye \
+  python scripts/stamp_migrations.py
+
 cp .env.example .env  # 编辑填入配置
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 # 后续更新
 git pull
 pip install -r requirements.txt
-alembic upgrade head
+alembic upgrade head  # 应用数据库变更
 sudo systemctl restart zheye
+```
+
+## 数据库迁移管理 (Alembic)
+
+项目使用 Alembic 管理数据库迁移，替代手动 `psql -f` 方式。
+
+### 目录结构
+
+```
+alembic.ini                    # 配置（从 DATABASE_URL 读取）
+alembic/
+├── env.py                     # 异步 PostgreSQL，导入核心 models
+├── script.py.mako             # 迁移模板
+└── versions/
+    └── 000_legacy.py          # 基础 revision（18个legacy迁移已应用）
+migrations/versions/*.sql      # 保留作为历史参考
+scripts/
+└── stamp_migrations.py        # 首次部署用
+```
+
+### 常用命令
+
+```bash
+# 创建迁移
+alembic revision -m "描述变更内容"
+
+# 应用所有待执行迁移
+alembic upgrade head
+
+# 回滚一步
+alembic downgrade -1
+
+# 查看当前版本
+alembic current
+
+# 查看可用版本
+alembic heads
 ```
 
 ## 数据备份
