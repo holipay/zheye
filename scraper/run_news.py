@@ -132,9 +132,18 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
         article_type = detect_article_type(item.title, item.summary, content)
         regions = extract_regions(item.title, item.summary, content)
 
+        # 翻译英文标题为中文
+        translated_title = None
+        if lang == "en" and item.title:
+            try:
+                from scraper.pipeline.translate import translate_text
+                translated_title = await translate_text(item.title, "en", "zh")
+            except Exception as e:
+                logger.debug(f"Translation failed: {e}")
+
         news_item = {
             "title": item.title,
-            "translated_title": None,
+            "translated_title": translated_title,
             "link": item.link,
             "link_hash": link_hash,
             "source": name,
