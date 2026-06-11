@@ -276,6 +276,7 @@ class VersionManager:
         
         result = await session.execute(delete_query)
         if result.rowcount > 0:
+            await session.commit()
             logger.info(f"清理了 {result.rowcount} 个旧版本: {analysis_type}/{target_id}")
     
     async def get_statistics(self) -> Dict[str, Any]:

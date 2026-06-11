@@ -153,13 +153,16 @@ async def get_latest(
     session: AsyncSession = Depends(get_session),
     limit: int = Query(default=10, le=100),
 ):
+    count_result = await session.execute(select(func.count(News.id)))
+    total = count_result.scalar()
+
     query = select(News).order_by(desc(News.created_at)).limit(limit)
     result = await session.execute(query)
     news_items = result.scalars().all()
-    
+
     return templates.TemplateResponse(request=request, name="partials/news_list.html", context=_get_api_context(
         request, news_items=news_items, category="all", article_type="all", sort="date",
-        page=1, total_pages=1, total=len(news_items),
+        page=1, total_pages=1, total=total,
     ))
 
 
@@ -168,7 +171,7 @@ async def get_articles(
     request: Request,
     session: AsyncSession = Depends(get_session),
     sort: str = "date",
-    page: int = 1,
+    page: int = Query(default=1, ge=1, description="页码"),
 ):
     page_size = settings.DEFAULT_PAGE_SIZE
     offset = (page - 1) * page_size

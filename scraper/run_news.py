@@ -84,12 +84,15 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
     for item in feed_items:
         link_hash = get_link_hash(item.link)
         
-        # 使用锁保护共享状态
+        # 原子性检查并标记（防止并发任务处理同一篇文章）
         async with _shared_lock:
             if link_hash in existing_hashes:
                 continue
             if is_duplicate(item.title, existing_titles):
                 continue
+            existing_hashes.add(link_hash)
+            existing_titles.append(item.title)
+            add_to_dedup_cache(item.title)
 
         content = None
         pub_date = item.date
@@ -139,13 +142,6 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
             "date": pub_date,
         }
         items.append(news_item)
-        
-        # 使用锁保护共享状态
-        async with _shared_lock:
-            existing_hashes.add(link_hash)
-            existing_titles.append(item.title)
-            # 添加到去重缓存
-            add_to_dedup_cache(item.title)
 
     await update_source_health(
         name,

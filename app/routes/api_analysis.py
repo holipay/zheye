@@ -284,7 +284,7 @@ async def get_reports_list(
     if period not in REPORT_TABLES:
         raise HTTPException(status_code=400, detail=Err.INVALID_REPORT_TYPE)
     
-    table_name = REPORT_TABLES[period]
+    table_name = period
     
     # 使用 SQLAlchemy table 构造替代 f-string SQL 拼接
     metadata = MetaData()
