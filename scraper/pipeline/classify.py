@@ -60,6 +60,9 @@ DEFAULT_KEYWORDS = {
 }
 
 
+_keyword_pattern_cache: dict[str, re.Pattern] = {}
+
+
 def _match_keyword(keyword: str, text: str) -> bool:
     """
     检查关键词是否在文本中匹配
@@ -79,15 +82,20 @@ def _match_keyword(keyword: str, text: str) -> bool:
     
     # 短词使用严格边界
     if SHORT_WORD_STRICT_BOUNDARY and len(keyword) <= SHORT_WORD_MAX_LENGTH:
-        # 使用负向前瞻和后瞻确保不是更长单词的一部分
-        # (?<![a-zA-Z]) 表示前面不是字母
-        # (?![a-zA-Z]) 表示后面不是字母
-        pattern = re.compile(r'(?<![a-zA-Z])' + re.escape(kw_lower) + r'(?![a-zA-Z])', re.IGNORECASE)
-        return bool(pattern.search(text))
+        cache_key = f"short:{kw_lower}"
+        if cache_key not in _keyword_pattern_cache:
+            _keyword_pattern_cache[cache_key] = re.compile(
+                r'(?<![a-zA-Z])' + re.escape(kw_lower) + r'(?![a-zA-Z])', re.IGNORECASE
+            )
+        return bool(_keyword_pattern_cache[cache_key].search(text))
     
     # 长词使用标准词边界
-    pattern = re.compile(r'\b' + re.escape(kw_lower) + r'\b', re.IGNORECASE)
-    return bool(pattern.search(text))
+    cache_key = f"long:{kw_lower}"
+    if cache_key not in _keyword_pattern_cache:
+        _keyword_pattern_cache[cache_key] = re.compile(
+            r'\b' + re.escape(kw_lower) + r'\b', re.IGNORECASE
+        )
+    return bool(_keyword_pattern_cache[cache_key].search(text))
 
 
 def classify_by_keywords(title: str, summary: str = "", default_category: str = "其他资讯") -> Optional[str]:

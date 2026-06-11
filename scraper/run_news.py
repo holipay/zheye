@@ -25,7 +25,7 @@ from scraper.pipeline.scheduler import (
 )
 from scraper.db import update_source_health, save_news_core, enrich_news, get_existing_hashes, get_existing_titles
 from scraper.db.writer import get_source_conditional_headers
-from scraper.sources.api_fetcher import MarketDataFetcher
+from scraper.sources.api_fetcher import get_market_fetcher
 from scraper.monitor import reset_monitor, get_monitor
 from models.base import async_session
 from models.run_metrics import RunMetrics
@@ -170,7 +170,7 @@ async def process_source(fetcher: Fetcher, source: dict, existing_hashes: set, e
 async def fetch_market_data():
     """获取市场数据并保存到数据库（批量插入）"""
     try:
-        fetcher = MarketDataFetcher()
+        fetcher = get_market_fetcher()
         if not fetcher.has_any_api:
             logger.info("No market data API configured, skipping")
             return

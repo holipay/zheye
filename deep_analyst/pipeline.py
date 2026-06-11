@@ -323,14 +323,13 @@ async def run_deep_analysis(
         logger.info(f"[{i}/{len(events)}] 开始分析: {event_data['title'][:50]}...")
 
         try:
-            async with session.begin_nested():
-                result = await analyze_single_event(session, event_data, ai_client)
-                pipeline_result.results.append(result)
+            result = await analyze_single_event(session, event_data, ai_client)
+            pipeline_result.results.append(result)
 
-                if result.success:
-                    pipeline_result.success += 1
-                else:
-                    pipeline_result.failed += 1
+            if result.success:
+                pipeline_result.success += 1
+            else:
+                pipeline_result.failed += 1
 
         except Exception as e:
             logger.error(f"[{i}/{len(events)}] 分析异常: {e}")

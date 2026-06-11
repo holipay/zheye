@@ -103,6 +103,14 @@ async def lifespan(app):
     except Exception as e:
         logger.warning(f"Failed to close translation client: {e}")
 
+    # 关闭市场数据 API 共享客户端
+    try:
+        from scraper.sources.api_fetcher import close_shared_client
+        await close_shared_client()
+        logger.info("Market data HTTP client closed")
+    except Exception as e:
+        logger.warning(f"Failed to close market data client: {e}")
+
     # 释放 spaCy 模型资源
     try:
         from scraper.pipeline.ner import close_models

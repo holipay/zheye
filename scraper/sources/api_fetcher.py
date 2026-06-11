@@ -15,6 +15,25 @@ from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
+_shared_http_client = None
+
+
+async def _get_shared_client():
+    """获取共享的 httpx.AsyncClient（连接池复用）"""
+    global _shared_http_client
+    if _shared_http_client is None or _shared_http_client.is_closed:
+        import httpx
+        _shared_http_client = httpx.AsyncClient(timeout=15)
+    return _shared_http_client
+
+
+async def close_shared_client():
+    """关闭共享 httpx.AsyncClient"""
+    global _shared_http_client
+    if _shared_http_client and not _shared_http_client.is_closed:
+        await _shared_http_client.aclose()
+        _shared_http_client = None
+
 
 @dataclass
 class MarketData:
@@ -47,32 +66,25 @@ class ExchangeRateAPI:
         if not self.enabled:
             return None
         
-        try:
-            import httpx
-        except ImportError:
-            logger.warning("httpx 未安装，无法获取 API 数据")
-            return None
-        
         url = f"{self.base_url}/{self.api_key}/latest/{base_currency}"
         
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(url, timeout=10)
-                response.raise_for_status()
-                data = response.json()
-                
-                if data.get("result") == "success":
-                    return {
-                        "base": base_currency,
-                        "date": data.get("time_last_update_utc"),
-                        "rates": data.get("conversion_rates", {}),
-                        "source": "exchangerate-api"
-                    }
-                else:
-                    logger.warning(f"ExchangeRate-API 返回错误: {data.get('error-type')}")
-            except Exception as e:
-                # 不打印完整URL，避免泄露API key
-                logger.error(f"ExchangeRate-API 请求失败: {type(e).__name__}")
+        try:
+            client = await _get_shared_client()
+            response = await client.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            if data.get("result") == "success":
+                return {
+                    "base": base_currency,
+                    "date": data.get("time_last_update_utc"),
+                    "rates": data.get("conversion_rates", {}),
+                    "source": "exchangerate-api"
+                }
+            else:
+                logger.warning(f"ExchangeRate-API 返回错误: {data.get('error-type')}")
+        except Exception as e:
+            logger.error(f"ExchangeRate-API 请求失败: {type(e).__name__}")
         
         return None
     
@@ -137,21 +149,15 @@ class AlphaVantageAPI:
         if not self.enabled:
             return None
         
-        try:
-            import httpx
-        except ImportError:
-            logger.warning("httpx 未安装，无法获取 API 数据")
-            return None
-        
         params["apikey"] = self.api_key
         
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(self.base_url, params=params, timeout=10)
-                response.raise_for_status()
-                return response.json()
-            except Exception as e:
-                logger.error(f"Alpha Vantage 请求失败: {e}")
+        try:
+            client = await _get_shared_client()
+            response = await client.get(self.base_url, params=params, timeout=10)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.error(f"Alpha Vantage 请求失败: {e}")
         
         return None
     
@@ -361,13 +367,21 @@ class MarketDataFetcher:
         ]
 
 
-# 全局实例
-market_fetcher = MarketDataFetcher()
+# 全局单例（避免在 run_news.py 中每次调用都创建新实例）
+_market_fetcher = None
+
+
+def get_market_fetcher() -> MarketDataFetcher:
+    """获取全局 MarketDataFetcher 单例"""
+    global _market_fetcher
+    if _market_fetcher is None:
+        _market_fetcher = MarketDataFetcher()
+    return _market_fetcher
 
 
 async def fetch_market_data() -> dict[str, list[MarketData]]:
     """获取所有市场数据的便捷函数"""
-    return await market_fetcher.fetch_all()
+    return await get_market_fetcher().fetch_all()
 
 
 if __name__ == "__main__":

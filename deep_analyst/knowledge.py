@@ -54,11 +54,6 @@ DEFAULT_CATEGORY_RELATIONS = {
 # 语义相似度工具
 # ============================================================
 
-_tfidf_vectorizer = None
-_tfidf_matrix = None
-_tfidf_atom_ids = None
-
-
 def _get_tfidf_similarity(text: str, atom_contents: List[str]) -> List[float]:
     """
     计算文本与知识原子内容的TF-IDF相似度
@@ -70,8 +65,6 @@ def _get_tfidf_similarity(text: str, atom_contents: List[str]) -> List[float]:
     Returns:
         相似度分数列表
     """
-    global _tfidf_vectorizer, _tfidf_matrix, _tfidf_atom_ids
-    
     try:
         from sklearn.feature_extraction.text import TfidfVectorizer
         from sklearn.metrics.pairwise import cosine_similarity
@@ -80,7 +73,6 @@ def _get_tfidf_similarity(text: str, atom_contents: List[str]) -> List[float]:
         if not atom_contents:
             return []
         
-        # 构建TF-IDF向量器（使用字符n-gram支持中文）
         vectorizer = TfidfVectorizer(
             analyzer='char_wb',
             ngram_range=(2, 4),
@@ -296,7 +288,7 @@ async def find_relevant_atoms(
     if entities:
         for entity in entities[:5]:
             filter_conditions.append(
-                KnowledgeAtom.entities.op("@>")(f'["{entity}"]')
+                KnowledgeAtom.entities.op("@>")(func.json_build_array(entity))
             )
 
     if not filter_conditions:
@@ -841,7 +833,7 @@ def _simple_similarity(text1: str, text2: str) -> float:
 
 def _has_negation_conflict(text1: str, text2: str) -> bool:
     """检查两个文本是否存在否定冲突"""
-    negation_words = ["不", "没有", "并非", "并非", "不是", "无", "未"]
+    negation_words = ["不", "没有", "并非", "不是", "无", "未"]
     
     for word in negation_words:
         # 一个有否定词，另一个没有

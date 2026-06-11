@@ -2,6 +2,7 @@ import asyncio
 import ipaddress
 import logging
 import random
+import socket
 from typing import Optional
 from urllib.parse import urlparse
 import httpx
@@ -37,17 +38,27 @@ def get_domain(url: str) -> str:
     return parsed.netloc or parsed.hostname or url
 
 
-def _is_private_ip(hostname: str) -> bool:
-    """检查是否为内网IP地址"""
+async def _is_private_ip(hostname: str) -> bool:
+    """检查是否为内网IP地址（包括DNS解析后检查）"""
     try:
         ip = ipaddress.ip_address(hostname)
         return ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved
     except ValueError:
-        # 不是IP地址，检查常见内网主机名
-        return hostname in ("localhost", "metadata.google.internal", "169.254.169.254")
+        if hostname in ("localhost", "metadata.google.internal", "169.254.169.254"):
+            return True
+        try:
+            loop = asyncio.get_running_loop()
+            _, infos = await loop.getaddrinfo(hostname, None, family=socket.AF_UNSPEC)
+            for _, _, _, _, sockaddr in infos:
+                resolved_ip = ipaddress.ip_address(sockaddr[0])
+                if resolved_ip.is_private or resolved_ip.is_loopback or resolved_ip.is_link_local or resolved_ip.is_reserved:
+                    return True
+        except (socket.gaierror, OSError):
+            pass
+        return False
 
 
-def validate_url(url: str) -> bool:
+async def validate_url(url: str) -> bool:
     """
     验证URL是否安全（SSRF防护）
     
@@ -60,7 +71,6 @@ def validate_url(url: str) -> bool:
     try:
         parsed = urlparse(url)
         
-        # 只允许HTTP和HTTPS协议
         if parsed.scheme not in ("http", "https"):
             logger.warning(f"SSRF防护: 拒绝非HTTP协议 {parsed.scheme}")
             return False
@@ -69,8 +79,7 @@ def validate_url(url: str) -> bool:
         if not hostname:
             return False
         
-        # 检查是否为内网地址
-        if _is_private_ip(hostname):
+        if await _is_private_ip(hostname):
             logger.warning(f"SSRF防护: 拒绝内网地址 {hostname}")
             return False
         
@@ -121,7 +130,7 @@ class Fetcher:
 
     async def fetch(self, url: str, etag: Optional[str] = None, last_modified: Optional[str] = None) -> dict:
         # SSRF防护：验证URL
-        if not validate_url(url):
+        if not await validate_url(url):
             return {"status": "error", "url": url, "error": "URL validation failed (SSRF protection)"}
         
         headers = {"User-Agent": get_random_ua()}

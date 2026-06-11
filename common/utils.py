@@ -85,9 +85,8 @@ def parse_ai_response(response: str, schema: Type[BaseModel] = None) -> Optional
                 validated = schema(**result)
                 return validated.model_dump()
             except ValidationError as e:
-                logger.warning(f"Schema 验证失败，使用原始数据: {e}")
-                # 验证失败时仍返回原始数据，但记录警告
-                return result
+                logger.warning(f"Schema 验证失败: {e}")
+                return None
         
         return result
         
