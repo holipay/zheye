@@ -1,12 +1,13 @@
 """
 智能调度模块
-根据源的健康状态动态调整抓取优先级
+根据源的健康状态动态调整抓取优先级和批次大小
 
 策略：
 1. 成功率高的源优先抓取
 2. 连续失败的源降低优先级
 3. 连续失败超过阈值的源暂时禁用
 4. 使用 weight 字段作为基础权重
+5. 按健康度分层：健康源大并发，不健康源小并发
 """
 
 import logging
@@ -25,6 +26,13 @@ MAX_CONSECUTIVE_FAILURES = 5  # 连续失败超过此数量暂时禁用
 MIN_SUCCESS_RATE = 30.0  # 最低成功率阈值
 PRIORITY_BOOST_HOURS = 2  # 成功抓取后优先级提升时间（小时）
 PRIORITY_DECAY_FACTOR = 0.5  # 优先级衰减因子
+
+# 分层并发配置
+TIER_HEALTHY_CONCURRENCY = 10    # 健康源并发数
+TIER_HEALTHY_DELAY = 2.0         # 健康源批次间延迟（秒）
+TIER_UNHEALTHY_CONCURRENCY = 3   # 不健康源并发数
+TIER_UNHEALTHY_DELAY = 15.0      # 不健康源批次间延迟（秒）
+HEALTHY_THRESHOLD = 0.8          # 健康源阈值（健康分数）
 
 
 @dataclass
@@ -226,3 +234,41 @@ async def get_health_summary() -> dict:
         "disabled_sources": disabled,
         "health_rate": healthy / total * 100 if total > 0 else 0,
     }
+
+
+def get_tiered_schedule_params(health_score: float) -> tuple[int, float]:
+    """
+    根据健康分数返回分层调度参数
+    
+    Args:
+        health_score: 健康分数 (0-1)
+    
+    Returns:
+        (concurrency, delay) 并发数和批次间延迟
+    """
+    if health_score >= HEALTHY_THRESHOLD:
+        return TIER_HEALTHY_CONCURRENCY, TIER_HEALTHY_DELAY
+    else:
+        return TIER_UNHEALTHY_CONCURRENCY, TIER_UNHEALTHY_DELAY
+
+
+def split_sources_by_health(priorities: list[tuple[dict, SourcePriority]]) -> tuple[list, list]:
+    """
+    将源按健康度分为两组：健康源和不健康源
+    
+    Args:
+        priorities: (源配置, 优先级信息) 元组列表
+    
+    Returns:
+        (healthy_sources, unhealthy_sources) 两个列表
+    """
+    healthy = []
+    unhealthy = []
+    
+    for source, priority in priorities:
+        if priority.health_score >= HEALTHY_THRESHOLD:
+            healthy.append(source)
+        else:
+            unhealthy.append(source)
+    
+    return healthy, unhealthy

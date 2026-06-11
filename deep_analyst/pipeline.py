@@ -260,6 +260,7 @@ async def run_deep_analysis(
     max_events: int = 10,
     cooldown_hours: int = 24,
     event_id: Optional[str] = None,
+    ai_client=None,
 ) -> PipelineResult:
     """
     执行批量深度分析
@@ -269,6 +270,7 @@ async def run_deep_analysis(
         max_events: 最多分析的事件数
         cooldown_hours: 同一事件的分析冷却时间
         event_id: 指定事件 ID（单事件分析模式）
+        ai_client: AI 客户端实例（可选，不传则自动创建）
 
     Returns:
         PipelineResult
@@ -277,7 +279,8 @@ async def run_deep_analysis(
     pipeline_result = PipelineResult()
 
     # 初始化 AI 客户端
-    ai_client = DeepSeekClient()
+    if ai_client is None:
+        ai_client = DeepSeekClient()
     if not ai_client.enabled:
         logger.error("DeepSeek API 未启用，请配置 DEEPSEEK_API_KEY")
         return pipeline_result

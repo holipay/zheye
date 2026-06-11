@@ -17,7 +17,12 @@ from scraper.pipeline import get_link_hash, is_duplicate
 from scraper.pipeline.classify import classify_hybrid, detect_article_type
 from scraper.pipeline.regions import extract_regions
 from scraper.pipeline.dedup import add_to_dedup_cache
-from scraper.pipeline.scheduler import filter_and_sort_sources, get_health_summary
+from scraper.pipeline.scheduler import (
+    filter_and_sort_sources, get_health_summary, get_source_priorities,
+    split_sources_by_health, get_tiered_schedule_params,
+    TIER_HEALTHY_CONCURRENCY, TIER_HEALTHY_DELAY,
+    TIER_UNHEALTHY_CONCURRENCY, TIER_UNHEALTHY_DELAY,
+)
 from scraper.db import update_source_health, save_news_core, enrich_news, get_existing_hashes, get_existing_titles
 from scraper.db.writer import get_source_conditional_headers
 from scraper.sources.api_fetcher import MarketDataFetcher
@@ -205,13 +210,18 @@ async def main():
     monitor = get_monitor()
 
     # 智能调度：根据健康状态过滤和排序源
-    sources = await filter_and_sort_sources(sources)
+    priorities = await get_source_priorities(sources)
+    healthy_sources, unhealthy_sources = split_sources_by_health(priorities)
+    
+    # 过滤禁用的源
+    healthy_sources = [s for s in healthy_sources if s.get("enabled", True)]
+    unhealthy_sources = [s for s in unhealthy_sources if s.get("enabled", True)]
     
     # 获取健康状态摘要
     health_summary = await get_health_summary()
     logger.info(f"健康状态: {health_summary['healthy_sources']}/{health_summary['total_sources']} 个源可用")
+    logger.info(f"分层调度: 健康源 {len(healthy_sources)} 个, 不健康源 {len(unhealthy_sources)} 个")
 
-    logger.info(f"Starting news scrape with {len(sources)} sources (batch size: {BATCH_SIZE})")
     start_time = datetime.now(timezone.utc)
 
     existing_hashes = await get_existing_hashes()
@@ -219,60 +229,70 @@ async def main():
     logger.info(f"Found {len(existing_hashes)} existing hashes")
 
     all_items = []
-    sources_attempted = len(sources)
+    sources_attempted = len(healthy_sources) + len(unhealthy_sources)
     sources_succeeded = 0
     sources_failed = 0
     items_fetched = 0
     items_deduped = 0
 
+    # 分层处理：先处理健康源（高并发），再处理不健康源（低并发）
+    tier_configs = [
+        ("健康源", healthy_sources, TIER_HEALTHY_CONCURRENCY, TIER_HEALTHY_DELAY),
+        ("不健康源", unhealthy_sources, TIER_UNHEALTHY_CONCURRENCY, TIER_UNHEALTHY_DELAY),
+    ]
+
     async with Fetcher(
         timeout=config_settings.get("fetch_timeout", 20),
         max_retries=config_settings.get("max_retries", 2),
-        max_concurrent=BATCH_SIZE,
+        max_concurrent=TIER_HEALTHY_CONCURRENCY,
     ) as fetcher:
-        batches = [sources[i:i + BATCH_SIZE] for i in range(0, len(sources), BATCH_SIZE)]
-
-        failed_sources = []
-        
-        for batch_idx, batch in enumerate(batches):
-            logger.info(f"Processing batch {batch_idx + 1}/{len(batches)} ({len(batch)} sources)")
-
-            tasks = [process_source(fetcher, src, existing_hashes, existing_titles) for src in batch]
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-            for i, result in enumerate(results):
-                if isinstance(result, Exception):
-                    logger.error(f"Source processing error: {result}")
-                    sources_failed += 1
-                    failed_sources.append(batch[i])
-                    monitor.record_source_result(batch[i]["name"], False, error=str(result))
-                elif isinstance(result, list):
-                    all_items.extend(result)
-                    sources_succeeded += 1
-                    monitor.record_source_result(batch[i]["name"], True, items_count=len(result))
-
-            if batch_idx < len(batches) - 1:
-                delay = random.uniform(BATCH_DELAY_MIN, BATCH_DELAY_MAX)
-                logger.info(f"Waiting {delay:.1f}s before next batch")
-                await asyncio.sleep(delay)
-        
-        # 重试失败的源（最多重试1次）
-        if failed_sources:
-            logger.info(f"重试 {len(failed_sources)} 个失败源...")
-            retry_delay = random.uniform(BATCH_DELAY_MIN, BATCH_DELAY_MAX)
-            await asyncio.sleep(retry_delay)
+        for tier_name, tier_sources, concurrency, delay in tier_configs:
+            if not tier_sources:
+                continue
+                
+            logger.info(f"处理{tier_name}: {len(tier_sources)} 个源 (并发={concurrency}, 延迟={delay}s)")
+            batches = [tier_sources[i:i + concurrency] for i in range(0, len(tier_sources), concurrency)]
+            failed_sources = []
             
-            for src in failed_sources:
-                try:
-                    result = await process_source(fetcher, src, existing_hashes, existing_titles)
-                    if isinstance(result, list):
+            for batch_idx, batch in enumerate(batches):
+                logger.info(f"  批次 {batch_idx + 1}/{len(batches)} ({len(batch)} sources)")
+
+                tasks = [process_source(fetcher, src, existing_hashes, existing_titles) for src in batch]
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                for i, result in enumerate(results):
+                    if isinstance(result, Exception):
+                        logger.error(f"Source processing error: {result}")
+                        sources_failed += 1
+                        failed_sources.append(batch[i])
+                        monitor.record_source_result(batch[i]["name"], False, error=str(result))
+                    elif isinstance(result, list):
                         all_items.extend(result)
                         sources_succeeded += 1
-                        sources_failed -= 1
-                        monitor.record_source_result(src["name"], True, items_count=len(result))
-                        logger.info(f"重试成功: {src['name']}")
-                except Exception as e:
-                    logger.error(f"重试失败 {src['name']}: {e}")
-                    monitor.record_source_result(src["name"], False, error=str(e))
+                        monitor.record_source_result(batch[i]["name"], True, items_count=len(result))
+
+                if batch_idx < len(batches) - 1:
+                    batch_delay = random.uniform(delay * 0.5, delay * 1.5)
+                    logger.info(f"  等待 {batch_delay:.1f}s")
+                    await asyncio.sleep(batch_delay)
+            
+            # 重试失败的源（最多重试1次）
+            if failed_sources:
+                logger.info(f"重试 {len(failed_sources)} 个{tier_name}失败源...")
+                retry_delay = random.uniform(delay, delay * 2)
+                await asyncio.sleep(retry_delay)
+                
+                for src in failed_sources:
+                    try:
+                        result = await process_source(fetcher, src, existing_hashes, existing_titles)
+                        if isinstance(result, list):
+                            all_items.extend(result)
+                            sources_succeeded += 1
+                            sources_failed -= 1
+                            monitor.record_source_result(src["name"], True, items_count=len(result))
+                            logger.info(f"重试成功: {src['name']}")
+                    except Exception as e:
+                        logger.error(f"重试失败 {src['name']}: {e}")
+                        monitor.record_source_result(src["name"], False, error=str(e))
 
     items_fetched = len(all_items)
     items_final = 0

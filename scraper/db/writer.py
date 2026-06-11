@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime, date, timezone
 from typing import Optional, List, Dict, Any
@@ -104,17 +105,25 @@ async def enrich_news(
     # 构建 link_hash -> item 映射
     hash_to_item = {item["link_hash"]: item for item in items if "link_hash" in item}
 
-    # ========== 子步骤 1: 关键词匹配 + 批量插入 ==========
-    stats["keywords"] = await _enrich_keywords(hash_to_id, hash_to_item)
+    # 并行执行 4 个独立富化步骤
+    results = await asyncio.gather(
+        _enrich_keywords(hash_to_id, hash_to_item),
+        _enrich_entities(hash_to_id, hash_to_item),
+        _enrich_events(hash_to_id, hash_to_item),
+        _enrich_relations(hash_to_id, hash_to_item),
+        return_exceptions=True,
+    )
 
-    # ========== 子步骤 2: 实体提取 + 同步 + 关联 ==========
-    stats["entities"] = await _enrich_entities(hash_to_id, hash_to_item)
+    # 收集结果（异常记为 0）
+    stats["keywords"] = results[0] if isinstance(results[0], int) else 0
+    stats["entities"] = results[1] if isinstance(results[1], int) else 0
+    stats["events"] = results[2] if isinstance(results[2], int) else 0
+    stats["relations"] = results[3] if isinstance(results[3], int) else 0
 
-    # ========== 子步骤 3: 事件检测 ==========
-    stats["events"] = await _enrich_events(hash_to_id, hash_to_item)
-
-    # ========== 子步骤 4: 关系计算 ==========
-    stats["relations"] = await _enrich_relations(hash_to_id, hash_to_item)
+    # 记录异常
+    for i, (name, result) in enumerate(zip(["keywords", "entities", "events", "relations"], results)):
+        if isinstance(result, Exception):
+            logger.warning(f"富化步骤 {name} 异常: {result}")
 
     # 清除缓存
     if any(v > 0 for v in stats.values()):

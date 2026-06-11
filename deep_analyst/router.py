@@ -17,7 +17,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from deep_analyst.ai_analysis import DeepSeekClient
+from app.deps import get_ai_client_dependency
+from scraper.pipeline.ai_analysis import DeepSeekClient
 from deep_analyst.knowledge import analyze_event_knowledge, analyze_causal_chain, find_relevant_atoms
 from deep_analyst.analogy import extract_event_representation, analyze_analogy, compute_structural_similarity
 from deep_analyst.scenario import analyze_scenarios
@@ -114,11 +115,10 @@ async def trigger_knowledge_analysis(
     _: bool = Depends(verify_admin_credentials),
     __: bool = Depends(csrf_protect),
     session: AsyncSession = Depends(get_session),
+    ai_client: DeepSeekClient = Depends(get_ai_client_dependency),
 ):
     """触发知识分析"""
     event, event_data, articles = await _get_event_and_articles(session, event_id)
-    
-    ai_client = DeepSeekClient()
 
     # 查找已有相关知识原子
     existing_atoms = await find_relevant_atoms(
@@ -316,11 +316,10 @@ async def trigger_causal_chain_analysis(
     _: bool = Depends(verify_admin_credentials),
     __: bool = Depends(csrf_protect),
     session: AsyncSession = Depends(get_session),
+    ai_client: DeepSeekClient = Depends(get_ai_client_dependency),
 ):
     """触发因果链分析"""
     event, event_data, articles = await _get_event_and_articles(session, event_id)
-    
-    ai_client = DeepSeekClient()
     analysis = await analyze_causal_chain(event_data, articles, ai_client)
     
     if not analysis:
@@ -463,11 +462,10 @@ async def trigger_analogy_analysis(
     _: bool = Depends(verify_admin_credentials),
     __: bool = Depends(csrf_protect),
     session: AsyncSession = Depends(get_session),
+    ai_client: DeepSeekClient = Depends(get_ai_client_dependency),
 ):
     """触发历史类比分析"""
     event, event_data, articles = await _get_event_and_articles(session, event_id)
-    
-    ai_client = DeepSeekClient()
     
     repr_result = await extract_event_representation(event_data, articles, ai_client)
     if not repr_result:
@@ -664,6 +662,7 @@ async def trigger_scenario_analysis(
     _: bool = Depends(verify_admin_credentials),
     __: bool = Depends(csrf_protect),
     session: AsyncSession = Depends(get_session),
+    ai_client: DeepSeekClient = Depends(get_ai_client_dependency),
 ):
     """触发情景推演分析"""
     event, event_data, articles = await _get_event_and_articles(session, event_id)
@@ -674,7 +673,6 @@ async def trigger_scenario_analysis(
     representation = repr_result.scalar_one_or_none()
     causal_pattern = representation.causal_pattern_desc if representation else None
     
-    ai_client = DeepSeekClient()
     analysis = await analyze_scenarios(event_data, articles, ai_client, causal_pattern)
     
     if not analysis:
