@@ -3,8 +3,8 @@
 {% block content %}
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title">Run History</h3>
-        <button class="btn btn-primary" onclick="loadRunHistory()">Refresh</button>
+        <h3 class="card-title">{{ t("admin.logs") }}</h3>
+        <button class="btn btn-primary" onclick="loadRunHistory()">{{ t("admin.refresh") }}</button>
     </div>
     <div class="card-body">
         <div class="table-container">
@@ -12,13 +12,13 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Run Type</th>
-                        <th>Started</th>
-                        <th>Duration</th>
-                        <th>Sources</th>
-                        <th>Success/Fail</th>
-                        <th>Fetched</th>
-                        <th>Saved</th>
+                        <th>{{ t("admin.run_type") }}</th>
+                        <th>{{ t("admin.started") }}</th>
+                        <th>{{ t("admin.duration") }}</th>
+                        <th>{{ t("admin.sources") }}</th>
+                        <th>{{ t("admin.success_rate") }}</th>
+                        <th>{{ t("admin.fetched_saved") }}</th>
+                        <th>{{ t("admin.fetched_saved") }}</th>
                     </tr>
                 </thead>
                 <tbody id="runs-table">
@@ -52,11 +52,11 @@ async function loadRunHistory() {
                     ? Math.round(run.sources_succeeded / run.sources_attempted * 100) 
                     : 0;
                 
-                let statusBadge = '<span class="badge badge-success">Success</span>';
+                let statusBadge = `<span class="badge badge-success">${i18n.enabled}</span>`;
                 if (successRate < 50) {
-                    statusBadge = '<span class="badge badge-danger">Failed</span>';
+                    statusBadge = `<span class="badge badge-danger">${i18n.error}</span>`;
                 } else if (successRate < 80) {
-                    statusBadge = '<span class="badge badge-warning">Partial</span>';
+                    statusBadge = `<span class="badge badge-warning">${i18n.warning}</span>`;
                 }
                 
                 return `
@@ -80,7 +80,7 @@ async function loadRunHistory() {
                 `;
             }).join('');
         } else {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">No run history</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">${i18n.no_run_history}</td></tr>`;
         }
     } catch (error) {
         console.error('Error loading run history:', error);

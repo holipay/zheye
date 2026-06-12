@@ -4,9 +4,81 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
-    <title>{{ title }} - {{ t("site.name") }} Admin</title>
+    <title>{{ title }} - {{ t("site.name") }}</title>
     <link rel="stylesheet" href="/static/css/admin.css">
     <script src="/static/js/htmx.min.js"></script>
+    <script>
+        const i18n = {
+            dashboard: {{ t("admin.dashboard")|tojson }},
+            rss_sources: {{ t("admin.rss_sources")|tojson }},
+            data_monitor: {{ t("admin.data_monitor")|tojson }},
+            logs: {{ t("admin.logs")|tojson }},
+            back_to_site: {{ t("admin.back_to_site")|tojson }},
+            total_news: {{ t("admin.total_news")|tojson }},
+            today: {{ t("admin.today")|tojson }},
+            this_week: {{ t("admin.this_week")|tojson }},
+            sources: {{ t("admin.sources")|tojson }},
+            active_events: {{ t("admin.active_events")|tojson }},
+            recent_runs: {{ t("admin.recent_runs")|tojson }},
+            view_all: {{ t("admin.view_all")|tojson }},
+            category_distribution: {{ t("admin.category_distribution")|tojson }},
+            news_trend_7d: {{ t("admin.news_trend_7d")|tojson }},
+            source_health: {{ t("admin.source_health")|tojson }},
+            manage_sources: {{ t("admin.manage_sources")|tojson }},
+            run_type: {{ t("admin.run_type")|tojson }},
+            started: {{ t("admin.started")|tojson }},
+            duration: {{ t("admin.duration")|tojson }},
+            fetched_saved: {{ t("admin.fetched_saved")|tojson }},
+            no_run_history: {{ t("admin.no_run_history")|tojson }},
+            healthy: {{ t("admin.healthy")|tojson }},
+            search_sources: {{ t("admin.search_sources")|tojson }},
+            all_categories: {{ t("admin.all_categories")|tojson }},
+            all_status: {{ t("admin.all_status")|tojson }},
+            warning: {{ t("admin.warning")|tojson }},
+            error: {{ t("admin.error")|tojson }},
+            language: {{ t("admin.language")|tojson }},
+            weight: {{ t("admin.weight")|tojson }},
+            status: {{ t("admin.status")|tojson }},
+            success_rate: {{ t("admin.success_rate")|tojson }},
+            last_check: {{ t("admin.last_check")|tojson }},
+            last_fetch: {{ t("admin.last_fetch")|tojson }},
+            actions: {{ t("admin.actions")|tojson }},
+            details: {{ t("admin.details")|tojson }},
+            enabled: {{ t("admin.enabled")|tojson }},
+            disabled: {{ t("admin.disabled")|tojson }},
+            source_details: {{ t("admin.source_details")|tojson }},
+            basic_info: {{ t("admin.basic_info")|tojson }},
+            url: {{ t("admin.url")|tojson }},
+            category: {{ t("admin.category")|tojson }},
+            health_status: {{ t("admin.health_status")|tojson }},
+            total_checks: {{ t("admin.total_checks")|tojson }},
+            consecutive_failures: {{ t("admin.consecutive_failures")|tojson }},
+            last_error: {{ t("admin.last_error")|tojson }},
+            recent_news: {{ t("admin.recent_news")|tojson }},
+            no_news: {{ t("admin.no_news")|tojson }},
+            no_data: {{ t("admin.no_data")|tojson }},
+            source_news_stats: {{ t("admin.source_news_stats")|tojson }},
+            system_info: {{ t("admin.system_info")|tojson }},
+            database_stats: {{ t("admin.database_stats")|tojson }},
+            os: {{ t("admin.os")|tojson }},
+            python_version: {{ t("admin.python_version")|tojson }},
+            database: {{ t("admin.database")|tojson }},
+            configured: {{ t("admin.configured")|tojson }},
+            not_configured: {{ t("admin.not_configured")|tojson }},
+            ai_function: {{ t("admin.ai_function")|tojson }},
+            enabled_label: {{ t("admin.enabled_label")|tojson }},
+            disabled_label: {{ t("admin.disabled_label")|tojson }},
+            config_file: {{ t("admin.config_file")|tojson }},
+            exists: {{ t("admin.exists")|tojson }},
+            not_found: {{ t("admin.not_found")|tojson }},
+            total_news_label: {{ t("admin.total_news_label")|tojson }},
+            sources_label: {{ t("admin.sources_label")|tojson }},
+            active_events_label: {{ t("admin.active_events_label")|tojson }},
+            today_news: {{ t("admin.today_news")|tojson }},
+            refresh: {{ t("admin.refresh")|tojson }},
+            source: {{ t("common.source")|tojson }}
+        };
+    </script>
 </head>
 <body>
     <div class="admin-layout">
@@ -19,27 +91,27 @@
                 </a>
             </div>
             <nav class="sidebar-nav">
-                <a href="/{{ lang }}/admin" class="nav-item {% if title == 'Dashboard' %}active{% endif %}">
+                <a href="/{{ lang }}/admin" class="nav-item {% if title == t('admin.dashboard') %}active{% endif %}">
                     <span class="nav-icon">📊</span>
-                    <span class="nav-text">Dashboard</span>
+                    <span class="nav-text">{{ t("admin.dashboard") }}</span>
                 </a>
-                <a href="/{{ lang }}/admin/sources" class="nav-item {% if title == 'RSS Sources' %}active{% endif %}">
+                <a href="/{{ lang }}/admin/sources" class="nav-item {% if title == t('admin.rss_sources') %}active{% endif %}">
                     <span class="nav-icon">📡</span>
-                    <span class="nav-text">RSS Sources</span>
+                    <span class="nav-text">{{ t("admin.rss_sources") }}</span>
                 </a>
-                <a href="/{{ lang }}/admin/monitor" class="nav-item {% if title == 'Data Monitor' %}active{% endif %}">
+                <a href="/{{ lang }}/admin/monitor" class="nav-item {% if title == t('admin.data_monitor') %}active{% endif %}">
                     <span class="nav-icon">📈</span>
-                    <span class="nav-text">Data Monitor</span>
+                    <span class="nav-text">{{ t("admin.data_monitor") }}</span>
                 </a>
-                <a href="/{{ lang }}/admin/logs" class="nav-item {% if title == 'Logs' %}active{% endif %}">
+                <a href="/{{ lang }}/admin/logs" class="nav-item {% if title == t('admin.logs') %}active{% endif %}">
                     <span class="nav-icon">📝</span>
-                    <span class="nav-text">Logs</span>
+                    <span class="nav-text">{{ t("admin.logs") }}</span>
                 </a>
             </nav>
             <div class="sidebar-footer">
                 <a href="/{{ lang }}" class="nav-item">
                     <span class="nav-icon">🌐</span>
-                    <span class="nav-text">Back to Site</span>
+                    <span class="nav-text">{{ t("admin.back_to_site") }}</span>
                 </a>
             </div>
         </aside>

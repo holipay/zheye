@@ -3,18 +3,18 @@
 {% block content %}
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title">RSS Sources</h3>
+        <h3 class="card-title">{{ t("admin.rss_sources") }}</h3>
         <div style="display: flex; gap: 12px;">
-            <input type="text" id="search-input" class="form-input" placeholder="Search sources..." style="width: 200px;"
+            <input type="text" id="search-input" class="form-input" placeholder="{{ t("admin.search_sources") }}" style="width: 200px;"
                    oninput="filterSources()">
             <select id="category-filter" class="form-select" style="width: 150px;" onchange="filterSources()">
-                <option value="">All Categories</option>
+                <option value="">{{ t("admin.all_categories") }}</option>
             </select>
             <select id="status-filter" class="form-select" style="width: 120px;" onchange="filterSources()">
-                <option value="">All Status</option>
-                <option value="healthy">Healthy</option>
-                <option value="warning">Warning</option>
-                <option value="error">Error</option>
+                <option value="">{{ t("admin.all_status") }}</option>
+                <option value="healthy">{{ t("admin.healthy") }}</option>
+                <option value="warning">{{ t("admin.warning") }}</option>
+                <option value="error">{{ t("admin.error") }}</option>
             </select>
         </div>
     </div>
@@ -23,14 +23,14 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Source</th>
-                        <th>Category</th>
-                        <th>Language</th>
-                        <th>Weight</th>
-                        <th>Status</th>
-                        <th>Success Rate</th>
-                        <th>Last Fetch</th>
-                        <th>Actions</th>
+                        <th>{{ t("common.source") }}</th>
+                        <th>{{ t("admin.category") }}</th>
+                        <th>{{ t("admin.language") }}</th>
+                        <th>{{ t("admin.weight") }}</th>
+                        <th>{{ t("admin.status") }}</th>
+                        <th>{{ t("admin.success_rate") }}</th>
+                        <th>{{ t("admin.last_fetch") }}</th>
+                        <th>{{ t("admin.actions") }}</th>
                     </tr>
                 </thead>
                 <tbody id="sources-table">
@@ -44,14 +44,13 @@
 </div>
 
 <!-- 源详情模态框 -->
-<div id="source-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; justify-content: center;">
+<div id="source-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
     <div style="background: white; border-radius: 8px; width: 600px; max-height: 80vh; overflow-y: auto;">
         <div style="padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-            <h3 id="modal-title">Source Details</h3>
+            <h3 id="modal-title">{{ t("admin.source_details") }}</h3>
             <button onclick="closeModal()" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
         </div>
         <div id="modal-content" style="padding: 20px;">
-            <!-- 动态填充 -->
         </div>
     </div>
 </div>
@@ -69,7 +68,6 @@ async function loadSources() {
         const data = await response.json();
         allSources = data.sources;
         
-        // 填充分类筛选器
         const categories = [...new Set(allSources.map(s => s.category))].filter(Boolean);
         const categoryFilter = document.getElementById('category-filter');
         categories.forEach(cat => {
@@ -117,7 +115,7 @@ function renderSources(sources) {
     const tbody = document.getElementById('sources-table');
     
     if (sources.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">No data</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-secondary);">${i18n.no_data}</td></tr>`;
         return;
     }
     
@@ -128,15 +126,14 @@ function renderSources(sources) {
         const successRate = health.success_rate || 0;
         const consecutiveFailures = health.consecutive_failures || 0;
         
-        let statusBadge = '<span class="badge badge-success">Healthy</span>';
+        let statusBadge = `<span class="badge badge-success">${i18n.healthy}</span>`;
         if (consecutiveFailures >= 5) {
-            statusBadge = '<span class="badge badge-danger">Error</span>';
+            statusBadge = `<span class="badge badge-danger">${i18n.error}</span>`;
         } else if (consecutiveFailures >= 3) {
-            statusBadge = '<span class="badge badge-warning">Warning</span>';
+            statusBadge = `<span class="badge badge-warning">${i18n.warning}</span>`;
         }
         
         const lastCheck = health.last_check ? new Date(health.last_check).toLocaleString(locale) : '-';
-        const lastItems = health.last_items || 0;
         
         return `
             <tr>
@@ -159,9 +156,9 @@ function renderSources(sources) {
                 <td style="font-size: 12px;">${lastCheck}</td>
                 <td>
                     <div style="display: flex; gap: 8px;">
-                        <button class="btn btn-sm btn-primary" onclick="viewSource('${src.name}')">Details</button>
+                        <button class="btn btn-sm btn-primary" onclick="viewSource('${src.name}')">${i18n.details}</button>
                         <button class="btn btn-sm ${src.enabled !== false ? 'btn-success' : 'btn-danger'}" onclick="toggleSource('${src.name}')">
-                            ${src.enabled !== false ? 'Enabled' : 'Disabled'}
+                            ${src.enabled !== false ? i18n.enabled : i18n.disabled}
                         </button>
                     </div>
                 </td>
@@ -180,10 +177,10 @@ async function toggleSource(name) {
         if (data.success) {
             loadSources();
         } else {
-            alert('Error: ' + (data.message || 'Unknown error'));
+            alert(data.message || 'Unknown error');
         }
     } catch (error) {
-        alert('Error: ' + error.message);
+        alert(error.message);
     }
 }
 
@@ -199,48 +196,48 @@ async function viewSource(name) {
         document.getElementById('modal-title').textContent = source.name;
         document.getElementById('modal-content').innerHTML = `
             <div style="margin-bottom: 20px;">
-                <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--text-secondary);">Basic Info</h4>
+                <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--text-secondary);">${i18n.basic_info}</h4>
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
                     <div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">URL</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">${i18n.url}</div>
                         <div style="word-break: break-all;">${source.url}</div>
                     </div>
                     <div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">Category</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">${i18n.category}</div>
                         <div>${source.category || '-'}</div>
                     </div>
                     <div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">Language</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">${i18n.language}</div>
                         <div>${source.lang}</div>
                     </div>
                     <div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">Weight</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">${i18n.weight}</div>
                         <div>${source.weight}</div>
                     </div>
                 </div>
             </div>
             
             <div style="margin-bottom: 20px;">
-                <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--text-secondary);">Health Status</h4>
+                <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--text-secondary);">${i18n.health_status}</h4>
                 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
                     <div style="text-align: center; padding: 12px; background: var(--bg-secondary); border-radius: 6px;">
                         <div style="font-size: 24px; font-weight: 700; color: var(--admin-success);">${health.success_rate}%</div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">Success Rate</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">${i18n.success_rate}</div>
                     </div>
                     <div style="text-align: center; padding: 12px; background: var(--bg-secondary); border-radius: 6px;">
                         <div style="font-size: 24px; font-weight: 700;">${health.total_checks}</div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">Total Checks</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">${i18n.total_checks}</div>
                     </div>
                     <div style="text-align: center; padding: 12px; background: var(--bg-secondary); border-radius: 6px;">
                         <div style="font-size: 24px; font-weight: 700; color: ${health.consecutive_failures >= 3 ? 'var(--admin-danger)' : 'var(--admin-success)'};">${health.consecutive_failures}</div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">Consecutive Failures</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">${i18n.consecutive_failures}</div>
                     </div>
                 </div>
             </div>
             
             ${health.last_error ? `
             <div style="margin-bottom: 20px;">
-                <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--text-secondary);">Last Error</h4>
+                <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--text-secondary);">${i18n.last_error}</h4>
                 <div style="padding: 12px; background: #fff5f5; border-radius: 6px; color: var(--admin-danger); font-size: 13px;">
                     ${health.last_error}
                 </div>
@@ -248,7 +245,7 @@ async function viewSource(name) {
             ` : ''}
             
             <div>
-                <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--text-secondary);">Recent News</h4>
+                <h4 style="margin-bottom: 12px; font-size: 14px; color: var(--text-secondary);">${i18n.recent_news}</h4>
                 ${recentNews.length > 0 ? `
                 <div style="max-height: 200px; overflow-y: auto;">
                     ${recentNews.map(n => `
@@ -258,7 +255,7 @@ async function viewSource(name) {
                         </div>
                     `).join('')}
                 </div>
-                ` : '<div style="color: var(--text-secondary);">No news</div>'}
+                ` : `<div style="color: var(--text-secondary);">${i18n.no_news}</div>`}
             </div>
         `;
         

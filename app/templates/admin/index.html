@@ -6,28 +6,28 @@
     <div class="stat-card">
         <div class="stat-card-header">
             <span class="stat-card-icon">📰</span>
-            <span class="stat-card-title">Total News</span>
+            <span class="stat-card-title">{{ t("admin.total_news") }}</span>
         </div>
         <div class="stat-card-value" id="stat-total">-</div>
     </div>
     <div class="stat-card">
         <div class="stat-card-header">
             <span class="stat-card-icon">📅</span>
-            <span class="stat-card-title">Today</span>
+            <span class="stat-card-title">{{ t("admin.today") }}</span>
         </div>
         <div class="stat-card-value" id="stat-today">-</div>
     </div>
     <div class="stat-card">
         <div class="stat-card-header">
             <span class="stat-card-icon">📊</span>
-            <span class="stat-card-title">This Week</span>
+            <span class="stat-card-title">{{ t("admin.this_week") }}</span>
         </div>
         <div class="stat-card-value" id="stat-week">-</div>
     </div>
     <div class="stat-card">
         <div class="stat-card-header">
             <span class="stat-card-icon">📡</span>
-            <span class="stat-card-title">Sources</span>
+            <span class="stat-card-title">{{ t("admin.sources") }}</span>
         </div>
         <div class="stat-card-value" id="stat-sources">-</div>
         <div class="stat-card-change positive" id="stat-healthy">-</div>
@@ -35,7 +35,7 @@
     <div class="stat-card">
         <div class="stat-card-header">
             <span class="stat-card-icon">⚡</span>
-            <span class="stat-card-title">Active Events</span>
+            <span class="stat-card-title">{{ t("admin.active_events") }}</span>
         </div>
         <div class="stat-card-value" id="stat-events">-</div>
     </div>
@@ -45,8 +45,8 @@
     <!-- 最近运行 -->
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title">Recent Runs</h3>
-            <a href="/{{ lang }}/admin/logs" class="btn btn-sm btn-primary">View All</a>
+            <h3 class="card-title">{{ t("admin.recent_runs") }}</h3>
+            <a href="/{{ lang }}/admin/logs" class="btn btn-sm btn-primary">{{ t("admin.view_all") }}</a>
         </div>
         <div class="card-body" id="last-run">
             <div class="loading">{{ t("common.loading") }}</div>
@@ -56,7 +56,7 @@
     <!-- 分类统计 -->
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title">Category Distribution</h3>
+            <h3 class="card-title">{{ t("admin.category_distribution") }}</h3>
         </div>
         <div class="card-body">
             <div id="category-stats">
@@ -69,7 +69,7 @@
 <!-- 每日趋势 -->
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title">7-Day News Trend</h3>
+        <h3 class="card-title">{{ t("admin.news_trend_7d") }}</h3>
     </div>
     <div class="card-body">
         <div id="daily-trend" class="chart-container">
@@ -81,19 +81,19 @@
 <!-- 源健康状态 -->
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title">Source Health</h3>
-        <a href="/{{ lang }}/admin/sources" class="btn btn-sm btn-primary">Manage Sources</a>
+        <h3 class="card-title">{{ t("admin.source_health") }}</h3>
+        <a href="/{{ lang }}/admin/sources" class="btn btn-sm btn-primary">{{ t("admin.manage_sources") }}</a>
     </div>
     <div class="card-body">
         <div class="table-container">
             <table>
                 <thead>
                     <tr>
-                        <th>Source</th>
-                        <th>Status</th>
-                        <th>Success Rate</th>
-                        <th>Last Check</th>
-                        <th>Last Fetch</th>
+                        <th>{{ t("common.source") }}</th>
+                        <th>{{ t("admin.status") }}</th>
+                        <th>{{ t("admin.success_rate") }}</th>
+                        <th>{{ t("admin.last_check") }}</th>
+                        <th>{{ t("admin.last_fetch") }}</th>
                     </tr>
                 </thead>
                 <tbody id="source-health-table">
@@ -122,7 +122,7 @@ async function loadDashboard() {
         document.getElementById('stat-today').textContent = overview.today_news;
         document.getElementById('stat-week').textContent = overview.week_news;
         document.getElementById('stat-sources').textContent = overview.source_count;
-        document.getElementById('stat-healthy').textContent = `${overview.healthy_sources} healthy`;
+        document.getElementById('stat-healthy').textContent = `${overview.healthy_sources} ${i18n.healthy}`;
         document.getElementById('stat-events').textContent = overview.active_events;
         
         // 更新最近运行
@@ -133,25 +133,25 @@ async function loadDashboard() {
             document.getElementById('last-run').innerHTML = `
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
                     <div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">Run Type</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">${i18n.run_type}</div>
                         <div style="font-weight: 600;">${run.run_type || '-'}</div>
                     </div>
                     <div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">Started</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">${i18n.started}</div>
                         <div style="font-weight: 600;">${run.started_at ? new Date(run.started_at).toLocaleString(locale) : '-'}</div>
                     </div>
                     <div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">Duration</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">${i18n.duration}</div>
                         <div style="font-weight: 600;">${duration}</div>
                     </div>
                     <div>
-                        <div style="font-size: 12px; color: var(--text-secondary);">Fetched / Saved</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">${i18n.fetched_saved}</div>
                         <div style="font-weight: 600;">${run.items_fetched} / ${run.items_saved}</div>
                     </div>
                 </div>
             `;
         } else {
-            document.getElementById('last-run').innerHTML = '<div style="color: var(--text-secondary);">No run history</div>';
+            document.getElementById('last-run').innerHTML = `<div style="color: var(--text-secondary);">${i18n.no_run_history}</div>`;
         }
         
         // 更新分类统计

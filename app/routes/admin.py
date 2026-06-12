@@ -91,7 +91,7 @@ async def admin_index(request: Request, lang: str, _: bool = Depends(verify_admi
     """管理后台首页"""
     if lang not in {"en", "zh"}:
         return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin")
-    ctx = get_template_context(request, include_csrf=True, title="Dashboard")
+    ctx = get_template_context(request, include_csrf=True, title=get_text(lang, "admin.dashboard"))
     return templates.TemplateResponse(request=request, name="admin/index.html", context=ctx)
 
 
@@ -100,7 +100,7 @@ async def admin_sources(request: Request, lang: str, _: bool = Depends(verify_ad
     """RSS 源管理页面"""
     if lang not in {"en", "zh"}:
         return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin/sources")
-    ctx = get_template_context(request, include_csrf=True, title="RSS Sources")
+    ctx = get_template_context(request, include_csrf=True, title=get_text(lang, "admin.rss_sources"))
     return templates.TemplateResponse(request=request, name="admin/sources.html", context=ctx)
 
 
@@ -109,7 +109,7 @@ async def admin_monitor(request: Request, lang: str, _: bool = Depends(verify_ad
     """数据监控页面"""
     if lang not in {"en", "zh"}:
         return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin/monitor")
-    ctx = get_template_context(request, include_csrf=True, title="Data Monitor")
+    ctx = get_template_context(request, include_csrf=True, title=get_text(lang, "admin.data_monitor"))
     return templates.TemplateResponse(request=request, name="admin/monitor.html", context=ctx)
 
 
@@ -118,7 +118,7 @@ async def admin_logs(request: Request, lang: str, _: bool = Depends(verify_admin
     """运行日志页面"""
     if lang not in {"en", "zh"}:
         return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin/logs")
-    ctx = get_template_context(request, include_csrf=True, title="Logs")
+    ctx = get_template_context(request, include_csrf=True, title=get_text(lang, "admin.logs"))
     return templates.TemplateResponse(request=request, name="admin/logs.html", context=ctx)
 
 

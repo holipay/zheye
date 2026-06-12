@@ -5,7 +5,7 @@
     <!-- 源统计 -->
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title">Source News Statistics</h3>
+            <h3 class="card-title">{{ t("admin.source_news_stats") }}</h3>
         </div>
         <div class="card-body">
             <div id="source-stats">
@@ -17,7 +17,7 @@
     <!-- 系统信息 -->
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title">System Info</h3>
+            <h3 class="card-title">{{ t("admin.system_info") }}</h3>
         </div>
         <div class="card-body">
             <div id="system-info">
@@ -30,7 +30,7 @@
 <!-- 数据库统计 -->
 <div class="card">
     <div class="card-header">
-        <h3 class="card-title">Database Statistics</h3>
+        <h3 class="card-title">{{ t("admin.database_stats") }}</h3>
     </div>
     <div class="card-body">
         <div id="db-stats" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
@@ -66,7 +66,7 @@ async function loadSourceStats() {
                 </div>
             `).join('');
         } else {
-            container.innerHTML = '<div style="color: var(--text-secondary);">No data</div>';
+            container.innerHTML = `<div style="color: var(--text-secondary);">${i18n.no_data}</div>`;
         }
     } catch (error) {
         console.error('Error loading source stats:', error);
@@ -81,25 +81,25 @@ async function loadSystemInfo() {
         document.getElementById('system-info').innerHTML = `
             <div style="display: flex; flex-direction: column; gap: 16px;">
                 <div>
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">OS</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">${i18n.os}</div>
                     <div style="font-size: 14px;">${data.platform}</div>
                 </div>
                 <div>
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Python Version</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">${i18n.python_version}</div>
                     <div style="font-size: 14px;">${data.python_version}</div>
                 </div>
                 <div>
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Database</div>
-                    <div style="font-size: 14px;">${data.database_configured ? '✓ Configured' : '✗ Not Configured'}</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">${i18n.database}</div>
+                    <div style="font-size: 14px;">${data.database_configured ? '✓ ' + i18n.configured : '✗ ' + i18n.not_configured}</div>
                 </div>
                 <div>
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">AI Function</div>
-                    <div style="font-size: 14px;">${data.ai_enabled ? '✅ Enabled' : '❌ Disabled'}</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">${i18n.ai_function}</div>
+                    <div style="font-size: 14px;">${data.ai_enabled ? '✅ ' + i18n.enabled_label : '❌ ' + i18n.disabled_label}</div>
                 </div>
                 <div>
-                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Config File</div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">${i18n.config_file}</div>
                     <div style="font-size: 12px; word-break: break-all;">${data.config_path}</div>
-                    <div style="font-size: 12px; color: ${data.config_exists ? 'var(--admin-success)' : 'var(--admin-danger)'};">${data.config_exists ? '✓ Exists' : '✗ Not Found'}</div>
+                    <div style="font-size: 12px; color: ${data.config_exists ? 'var(--admin-success)' : 'var(--admin-danger)'};">${data.config_exists ? '✓ ' + i18n.exists : '✗ ' + i18n.not_found}</div>
                 </div>
             </div>
         `;
@@ -117,19 +117,19 @@ async function loadDbStats() {
         document.getElementById('db-stats').innerHTML = `
             <div style="text-align: center; padding: 20px; background: var(--bg-secondary); border-radius: 8px;">
                 <div style="font-size: 32px; font-weight: 700; color: var(--admin-accent);">${overview.total_news}</div>
-                <div style="font-size: 13px; color: var(--text-secondary);">Total News</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">${i18n.total_news_label}</div>
             </div>
             <div style="text-align: center; padding: 20px; background: var(--bg-secondary); border-radius: 8px;">
                 <div style="font-size: 32px; font-weight: 700; color: var(--admin-success);">${overview.source_count}</div>
-                <div style="font-size: 13px; color: var(--text-secondary);">Sources</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">${i18n.sources_label}</div>
             </div>
             <div style="text-align: center; padding: 20px; background: var(--bg-secondary); border-radius: 8px;">
                 <div style="font-size: 32px; font-weight: 700; color: var(--admin-warning);">${overview.active_events}</div>
-                <div style="font-size: 13px; color: var(--text-secondary);">Active Events</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">${i18n.active_events_label}</div>
             </div>
             <div style="text-align: center; padding: 20px; background: var(--bg-secondary); border-radius: 8px;">
                 <div style="font-size: 32px; font-weight: 700; color: var(--admin-highlight);">${overview.today_news}</div>
-                <div style="font-size: 13px; color: var(--text-secondary);">Today's News</div>
+                <div style="font-size: 13px; color: var(--text-secondary);">${i18n.today_news}</div>
             </div>
         `;
     } catch (error) {
