@@ -1,7 +1,7 @@
 import os
 from typing import Optional
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import ConfigDict, Field
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -106,11 +106,12 @@ class Settings(BaseSettings):
     MAX_RETRIES: int = Field(default=2, description="最大重试次数")
     RETENTION_DAYS: int = Field(default=30, description="数据保留天数")
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
-        extra = "ignore"  # 忽略额外的环境变量
+    model_config = ConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore",
+    )
 
 
 settings = Settings()
