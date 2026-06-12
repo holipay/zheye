@@ -414,6 +414,14 @@ tr:hover {
    暗黑模式
    ======================================== */
 [data-theme="dark"] {
+    --admin-primary: #0d1117;
+    --admin-secondary: #161b22;
+    --admin-accent: #1a4a7a;
+    --admin-highlight: #ff6b6b;
+    --admin-success: #00d2a0;
+    --admin-warning: #fdd835;
+    --admin-danger: #ff7043;
+
     --text-primary: #e2e8f0;
     --text-secondary: #a0aec0;
     --text-light: #718096;
