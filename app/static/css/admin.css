@@ -409,3 +409,158 @@ tr:hover {
         grid-template-columns: 1fr;
     }
 }
+
+/* ========================================
+   暗黑模式
+   ======================================== */
+[data-theme="dark"] {
+    --text-primary: #e2e8f0;
+    --text-secondary: #a0aec0;
+    --text-light: #718096;
+    --text-inverse: #1a1a2e;
+
+    --bg-primary: #1a202c;
+    --bg-secondary: #0d1117;
+    --bg-sidebar: #0a0e14;
+
+    --border-color: #2d3748;
+
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+}
+
+[data-theme="dark"] body {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .sidebar {
+    background: var(--bg-sidebar);
+    border-right-color: var(--border-color);
+}
+
+[data-theme="dark"] .sidebar .nav-item:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+[data-theme="dark"] .sidebar .nav-item.active {
+    background: rgba(255,255,255,0.15);
+}
+
+[data-theme="dark"] .admin-header {
+    background: var(--bg-primary);
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .admin-content {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .card {
+    background: var(--bg-primary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .card-header {
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .stat-card {
+    background: var(--bg-primary);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .table-container table {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .table-container th {
+    background: var(--bg-tertiary);
+    border-bottom-color: var(--border-color);
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .table-container td {
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .table-container tr:hover {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .form-input,
+[data-theme="dark"] .form-select {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .badge {
+    color: var(--text-primary);
+}
+
+[data-theme="dark"] .badge-success {
+    background: rgba(0, 184, 148, 0.2);
+    color: #00b894;
+}
+
+[data-theme="dark"] .badge-danger {
+    background: rgba(225, 112, 85, 0.2);
+    color: #e17055;
+}
+
+[data-theme="dark"] .badge-warning {
+    background: rgba(253, 203, 110, 0.2);
+    color: #fdcb6e;
+}
+
+[data-theme="dark"] .badge-info {
+    background: rgba(15, 52, 96, 0.3);
+    color: #74b9ff;
+}
+
+[data-theme="dark"] .progress-bar {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="dark"] .btn-primary {
+    background: var(--admin-accent);
+}
+
+[data-theme="dark"] .btn-primary:hover {
+    background: #1a4a7a;
+}
+
+[data-theme="dark"] .loading {
+    color: var(--text-muted);
+}
+
+/* 暗黑模式切换按钮 */
+.theme-toggle {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    z-index: 1000;
+    transition: all 0.3s;
+}
+
+.theme-toggle:hover {
+    transform: scale(1.1);
+    border-color: var(--admin-accent);
+}
+
+[data-theme="dark"] .theme-toggle {
+    background: var(--bg-tertiary);
+    border-color: var(--border-color);
+}
