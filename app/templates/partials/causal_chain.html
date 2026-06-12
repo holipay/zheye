@@ -3,7 +3,7 @@
     <!-- Mermaid 因果链图 -->
     {% if mermaid %}
     <div class="chain-mermaid">
-        <h4 class="section-title">{{ "Causal Chain Visualization" if lang == "en" else "因果链可视化" }}</h4>
+        <h4 class="section-title">{{ t("deep.causal_chain_viz") }}</h4>
         <div class="mermaid-container">
             <pre class="mermaid">{{ mermaid }}</pre>
         </div>
@@ -12,18 +12,18 @@
     
     <!-- 因果链图示 -->
     <div class="chain-visualization">
-        <h4 class="section-title">{{ "Causal Chain Analysis" if lang == "en" else "因果链分析" }}</h4>
+        <h4 class="section-title">{{ t("deep.causal_chain_analysis") }}</h4>
         
         <!-- 节点列表（按类型分组） -->
         <div class="nodes-by-type">
             {% set node_types = ["root_cause", "trigger", "immediate", "short_term", "long_term", "scenario"] %}
             {% set type_labels = {
-                "root_cause": "Root Cause" if lang == "en" else "根本原因",
-                "trigger": "Trigger" if lang == "en" else "触发因素",
-                "immediate": "Immediate Impact" if lang == "en" else "即时影响",
-                "short_term": "Short-term Effect" if lang == "en" else "短期效应",
-                "long_term": "Long-term Outlook" if lang == "en" else "长期走向",
-                "scenario": "Scenario" if lang == "en" else "可能情景"
+                "root_cause": t("deep.root_cause"),
+                "trigger": t("deep.trigger"),
+                "immediate": t("deep.immediate_impact"),
+                "short_term": t("deep.short_term"),
+                "long_term": t("deep.long_term"),
+                "scenario": t("deep.scenario")
             } %}
             {% set type_icons = {
                 "root_cause": "🌱",
@@ -93,7 +93,7 @@
     <!-- 关系列表 -->
     {% if links %}
     <div class="links-section">
-        <h4 class="section-title">{{ "Causal Relationships" if lang == "en" else "因果关系" }}</h4>
+        <h4 class="section-title">{{ t("deep.causal_relationships") }}</h4>
         <div class="links-list">
             {% for link in links %}
             <div class="link-item">

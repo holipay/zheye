@@ -1,16 +1,16 @@
 <!-- 知识框架空状态 -->
 <div class="empty-state">
     <div class="empty-icon">📖</div>
-    <h4 class="empty-title">{{ "No Knowledge Framework" if lang == "en" else "暂无知识框架" }}</h4>
+    <h4 class="empty-title">{{ t("deep.no_knowledge") }}</h4>
     <p class="empty-description">
-        {{ "The knowledge framework analysis has not been performed yet." if lang == "en" else "知识框架分析尚未执行。" }}
+        {{ t("deep.no_knowledge_desc") }}
     </p>
     <button class="btn-analyze" 
             hx-post="/api/deep-analyst/events/{{ event_id }}/knowledge/analyze"
             hx-headers='{"X-CSRF-Token": document.querySelector("meta[name=csrf-token]")?.content || ""}'
             hx-target="#tab-knowledge"
             hx-swap="innerHTML">
-        {{ "Analyze Knowledge Framework" if lang == "en" else "分析知识框架" }}
+        {{ t("deep.analyze_knowledge") }}
     </button>
 </div>
 

@@ -9,7 +9,7 @@
     </div>
     {% if analysis.hot_keywords %}
     <div class="analysis-keywords">
-        <h4>🔥 Hot Keywords</h4>
+        <h4>{{ t("home.hot_keywords") }}</h4>
         <div class="keyword-tags">
             {% for keyword in analysis.hot_keywords %}
             <span class="keyword-tag">{{ keyword }}</span>

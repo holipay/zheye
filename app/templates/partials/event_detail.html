@@ -9,33 +9,33 @@
         <h2 class="event-title">{{ event.title }}</h2>
         <div class="event-meta">
             <span class="event-category badge">{{ t("category." + event.category) }}</span>
-            <span class="event-type">{{ event.event_type or 'Uncategorized' }}</span>
+            <span class="event-type">{{ event.event_type or t("common.uncategorized") }}</span>
             <span class="event-status status-{{ event.status }}">{{ event.status }}</span>
         </div>
     </div>
 
     <div class="event-info-grid">
         <div class="event-info-card">
-            <div class="info-label">{{ "First Seen" if lang == "en" else "首次出现" }}</div>
+            <div class="info-label">{{ t("common.first_seen") }}</div>
             <div class="info-value">{{ event.first_seen }}</div>
         </div>
         <div class="event-info-card">
-            <div class="info-label">{{ "Last Updated" if lang == "en" else "最近更新" }}</div>
+            <div class="info-label">{{ t("common.last_updated") }}</div>
             <div class="info-value">{{ event.last_updated }}</div>
         </div>
         <div class="event-info-card">
-            <div class="info-label">{{ "Updates" if lang == "en" else "更新次数" }}</div>
+            <div class="info-label">{{ t("common.updates") }}</div>
             <div class="info-value">{{ event.update_count }}</div>
         </div>
         <div class="event-info-card">
-            <div class="info-label">{{ "Articles" if lang == "en" else "相关文章" }}</div>
+            <div class="info-label">{{ t("common.articles_count") }}</div>
             <div class="info-value">{{ event.timeline|length }}</div>
         </div>
     </div>
 
     {% if event.description %}
     <div class="event-description">
-        <h3>{{ "Event Overview" if lang == "en" else "事件概述" }}</h3>
+        <h3>{{ t("common.event_overview") }}</h3>
         <p>{{ event.description }}</p>
     </div>
     {% endif %}
@@ -44,20 +44,20 @@
     <div class="event-tabs">
         {% if deep_analyst_enabled %}
         <button class="tab-btn active" onclick="switchTab('knowledge')">
-            {{ "Knowledge" if lang == "en" else "知识框架" }}
+            {{ t("common.knowledge") }}
         </button>
         <button class="tab-btn" onclick="switchTab('causal')">
-            {{ "Causal Chain" if lang == "en" else "因果链" }}
+            {{ t("common.causal_chain") }}
         </button>
         <button class="tab-btn" onclick="switchTab('analogies')">
-            {{ "Historical" if lang == "en" else "历史类比" }}
+            {{ t("common.historical") }}
         </button>
         <button class="tab-btn" onclick="switchTab('scenarios')">
-            {{ "Scenarios" if lang == "en" else "情景推演" }}
+            {{ t("common.scenarios") }}
         </button>
         {% endif %}
         <button class="tab-btn {% if not deep_analyst_enabled %}active{% endif %}" onclick="switchTab('timeline')">
-            {{ "Timeline" if lang == "en" else "事件时间线" }}
+            {{ t("common.timeline") }}
         </button>
     </div>
 
@@ -67,7 +67,7 @@
         <div hx-get="/api/deep-analyst/events/{{ event.event_id }}/knowledge?lang={{ lang }}" 
              hx-trigger="load" 
              hx-target="#tab-knowledge">
-            <div class="loading">{{ "Loading..." if lang == "en" else "加载中..." }}</div>
+            <div class="loading">{{ t("common.loading") }}</div>
         </div>
     </div>
 
@@ -76,7 +76,7 @@
         <div hx-get="/api/deep-analyst/events/{{ event.event_id }}/causal-chain?lang={{ lang }}" 
              hx-trigger="load" 
              hx-target="#tab-causal">
-            <div class="loading">{{ "Loading..." if lang == "en" else "加载中..." }}</div>
+            <div class="loading">{{ t("common.loading") }}</div>
         </div>
     </div>
 
@@ -85,7 +85,7 @@
         <div hx-get="/api/deep-analyst/events/{{ event.event_id }}/analogies?lang={{ lang }}" 
              hx-trigger="load" 
              hx-target="#tab-analogies">
-            <div class="loading">{{ "Loading..." if lang == "en" else "加载中..." }}</div>
+            <div class="loading">{{ t("common.loading") }}</div>
         </div>
     </div>
 
@@ -94,7 +94,7 @@
         <div hx-get="/api/deep-analyst/events/{{ event.event_id }}/scenarios?lang={{ lang }}" 
              hx-trigger="load" 
              hx-target="#tab-scenarios">
-            <div class="loading">{{ "Loading..." if lang == "en" else "加载中..." }}</div>
+            <div class="loading">{{ t("common.loading") }}</div>
         </div>
     </div>
     {% endif %}
@@ -116,13 +116,13 @@
             {% endfor %}
         </div>
         {% else %}
-        <p class="no-data">{{ "No related articles" if lang == "en" else "暂无相关文章" }}</p>
+        <p class="no-data">{{ t("common.no_related_articles") }}</p>
         {% endif %}
     </div>
 
     {% if event.related_events %}
     <div class="related-events-section">
-        <h3>{{ "Related Events" if lang == "en" else "相关事件" }}</h3>
+        <h3>{{ t("common.related_events") }}</h3>
         <div class="related-events-list">
             {% for related in event.related_events %}
             <div class="related-event-item">
@@ -136,7 +136,7 @@
                     </a>
                 </h4>
                 <div class="related-meta">
-                    <span>{{ related.update_count }} {{ "updates" if lang == "en" else "次更新" }}</span>
+                    <span>{{ t("common.updates_count", count=related.update_count) }}</span>
                 </div>
             </div>
             {% endfor %}

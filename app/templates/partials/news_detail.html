@@ -22,24 +22,24 @@
 
         {% if news.summary %}
         <div class="detail-summary">
-            <h4>Summary</h4>
+            <h4>{{ t("common.summary") }}</h4>
             <p>{{ news.summary }}</p>
         </div>
         {% endif %}
 
         {% if news.content %}
         <div class="detail-content">
-            <h4>Content</h4>
+            <h4>{{ t("common.content") }}</h4>
             <p>{{ news.content }}</p>
         </div>
         {% endif %}
 
-        <a href="{{ news.link }}" target="_blank" rel="noopener" class="read-original">Read Original &rarr;</a>
+        <a href="{{ news.link }}" target="_blank" rel="noopener" class="read-original">{{ t("common.read_original") }} &rarr;</a>
     </article>
 
     {% if keywords %}
     <section class="detail-section">
-        <h3>Keywords</h3>
+        <h3>{{ t("common.keywords") }}</h3>
         <div class="keyword-tags">
             {% for kw in keywords %}
             <a href="/{{ lang }}/news?keyword_id={{ kw.id }}" class="keyword-tag">
@@ -52,7 +52,7 @@
 
     {% if entities %}
     <section class="detail-section">
-        <h3>Entities</h3>
+        <h3>{{ t("common.entities") }}</h3>
         <div class="entity-grid">
             {% for ent in entities %}
             <div class="entity-item entity-{{ ent.entity_type }}">
@@ -69,7 +69,7 @@
 
     {% if related %}
     <section class="detail-section">
-        <h3>Related Articles</h3>
+        <h3>{{ t("common.related_articles") }}</h3>
         <div class="related-list">
             {% for r in related %}
             <a href="/{{ lang }}/news/{{ r.id }}" class="related-item">
@@ -77,7 +77,7 @@
                     <span class="related-source">{{ r.source }}</span>
                     <span class="related-category">{{ t("category." + r.category) }}</span>
                     <span class="related-date">{{ r.date }}</span>
-                    <span class="related-score">Relevance: {{ "%.0f"|format(r.score * 100) }}%</span>
+                    <span class="related-score">{{ t("common.relevance") }}: {{ "%.0f"|format(r.score * 100) }}%</span>
                 </div>
                 <div class="related-title">{{ r.translated_title or r.title }}</div>
             </a>

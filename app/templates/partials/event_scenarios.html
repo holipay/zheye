@@ -3,7 +3,7 @@
     <!-- 关键变量 -->
     {% if key_variables %}
     <div class="scenarios-section">
-        <h4 class="section-title">{{ "Key Variables" if lang == "en" else "关键变量" }}</h4>
+        <h4 class="section-title">{{ t("deep.key_variables") }}</h4>
         <div class="variables-grid">
             {% for var in key_variables %}
             <div class="variable-card">
@@ -11,13 +11,13 @@
                 <div class="var-importance">{{ var.why_important }}</div>
                 {% if var.current_status %}
                 <div class="var-status">
-                    <span class="status-label">{{ "Current Status" if lang == "en" else "当前状态" }}:</span>
+                    <span class="status-label">{{ t("deep.current_status") }}:</span>
                     {{ var.current_status }}
                 </div>
                 {% endif %}
                 {% if var.data_source %}
                 <div class="var-source">
-                    <span class="source-label">{{ "Data Source" if lang == "en" else "数据来源" }}:</span>
+                    <span class="source-label">{{ t("deep.data_source") }}:</span>
                     {{ var.data_source }}
                 </div>
                 {% endif %}
@@ -30,7 +30,7 @@
     <!-- 观察信号 -->
     {% if observation_signals %}
     <div class="scenarios-section">
-        <h4 class="section-title">{{ "Observation Signals" if lang == "en" else "观察信号" }}</h4>
+        <h4 class="section-title">{{ t("deep.observation_signals") }}</h4>
         <div class="signals-list">
             {% for signal in observation_signals %}
             <div class="signal-card">
@@ -38,13 +38,13 @@
                 <div class="signal-watch">{{ signal.what_to_watch }}</div>
                 {% if signal.frequency %}
                 <div class="signal-freq">
-                    <span class="freq-label">{{ "Frequency" if lang == "en" else "频率" }}:</span>
+                    <span class="freq-label">{{ t("deep.frequency") }}:</span>
                     {{ signal.frequency }}
                 </div>
                 {% endif %}
                 {% if signal.source %}
                 <div class="signal-source">
-                    <span class="source-label">{{ "Source" if lang == "en" else "来源" }}:</span>
+                    <span class="source-label">{{ t("deep.source") }}:</span>
                     {{ signal.source }}
                 </div>
                 {% endif %}
@@ -57,7 +57,7 @@
     <!-- 情景框架 -->
     {% if scenarios %}
     <div class="scenarios-section">
-        <h4 class="section-title">{{ "Scenarios" if lang == "en" else "情景框架" }}</h4>
+        <h4 class="section-title">{{ t("deep.scenarios_framework") }}</h4>
         <div class="scenarios-list">
             {% for scenario in scenarios %}
             <div class="scenario-card">
@@ -66,7 +66,7 @@
                 
                 {% if scenario.trigger_conditions %}
                 <div class="scenario-triggers">
-                    <span class="triggers-label">{{ "Trigger Conditions" if lang == "en" else "触发条件" }}:</span>
+                    <span class="triggers-label">{{ t("deep.trigger_conditions") }}:</span>
                     <ul class="triggers-list">
                         {% for condition in scenario.trigger_conditions %}
                         <li>{{ condition }}</li>
@@ -77,7 +77,7 @@
 
                 {% if scenario.observation_cues %}
                 <div class="scenario-cues">
-                    <span class="cues-label">{{ "Observation Cues" if lang == "en" else "观察线索" }}:</span>
+                    <span class="cues-label">{{ t("deep.observation_cues") }}:</span>
                     <ul class="cues-list">
                         {% for cue in scenario.observation_cues %}
                         <li>{{ cue }}</li>
@@ -88,7 +88,7 @@
 
                 {% if scenario.implications %}
                 <div class="scenario-implications">
-                    <span class="implications-label">{{ "Implications" if lang == "en" else "影响分析" }}:</span>
+                    <span class="implications-label">{{ t("deep.implications") }}:</span>
                     {{ scenario.implications }}
                 </div>
                 {% endif %}
@@ -101,20 +101,20 @@
     <!-- 思考问题 -->
     {% if thinking_questions %}
     <div class="scenarios-section">
-        <h4 class="section-title">{{ "Thinking Questions" if lang == "en" else "思考问题" }}</h4>
+        <h4 class="section-title">{{ t("deep.thinking_questions") }}</h4>
         <div class="questions-list">
             {% for q in thinking_questions %}
             <div class="question-card">
                 <div class="question-text">{{ q.question }}</div>
                 {% if q.purpose %}
                 <div class="question-purpose">
-                    <span class="purpose-label">{{ "Purpose" if lang == "en" else "目的" }}:</span>
+                    <span class="purpose-label">{{ t("deep.purpose") }}:</span>
                     {{ q.purpose }}
                 </div>
                 {% endif %}
                 {% if q.perspective %}
                 <div class="question-perspective">
-                    <span class="perspective-label">{{ "Perspective" if lang == "en" else "视角" }}:</span>
+                    <span class="perspective-label">{{ t("deep.perspective") }}:</span>
                     {{ q.perspective }}
                 </div>
                 {% endif %}

@@ -142,16 +142,17 @@ async def get_event_categories(session: AsyncSession = Depends(get_session)):
     return data
 
 
-@router.get("/events/{event_id}")
+@router.get("/events/{event_id}", response_class=HTMLResponse)
 async def get_event_detail(
+    request: Request,
     event_id: str,
     session: AsyncSession = Depends(get_session),
 ):
-    """获取事件详情和时间线"""
+    """获取事件详情和时间线（HTML）"""
     cache_key = f"api:events:detail:{event_id}"
     cached = get_cached(cache_key)
     if cached:
-        return cached
+        return HTMLResponse(content=cached)
 
     result = await session.execute(
         select(Event).where(Event.event_id == event_id)
@@ -161,14 +162,12 @@ async def get_event_detail(
     if not event:
         raise HTTPException(status_code=404, detail=Err.EVENT_NOT_FOUND)
 
-    # 获取关联文章详情
     articles = []
     if event.related_articles:
         for article_ref in event.related_articles[:10]:
             if isinstance(article_ref, dict):
                 articles.append(article_ref)
 
-    # 获取事件类型的其他事件（相关事件）
     related_events = []
     if event.data and event.data.get("event_type"):
         event_type = event.data["event_type"]
@@ -188,10 +187,9 @@ async def get_event_detail(
                 "update_count": related.update_count,
             })
 
-    # 获取因果链数据
     causal_chain = await _get_causal_chain(session, event_id)
 
-    data = {
+    event_data = {
         "event_id": event.event_id,
         "title": event.title,
         "description": event.description,
@@ -205,12 +203,22 @@ async def get_event_detail(
         "related_events": related_events,
         "causal_chain": causal_chain,
     }
-    set_cached(cache_key, data, ttl=300)
-    return data
+
+    from app.config import settings
+    response = templates.TemplateResponse(
+        request=request,
+        name="partials/event_detail.html",
+        context=_get_api_context(request, event=event_data, deep_analyst_enabled=settings.ENABLE_DEEP_ANALYST),
+    )
+    set_cached(cache_key, response.body.decode(), ttl=300)
+    return response
 
 
 async def _get_causal_chain(session: AsyncSession, event_id: str) -> dict:
-    from deep_analyst.models.causal_chain import CausalNode, CausalLink, NodeType
+    try:
+        from deep_analyst.models.causal_chain import CausalNode, CausalLink, NodeType
+    except ImportError:
+        return {"nodes": [], "links": [], "mermaid": ""}
 
     # 查询因果节点
     nodes_query = (

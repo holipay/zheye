@@ -12,11 +12,11 @@
                 <div class="hero-stat-label">{{ t("home.stat_total") }}</div>
             </div>
             <div class="hero-stat">
-                <div class="hero-stat-value" id="stat-sources">44+</div>
+                <div class="hero-stat-value" id="stat-sources">-</div>
                 <div class="hero-stat-label">{{ t("home.stat_sources") }}</div>
             </div>
             <div class="hero-stat">
-                <div class="hero-stat-value" id="stat-categories">13</div>
+                <div class="hero-stat-value" id="stat-categories">-</div>
                 <div class="hero-stat-label">{{ t("home.stat_categories") }}</div>
             </div>
         </div>
@@ -141,6 +141,8 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(r => r.json())
         .then(data => {
             document.getElementById('stat-total').textContent = data.total || 0;
+            document.getElementById('stat-sources').textContent = (data.sources ? data.sources.length : 0) + '+';
+            document.getElementById('stat-categories').textContent = data.categories ? data.categories.length : 0;
         });
 
     // 加载图表

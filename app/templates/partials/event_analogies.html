@@ -3,11 +3,11 @@
     <!-- 当前事件表征 -->
     {% if representation %}
     <div class="representation-section">
-        <h4 class="section-title">{{ "Event Representation" if lang == "en" else "事件表征" }}</h4>
+        <h4 class="section-title">{{ t("deep.event_representation") }}</h4>
         <div class="representation-card">
             {% if representation.surface_summary %}
             <div class="repr-layer">
-                <h5 class="layer-title">{{ "Surface Layer" if lang == "en" else "表面层" }}</h5>
+                <h5 class="layer-title">{{ t("deep.surface_layer") }}</h5>
                 <p class="layer-content">{{ representation.surface_summary }}</p>
                 {% if representation.surface_entities %}
                 <div class="entities-list">
@@ -21,20 +21,20 @@
 
             {% if representation.causal_pattern_desc %}
             <div class="repr-layer">
-                <h5 class="layer-title">{{ "Structural Layer" if lang == "en" else "结构层" }}</h5>
+                <h5 class="layer-title">{{ t("deep.structural_layer") }}</h5>
                 <div class="pattern-info">
                     <span class="pattern-tag">{{ representation.causal_pattern }}</span>
                     <p class="layer-content">{{ representation.causal_pattern_desc }}</p>
                 </div>
                 {% if representation.decision_logic %}
                 <div class="logic-item">
-                    <span class="logic-label">{{ "Decision Logic" if lang == "en" else "决策逻辑" }}:</span>
+                    <span class="logic-label">{{ t("deep.decision_logic") }}:</span>
                     {{ representation.decision_logic }}
                 </div>
                 {% endif %}
                 {% if representation.transmission_mechanism %}
                 <div class="logic-item">
-                    <span class="logic-label">{{ "Transmission" if lang == "en" else "传导机制" }}:</span>
+                    <span class="logic-label">{{ t("deep.transmission") }}:</span>
                     {{ representation.transmission_mechanism }}
                 </div>
                 {% endif %}
@@ -43,7 +43,7 @@
 
             {% if representation.economic_principle_desc %}
             <div class="repr-layer">
-                <h5 class="layer-title">{{ "Abstract Layer" if lang == "en" else "抽象层" }}</h5>
+                <h5 class="layer-title">{{ t("deep.abstract_layer") }}</h5>
                 <div class="principle-info">
                     <span class="principle-tag">{{ representation.economic_principle }}</span>
                     <p class="layer-content">{{ representation.economic_principle_desc }}</p>
@@ -56,14 +56,14 @@
 
     <!-- 类比结果 -->
     <div class="analogies-section">
-        <h4 class="section-title">{{ "Historical Analogies" if lang == "en" else "历史类比" }}</h4>
+        <h4 class="section-title">{{ t("deep.historical_analogies") }}</h4>
         <div class="analogies-list">
             {% for analogy in analogies %}
             <div class="analogy-card">
                 <div class="analogy-header">
                     <span class="analogy-type badge">{{ analogy.analogy_type }}</span>
                     <span class="similarity-score">
-                        {{ "Similarity" if lang == "en" else "相似度" }}: 
+                        {{ t("deep.similarity") }}: 
                         {{ "%.0f" | format(analogy.overall_similarity * 100) }}%
                     </span>
                 </div>
@@ -72,7 +72,7 @@
 
                 {% if analogy.key_insight %}
                 <div class="insight-box">
-                    <span class="insight-label">{{ "Key Insight" if lang == "en" else "关键洞察" }}:</span>
+                    <span class="insight-label">{{ t("deep.key_insight") }}:</span>
                     {{ analogy.key_insight }}
                 </div>
                 {% endif %}
@@ -80,35 +80,35 @@
                 <!-- 相似度维度 -->
                 <div class="similarity-dimensions">
                     <div class="dimension">
-                        <span class="dim-label">{{ "Causal" if lang == "en" else "因果" }}</span>
+                        <span class="dim-label">{{ t("deep.causal") }}</span>
                         <div class="dim-bar">
                             <div class="dim-fill" style="width: {{ analogy.causal_similarity * 100 }}%"></div>
                         </div>
                         <span class="dim-value">{{ "%.0f" | format(analogy.causal_similarity * 100) }}%</span>
                     </div>
                     <div class="dimension">
-                        <span class="dim-label">{{ "Decision" if lang == "en" else "决策" }}</span>
+                        <span class="dim-label">{{ t("deep.decision") }}</span>
                         <div class="dim-bar">
                             <div class="dim-fill" style="width: {{ analogy.decision_similarity * 100 }}%"></div>
                         </div>
                         <span class="dim-value">{{ "%.0f" | format(analogy.decision_similarity * 100) }}%</span>
                     </div>
                     <div class="dimension">
-                        <span class="dim-label">{{ "Mechanism" if lang == "en" else "传导" }}</span>
+                        <span class="dim-label">{{ t("deep.mechanism") }}</span>
                         <div class="dim-bar">
                             <div class="dim-fill" style="width: {{ analogy.mechanism_similarity * 100 }}%"></div>
                         </div>
                         <span class="dim-value">{{ "%.0f" | format(analogy.mechanism_similarity * 100) }}%</span>
                     </div>
                     <div class="dimension">
-                        <span class="dim-label">{{ "Constraint" if lang == "en" else "约束" }}</span>
+                        <span class="dim-label">{{ t("deep.constraint") }}</span>
                         <div class="dim-bar">
                             <div class="dim-fill" style="width: {{ analogy.constraint_similarity * 100 }}%"></div>
                         </div>
                         <span class="dim-value">{{ "%.0f" | format(analogy.constraint_similarity * 100) }}%</span>
                     </div>
                     <div class="dimension">
-                        <span class="dim-label">{{ "Game" if lang == "en" else "博弈" }}</span>
+                        <span class="dim-label">{{ t("deep.game") }}</span>
                         <div class="dim-bar">
                             <div class="dim-fill" style="width: {{ analogy.game_similarity * 100 }}%"></div>
                         </div>
@@ -118,7 +118,7 @@
 
                 {% if analogy.lessons_learned %}
                 <div class="lessons-box">
-                    <span class="lessons-label">{{ "Lessons Learned" if lang == "en" else "历史教训" }}:</span>
+                    <span class="lessons-label">{{ t("deep.lessons_learned") }}:</span>
                     {{ analogy.lessons_learned }}
                 </div>
                 {% endif %}
@@ -127,7 +127,7 @@
                 <div class="differences-section">
                     {% if analogy.surface_differences %}
                     <div class="diff-group">
-                        <span class="diff-label">{{ "Surface Differences" if lang == "en" else "表面差异" }}:</span>
+                        <span class="diff-label">{{ t("deep.surface_diff") }}:</span>
                         <ul class="diff-list">
                             {% for diff in analogy.surface_differences %}
                             <li>{{ diff }}</li>
@@ -137,7 +137,7 @@
                     {% endif %}
                     {% if analogy.structural_differences %}
                     <div class="diff-group">
-                        <span class="diff-label">{{ "Structural Differences" if lang == "en" else "结构差异" }}:</span>
+                        <span class="diff-label">{{ t("deep.structural_diff") }}:</span>
                         <ul class="diff-list">
                             {% for diff in analogy.structural_differences %}
                             <li>{{ diff }}</li>
@@ -150,7 +150,7 @@
 
                 {% if analogy.confidence %}
                 <div class="confidence-info">
-                    {{ "Confidence" if lang == "en" else "置信度" }}: {{ "%.0f" | format(analogy.confidence * 100) }}%
+                    {{ t("deep.confidence") }}: {{ "%.0f" | format(analogy.confidence * 100) }}%
                 </div>
                 {% endif %}
             </div>

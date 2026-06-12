@@ -536,9 +536,9 @@ async def get_entity_types(
     result = await session.execute(query)
     types = result.all()
 
-    response = templates.TemplateResponse(request=request, name="partials/entity_types.html", context={
-        "types": types,
-    })
+    response = templates.TemplateResponse(request=request, name="partials/entity_types.html", context=_get_api_context(
+        request, types=types,
+    ))
     set_cached(cache_key, response.body.decode(), ttl=300)
     return response
 

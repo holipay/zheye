@@ -1,16 +1,16 @@
 <!-- 历史类比空状态 -->
 <div class="empty-state">
     <div class="empty-icon">📚</div>
-    <h4 class="empty-title">{{ "No Historical Analogies" if lang == "en" else "暂无历史类比" }}</h4>
+    <h4 class="empty-title">{{ t("deep.no_analogies") }}</h4>
     <p class="empty-description">
-        {{ "The historical analogy analysis has not been performed yet." if lang == "en" else "历史类比分析尚未执行。" }}
+        {{ t("deep.no_analogies_desc") }}
     </p>
     <button class="btn-analyze" 
             hx-post="/api/deep-analyst/events/{{ event_id }}/analogies/analyze"
             hx-headers='{"X-CSRF-Token": document.querySelector("meta[name=csrf-token]")?.content || ""}'
             hx-target="#tab-analogies"
             hx-swap="innerHTML">
-        {{ "Analyze Historical Analogies" if lang == "en" else "分析历史类比" }}
+        {{ t("deep.analyze_analogies") }}
     </button>
 </div>
 

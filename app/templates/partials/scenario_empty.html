@@ -1,16 +1,16 @@
 <!-- 情景推演空状态 -->
 <div class="empty-state">
     <div class="empty-icon">🎯</div>
-    <h4 class="empty-title">{{ "No Scenario Analysis" if lang == "en" else "暂无情景推演" }}</h4>
+    <h4 class="empty-title">{{ t("deep.no_scenarios") }}</h4>
     <p class="empty-description">
-        {{ "The scenario analysis has not been performed yet." if lang == "en" else "情景推演分析尚未执行。" }}
+        {{ t("deep.no_scenarios_desc") }}
     </p>
     <button class="btn-analyze" 
             hx-post="/api/deep-analyst/events/{{ event_id }}/scenarios/analyze"
             hx-headers='{"X-CSRF-Token": document.querySelector("meta[name=csrf-token]")?.content || ""}'
             hx-target="#tab-scenarios"
             hx-swap="innerHTML">
-        {{ "Analyze Scenarios" if lang == "en" else "分析情景推演" }}
+        {{ t("deep.analyze_scenarios") }}
     </button>
 </div>
 

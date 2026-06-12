@@ -1,16 +1,16 @@
 <!-- 因果链空状态 -->
 <div class="empty-state">
     <div class="empty-icon">🔗</div>
-    <h4 class="empty-title">{{ "No Causal Chain Analysis" if lang == "en" else "暂无因果链分析" }}</h4>
+    <h4 class="empty-title">{{ t("deep.no_causal") }}</h4>
     <p class="empty-description">
-        {{ "The causal chain analysis has not been performed yet." if lang == "en" else "因果链分析尚未执行。" }}
+        {{ t("deep.no_causal_desc") }}
     </p>
     <button class="btn-analyze" 
             hx-post="/api/deep-analyst/events/{{ event_id }}/causal-chain/analyze"
             hx-headers='{"X-CSRF-Token": document.querySelector("meta[name=csrf-token]")?.content || ""}'
             hx-target="#tab-causal"
             hx-swap="innerHTML">
-        {{ "Analyze Causal Chain" if lang == "en" else "分析因果链" }}
+        {{ t("deep.analyze_causal") }}
     </button>
 </div>
 

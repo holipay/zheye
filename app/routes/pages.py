@@ -51,9 +51,9 @@ async def news(request: Request, lang: str, category: str = "all", article_type:
 
 
 @router.get("/{lang}/articles")
-async def articles(request: Request, lang: str):
+async def articles(request: Request, lang: str, sort: str = "date", page: int = 1):
     lang = validate_lang(lang)
-    ctx = get_template_context(request, title=get_text(lang, "nav.news"))
+    ctx = get_template_context(request, title=get_text(lang, "articles.title"), sort=sort, page=page)
     return templates.TemplateResponse(request=request, name="articles.html", context=ctx)
 
 
@@ -72,9 +72,9 @@ async def news_detail(request: Request, lang: str, news_id: int):
 
 
 @router.get("/{lang}/events")
-async def events(request: Request, lang: str):
+async def events(request: Request, lang: str, days: int = 7, category: str = None):
     lang = validate_lang(lang)
-    ctx = get_template_context(request, title=get_text(lang, "nav.events"))
+    ctx = get_template_context(request, title=get_text(lang, "nav.events"), days=days, category=category)
     return templates.TemplateResponse(request=request, name="events.html", context=ctx)
 
 

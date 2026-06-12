@@ -13,10 +13,10 @@
                 <option value="大宗商品与能源" {% if category == '大宗商品与能源' %}selected{% endif %}>{{ t("category.大宗商品与能源") }}</option>
             </select>
             <select name="days" hx-get="/api/events/timeline?lang={{ lang }}" hx-target="#events-timeline" hx-include="#event-category-filter">
-                <option value="1" {% if days == 1 %}selected{% endif %}>Today</option>
-                <option value="3" {% if days == 3 %}selected{% endif %}>Last 3 days</option>
-                <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 days</option>
-                <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 days</option>
+                <option value="1" {% if days == 1 %}selected{% endif %}>{{ t("common.today") }}</option>
+                <option value="3" {% if days == 3 %}selected{% endif %}>{{ t("common.last_3_days") }}</option>
+                <option value="7" {% if days == 7 %}selected{% endif %}>{{ t("common.last_7_days") }}</option>
+                <option value="30" {% if days == 30 %}selected{% endif %}>{{ t("common.last_30_days") }}</option>
             </select>
         </div>
     </div>
@@ -38,10 +38,10 @@
                 </h4>
                 <div class="event-meta">
                     <span class="event-updates">
-                        <i class="icon-update"></i> {{ event.update_count }} updates
+                        {{ t("common.updates_count", count=event.update_count) }}
                     </span>
                     <span class="event-articles">
-                        <i class="icon-article"></i> {{ event.article_count }} articles
+                        {{ t("common.articles_count_unit", count=event.article_count) }}
                     </span>
                     <span class="event-status status-{{ event.status }}">
                         {{ event.status }}
