@@ -651,15 +651,9 @@ async def search_news(
 
     offset = (page - 1) * page_size
     
-    # 使用 PostgreSQL 全文搜索
-    # to_tsvector('simple', ...) 配合 plainto_tsquery('simple', ...) 支持中英文
+    # 使用 PostgreSQL 全文搜索（利用预计算的 search_vector 列 + GIN 索引）
     ts_query = func.plainto_tsquery('simple', search_term)
-    ts_vector = func.to_tsvector('simple', 
-        News.title + ' ' + func.coalesce(News.translated_title, '') + ' ' + func.coalesce(News.content, '')
-    )
-    
-    # 使用 @@ 运算符进行全文搜索匹配
-    base_filter = ts_vector.op('@@')(ts_query)
+    base_filter = News.search_vector.op('@@')(ts_query)
 
     count_query = select(func.count(News.id)).where(base_filter)
     if category and category != "all":
@@ -669,7 +663,7 @@ async def search_news(
     total = total_result.scalar()
 
     # 使用 ts_rank 进行相关性排序
-    rank = func.ts_rank(ts_vector, ts_query).label("rank")
+    rank = func.ts_rank(News.search_vector, ts_query).label("rank")
     
     query = (
         select(News, rank)

@@ -1,6 +1,6 @@
 from datetime import datetime
 from sqlalchemy import Column, BigInteger, String, Text, DateTime, Float, Index, func
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from models.base import Base
 
 
@@ -31,6 +31,9 @@ class News(Base):
     ai_importance = Column(Float, default=0.0)  # 重要性评分 0-1
     ai_analyzed_at = Column(DateTime(timezone=True))  # 分析时间
 
+    # 全文搜索列（由触发器自动维护）
+    search_vector = Column(TSVECTOR)
+
     __table_args__ = (
         Index("idx_news_category_date", "category", "date"),
         Index("idx_news_source", "source"),
@@ -38,4 +41,5 @@ class News(Base):
         Index("idx_news_sentiment", "ai_sentiment"),
         Index("idx_news_importance", "ai_importance"),
         Index("idx_news_regions", "regions", postgresql_using="gin"),
+        Index("idx_news_search_vector", "search_vector", postgresql_using="gin"),
     )
