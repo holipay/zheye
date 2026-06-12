@@ -26,6 +26,12 @@ async def get_news(
     sort: str = "date",
     page: int = Query(default=1, ge=1, description="页码"),
 ):
+    lang = request.query_params.get("lang", "en")
+    cache_key = f"api:news:{lang}:{category}:{article_type}:{keyword_id}:{sort}:{page}"
+    cached = get_cached(cache_key)
+    if cached:
+        return HTMLResponse(content=cached)
+
     page_size = settings.DEFAULT_PAGE_SIZE
     offset = (page - 1) * page_size
 
@@ -100,7 +106,9 @@ async def get_news(
 
     ctx = _get_api_context(request, news_items=news_items, category=category, article_type=article_type,
                            keyword_id=keyword_id, sort=sort, page=page, total_pages=total_pages, total=total)
-    return templates.TemplateResponse(request=request, name="partials/news_list.html", context=ctx)
+    response = templates.TemplateResponse(request=request, name="partials/news_list.html", context=ctx)
+    set_cached(cache_key, response.body.decode(), ttl=60)
+    return response
 
 
 @router.get("/categories", response_class=HTMLResponse)
@@ -634,8 +642,14 @@ async def search_news(
             page=1, total_pages=0, total=0, search_query=q,
         ))
 
-    offset = (page - 1) * page_size
+    lang = request.query_params.get("lang", "en")
     search_term = q.strip()
+    cache_key = f"api:search:{lang}:{search_term}:{category}:{page}"
+    cached = get_cached(cache_key)
+    if cached:
+        return HTMLResponse(content=cached)
+
+    offset = (page - 1) * page_size
     
     # 使用 PostgreSQL 全文搜索
     # to_tsvector('simple', ...) 配合 plainto_tsquery('simple', ...) 支持中英文
@@ -673,7 +687,9 @@ async def search_news(
 
     total_pages = (total + page_size - 1) // page_size
 
-    return templates.TemplateResponse(request=request, name="partials/news_list.html", context=_get_api_context(
+    response = templates.TemplateResponse(request=request, name="partials/news_list.html", context=_get_api_context(
         request, news_items=news_items, category=category, article_type="all", sort="date",
         page=page, total_pages=total_pages, total=total, search_query=q,
     ))
+    set_cached(cache_key, response.body.decode(), ttl=120)
+    return response
