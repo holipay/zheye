@@ -38,10 +38,32 @@ async def scheduled_cleanup():
     try:
         from scripts.cleanup_old_data import main as cleanup_main
         logger.info("Scheduled: starting data cleanup")
-        await cleanup_main()
+        await cleanup_main(confirm=True)
         logger.info("Scheduled: data cleanup completed")
     except Exception as e:
         logger.error(f"Scheduled cleanup failed: {e}")
+
+
+async def scheduled_retry_tasks():
+    """定时任务：重试失败的 AI 分析任务"""
+    try:
+        from scripts.retry_failed_tasks import main as retry_main
+        logger.info("Scheduled: starting failed task retry")
+        await retry_main()
+        logger.info("Scheduled: failed task retry completed")
+    except Exception as e:
+        logger.error(f"Scheduled retry failed: {e}")
+
+
+async def scheduled_quality_decay():
+    """定时任务：知识原子质量衰减"""
+    try:
+        from scripts.run_quality_decay import main as decay_main
+        logger.info("Scheduled: starting quality decay")
+        await decay_main()
+        logger.info("Scheduled: quality decay completed")
+    except Exception as e:
+        logger.error(f"Scheduled quality decay failed: {e}")
 
 
 @asynccontextmanager
@@ -72,11 +94,17 @@ async def lifespan(app):
         # 每天凌晨 2:00 执行 AI 分析
         scheduler.add_job(scheduled_daily_analysis, CronTrigger(hour=2), id="daily_analysis")
 
-        # 每天凌晨 3:00 清理旧数据
-        scheduler.add_job(scheduled_cleanup, CronTrigger(hour=3), id="cleanup")
+        # 每年 1 月 1 日凌晨 3:00 清理旧数据
+        scheduler.add_job(scheduled_cleanup, CronTrigger(month=1, day=1, hour=3), id="cleanup")
+
+        # 每小时重试失败的 AI 分析任务
+        scheduler.add_job(scheduled_retry_tasks, CronTrigger(minute=0), id="retry_failed_tasks")
+
+        # 每天凌晨 3:30 知识原子质量衰减
+        scheduler.add_job(scheduled_quality_decay, CronTrigger(hour=3, minute=30), id="quality_decay")
 
         scheduler.start()
-        logger.info("Scheduler started with 3 jobs")
+        logger.info("Scheduler started with 5 jobs")
     except Exception as e:
         logger.warning(f"Failed to start scheduler: {e}")
 

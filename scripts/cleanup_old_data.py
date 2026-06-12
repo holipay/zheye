@@ -168,12 +168,16 @@ async def cleanup_market_data(session: AsyncSession, cutoff_date: datetime, dry_
     return count
 
 
-async def main():
+async def main(confirm: bool = False):
     parser = argparse.ArgumentParser(description='清理旧数据')
     parser.add_argument('--dry-run', action='store_true', help='仅统计，不实际删除')
     parser.add_argument('--retention-days', type=int, default=None, help='保留天数（默认使用配置）')
     parser.add_argument('--confirm', action='store_true', help='确认执行删除（必须显式指定）')
     args = parser.parse_args()
+    
+    # 允许从调度器调用时通过参数绕过安全检查
+    if confirm:
+        args.confirm = True
     
     retention_days = args.retention_days or settings.RETENTION_DAYS
     

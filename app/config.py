@@ -104,7 +104,7 @@ class Settings(BaseSettings):
     # 其他配置
     MYMEMORY_EMAIL: Optional[str] = Field(default=None, description="MyMemory 翻译邮箱")
     MAX_RETRIES: int = Field(default=2, description="最大重试次数")
-    RETENTION_DAYS: int = Field(default=30, description="数据保留天数")
+    RETENTION_DAYS: int = Field(default=365, description="数据保留天数")
 
     model_config = ConfigDict(
         env_file=".env",
