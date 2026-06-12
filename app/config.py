@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     
     # 缓存配置
     CACHE_TTL_SECONDS: int = Field(default=300, description="缓存TTL（秒）")
-    CACHE_MAX_SIZE: int = Field(default=100, description="缓存最大条目数")
+    CACHE_MAX_SIZE: int = Field(default=500, description="缓存最大条目数")
     
     # AI 配置
     DEEPSEEK_API_KEY: str = Field(default="", description="DeepSeek API Key")

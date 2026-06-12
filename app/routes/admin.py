@@ -4,6 +4,7 @@
 """
 
 import os
+import asyncio
 import yaml
 import logging
 from datetime import datetime, date, timedelta
@@ -43,8 +44,8 @@ class SourceUpdateRequest(BaseModel):
 CONFIG_PATH = Path(__file__).parent.parent.parent / "scraper" / "sources" / "config.yaml"
 
 
-def load_rss_config() -> dict[str, Any]:
-    """加载 RSS 源配置"""
+def _load_rss_config_sync() -> dict[str, Any]:
+    """同步加载 RSS 源配置"""
     try:
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             return yaml.safe_load(f)
@@ -53,8 +54,8 @@ def load_rss_config() -> dict[str, Any]:
         return {"sources": [], "settings": {}}
 
 
-def save_rss_config(config: dict[str, Any]) -> bool:
-    """保存 RSS 源配置"""
+def _save_rss_config_sync(config: dict[str, Any]) -> bool:
+    """同步保存 RSS 源配置"""
     try:
         with open(CONFIG_PATH, "w", encoding="utf-8") as f:
             yaml.dump(config, f, allow_unicode=True, default_flow_style=False)
@@ -62,6 +63,16 @@ def save_rss_config(config: dict[str, Any]) -> bool:
     except Exception as e:
         logger.error(f"保存配置失败: {e}")
         return False
+
+
+async def load_rss_config() -> dict[str, Any]:
+    """异步加载 RSS 源配置"""
+    return await asyncio.to_thread(_load_rss_config_sync)
+
+
+async def save_rss_config(config: dict[str, Any]) -> bool:
+    """异步保存 RSS 源配置"""
+    return await asyncio.to_thread(_save_rss_config_sync, config)
 
 
 # ============================================================
@@ -213,7 +224,7 @@ async def get_sources(
     session: AsyncSession = Depends(get_session),
 ):
     """获取所有 RSS 源及其健康状态"""
-    config = load_rss_config()
+    config = await load_rss_config()
     sources = config.get("sources", [])
     
     # 获取源健康状态
@@ -256,7 +267,7 @@ async def get_source_detail(
     session: AsyncSession = Depends(get_session),
 ):
     """获取单个源详情"""
-    config = load_rss_config()
+    config = await load_rss_config()
     sources = config.get("sources", [])
     
     source = None
@@ -310,7 +321,7 @@ async def get_source_detail(
 @router.post("/admin/api/sources/{source_name}/toggle")
 async def toggle_source(source_name: str, request: Request, _: bool = Depends(verify_admin_credentials), __: bool = Depends(csrf_protect)):
     """启用/禁用源"""
-    config = load_rss_config()
+    config = await load_rss_config()
     sources = config.get("sources", [])
     
     found = False
@@ -323,7 +334,7 @@ async def toggle_source(source_name: str, request: Request, _: bool = Depends(ve
     if not found:
         raise HTTPException(status_code=404, detail=Err.SOURCE_NOT_FOUND)
     
-    if save_rss_config(config):
+    if await save_rss_config(config):
         return {"success": True, "message": f"源 {source_name} 状态已更新"}
     else:
         raise HTTPException(status_code=500, detail=Err.SAVE_CONFIG_FAILED)
@@ -337,13 +348,12 @@ async def update_source(
     __: bool = Depends(csrf_protect),
 ):
     """更新源配置"""
-    config = load_rss_config()
+    config = await load_rss_config()
     sources = config.get("sources", [])
     
     found = False
     for src in sources:
         if src.get("name") == source_name:
-            # 更新允许的字段
             if data.weight is not None:
                 src["weight"] = data.weight
             if data.category is not None:
@@ -358,7 +368,7 @@ async def update_source(
     if not found:
         raise HTTPException(status_code=404, detail=Err.SOURCE_NOT_FOUND)
     
-    if save_rss_config(config):
+    if await save_rss_config(config):
         return {"success": True, "message": f"源 {source_name} 配置已更新"}
     else:
         raise HTTPException(status_code=500, detail=Err.SAVE_CONFIG_FAILED)

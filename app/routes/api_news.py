@@ -153,6 +153,12 @@ async def get_latest(
     session: AsyncSession = Depends(get_session),
     limit: int = Query(default=10, le=100),
 ):
+    lang = request.query_params.get("lang", "en")
+    cache_key = f"api:latest:{lang}:{limit}"
+    cached = get_cached(cache_key)
+    if cached:
+        return HTMLResponse(content=cached)
+
     count_result = await session.execute(select(func.count(News.id)))
     total = count_result.scalar()
 
@@ -160,10 +166,12 @@ async def get_latest(
     result = await session.execute(query)
     news_items = result.scalars().all()
 
-    return templates.TemplateResponse(request=request, name="partials/news_list.html", context=_get_api_context(
+    response = templates.TemplateResponse(request=request, name="partials/news_list.html", context=_get_api_context(
         request, news_items=news_items, category="all", article_type="all", sort="date",
         page=1, total_pages=1, total=total,
     ))
+    set_cached(cache_key, response.body.decode(), ttl=120)
+    return response
 
 
 @router.get("/articles", response_class=HTMLResponse)
@@ -173,10 +181,15 @@ async def get_articles(
     sort: str = "date",
     page: int = Query(default=1, ge=1, description="页码"),
 ):
+    lang = request.query_params.get("lang", "en")
+    cache_key = f"api:articles:{lang}:{sort}:{page}"
+    cached = get_cached(cache_key)
+    if cached:
+        return HTMLResponse(content=cached)
+
     page_size = settings.DEFAULT_PAGE_SIZE
     offset = (page - 1) * page_size
 
-    # 只获取有完整内容的文章
     base_query = select(News).where(News.content.isnot(None), News.content != "")
     count_query = select(func.count(News.id)).where(News.content.isnot(None), News.content != "")
 
@@ -193,10 +206,12 @@ async def get_articles(
     result = await session.execute(query)
     news_items = result.scalars().all()
 
-    return templates.TemplateResponse(request=request, name="partials/articles_list.html", context=_get_api_context(
+    response = templates.TemplateResponse(request=request, name="partials/articles_list.html", context=_get_api_context(
         request, news_items=news_items, sort=sort,
         page=page, total_pages=total_pages, total=total,
     ))
+    set_cached(cache_key, response.body.decode(), ttl=120)
+    return response
 
 
 @router.get("/meta")
@@ -334,6 +349,11 @@ async def get_popular_keywords(
     lang: str = "en",
     limit: int = 20,
 ):
+    cache_key = f"api:keywords:popular:{lang}:{limit}"
+    cached = get_cached(cache_key)
+    if cached:
+        return HTMLResponse(content=cached)
+
     query = (
         select(Keyword, func.count(ArticleKeyword.id).label("article_count"))
         .outerjoin(ArticleKeyword, ArticleKeyword.keyword_id == Keyword.id)
@@ -355,9 +375,11 @@ async def get_popular_keywords(
             "article_count": count,
         })
 
-    return templates.TemplateResponse(request=request, name="partials/keywords.html", context=_get_api_context(
+    response = templates.TemplateResponse(request=request, name="partials/keywords.html", context=_get_api_context(
         request, keywords=keywords,
     ))
+    set_cached(cache_key, response.body.decode(), ttl=300)
+    return response
 
 
 @router.get("/keywords/{keyword_id}/articles")
@@ -420,6 +442,11 @@ async def get_news_detail(
     news_id: int,
     session: AsyncSession = Depends(get_session),
 ):
+    cache_key = f"api:news:detail:{news_id}"
+    cached = get_cached(cache_key)
+    if cached:
+        return HTMLResponse(content=cached)
+
     news_result = await session.execute(select(News).where(News.id == news_id))
     news = news_result.scalar_one_or_none()
     if not news:
@@ -477,9 +504,11 @@ async def get_news_detail(
         for r, score, relation_type in related_result.all()
     ]
 
-    return templates.TemplateResponse(request=request, name="partials/news_detail.html", context=_get_api_context(
+    response = templates.TemplateResponse(request=request, name="partials/news_detail.html", context=_get_api_context(
         request, news=news, keywords=keywords, entities=entities, related=related,
     ))
+    set_cached(cache_key, response.body.decode(), ttl=300)
+    return response
 
 
 @router.get("/entities/popular", response_class=HTMLResponse)
@@ -489,6 +518,12 @@ async def get_popular_entities(
     entity_type: str = None,
     limit: int = 15,
 ):
+    lang = request.query_params.get("lang", "en")
+    cache_key = f"api:entities:popular:{lang}:{entity_type}:{limit}"
+    cached = get_cached(cache_key)
+    if cached:
+        return HTMLResponse(content=cached)
+
     query = (
         select(Entity, func.count(ArticleEntity.id).label("article_count"))
         .join(ArticleEntity, ArticleEntity.entity_id == Entity.id)
@@ -512,9 +547,11 @@ async def get_popular_entities(
             "article_count": count,
         })
 
-    return templates.TemplateResponse(request=request, name="partials/entity_list.html", context=_get_api_context(
+    response = templates.TemplateResponse(request=request, name="partials/entity_list.html", context=_get_api_context(
         request, entities=entities, entity_type=entity_type,
     ))
+    set_cached(cache_key, response.body.decode(), ttl=300)
+    return response
 
 
 @router.get("/entities/types", response_class=HTMLResponse)

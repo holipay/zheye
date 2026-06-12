@@ -11,14 +11,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models.base import get_session
 from app.cache import get_cached, set_cached
+from app.config import settings
 from app.i18n import get_text, get_language_from_request
+from app.main import limiter
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/charts")
 
 
 @router.get("/daily-trend")
+@limiter.limit(settings.RATE_LIMIT_API)
 async def get_daily_trend(
+    request: Request,
     days: int = Query(default=30, le=90),
     session: AsyncSession = Depends(get_session),
 ):
@@ -72,6 +76,7 @@ async def get_daily_trend(
 
 
 @router.get("/sentiment")
+@limiter.limit(settings.RATE_LIMIT_API)
 async def get_sentiment_distribution(
     request: Request,
     days: int = Query(default=7, le=30),
@@ -122,7 +127,9 @@ async def get_sentiment_distribution(
 
 
 @router.get("/sentiment-trend")
+@limiter.limit(settings.RATE_LIMIT_API)
 async def get_sentiment_trend(
+    request: Request,
     days: int = Query(default=30, le=90),
     session: AsyncSession = Depends(get_session),
 ):
@@ -166,6 +173,7 @@ async def get_sentiment_trend(
 
 
 @router.get("/categories")
+@limiter.limit(settings.RATE_LIMIT_API)
 async def get_category_stats(
     request: Request,
     days: int = Query(default=30, le=90),
@@ -213,7 +221,9 @@ async def get_category_stats(
 
 
 @router.get("/keywords")
+@limiter.limit(settings.RATE_LIMIT_API)
 async def get_keyword_trends(
+    request: Request,
     limit: int = Query(default=10, le=20),
     days: int = Query(default=30, le=90),
     session: AsyncSession = Depends(get_session),
@@ -289,7 +299,9 @@ async def get_keyword_trends(
 
 
 @router.get("/sources")
+@limiter.limit(settings.RATE_LIMIT_API)
 async def get_source_stats(
+    request: Request,
     days: int = Query(default=30, le=90),
     session: AsyncSession = Depends(get_session),
 ):
@@ -323,7 +335,9 @@ async def get_source_stats(
 
 
 @router.get("/regions")
+@limiter.limit(settings.RATE_LIMIT_API)
 async def get_region_stats(
+    request: Request,
     days: int = Query(default=30, le=90),
     session: AsyncSession = Depends(get_session),
 ):
@@ -370,7 +384,9 @@ async def get_region_stats(
 
 
 @router.get("/importance")
+@limiter.limit(settings.RATE_LIMIT_API)
 async def get_importance_distribution(
+    request: Request,
     days: int = Query(default=30, le=90),
     session: AsyncSession = Depends(get_session),
 ):
