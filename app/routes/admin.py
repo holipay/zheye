@@ -24,13 +24,27 @@ from models.run_metrics import RunMetrics
 from models.event import Event
 from app.i18n import get_text, DEFAULT_LANGUAGE
 from app.auth import verify_admin_credentials, check_admin_enabled
-from app.csrf import csrf_protect
+from app.csrf import csrf_protect, CSRF_COOKIE_NAME
 from app.context import get_template_context
 from app.errors import ErrorMessages as Err
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
+
+
+def _admin_page_response(request, name, context):
+    """创建管理后台页面响应并设置 CSRF cookie"""
+    response = templates.TemplateResponse(request=request, name=name, context=context)
+    if "csrf_token" in context:
+        response.set_cookie(
+            key=CSRF_COOKIE_NAME,
+            value=context["csrf_token"],
+            max_age=3600,
+            httponly=True,
+            samesite="lax",
+        )
+    return response
 
 
 class SourceUpdateRequest(BaseModel):
@@ -92,7 +106,7 @@ async def admin_index(request: Request, lang: str, _: bool = Depends(verify_admi
     if lang not in {"en", "zh"}:
         return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin")
     ctx = get_template_context(request, include_csrf=True, title=get_text(lang, "admin.dashboard"))
-    return templates.TemplateResponse(request=request, name="admin/index.html", context=ctx)
+    return _admin_page_response(request, "admin/index.html", ctx)
 
 
 @router.get("/{lang}/admin/sources", response_class=HTMLResponse)
@@ -101,7 +115,7 @@ async def admin_sources(request: Request, lang: str, _: bool = Depends(verify_ad
     if lang not in {"en", "zh"}:
         return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin/sources")
     ctx = get_template_context(request, include_csrf=True, title=get_text(lang, "admin.rss_sources"))
-    return templates.TemplateResponse(request=request, name="admin/sources.html", context=ctx)
+    return _admin_page_response(request, "admin/sources.html", ctx)
 
 
 @router.get("/{lang}/admin/monitor", response_class=HTMLResponse)
@@ -110,7 +124,7 @@ async def admin_monitor(request: Request, lang: str, _: bool = Depends(verify_ad
     if lang not in {"en", "zh"}:
         return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin/monitor")
     ctx = get_template_context(request, include_csrf=True, title=get_text(lang, "admin.data_monitor"))
-    return templates.TemplateResponse(request=request, name="admin/monitor.html", context=ctx)
+    return _admin_page_response(request, "admin/monitor.html", ctx)
 
 
 @router.get("/{lang}/admin/logs", response_class=HTMLResponse)
@@ -119,7 +133,7 @@ async def admin_logs(request: Request, lang: str, _: bool = Depends(verify_admin
     if lang not in {"en", "zh"}:
         return RedirectResponse(url=f"/{DEFAULT_LANGUAGE}/admin/logs")
     ctx = get_template_context(request, include_csrf=True, title=get_text(lang, "admin.logs"))
-    return templates.TemplateResponse(request=request, name="admin/logs.html", context=ctx)
+    return _admin_page_response(request, "admin/logs.html", ctx)
 
 
 # ============================================================

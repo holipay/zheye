@@ -36,6 +36,11 @@ def get_template_context(request: Request, include_csrf: bool = False, **kwargs)
     return context
 
 
+def get_csrf_token():
+    """生成已签名的 CSRF token（用于在响应中设置 cookie）"""
+    return sign_token(generate_csrf_token())
+
+
 def get_api_context(request: Request, **kwargs):
     """
     构建 API 模板上下文（不含 request）

@@ -259,6 +259,8 @@
     "run_type": "运行类型",
     "started": "开始时间",
     "duration": "耗时",
+    "fetched": "抓取",
+    "saved": "保存",
     "fetched_saved": "抓取 / 保存",
     "no_run_history": "暂无运行记录",
     "healthy": "健康",

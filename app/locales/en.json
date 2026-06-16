@@ -259,6 +259,8 @@
     "run_type": "Run Type",
     "started": "Started",
     "duration": "Duration",
+    "fetched": "Fetched",
+    "saved": "Saved",
     "fetched_saved": "Fetched / Saved",
     "no_run_history": "No run history",
     "healthy": "healthy",

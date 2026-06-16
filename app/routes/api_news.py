@@ -67,7 +67,7 @@ async def get_news(
         total_result = await session.execute(count_query)
         total = total_result.scalar()
 
-        query = base_query.order_by(desc("total_weight"), desc(News.date)).offset(offset).limit(page_size)
+        query = base_query.order_by(desc("total_weight"), desc(func.coalesce(News.date, News.created_at))).offset(offset).limit(page_size)
         result = await session.execute(query)
         rows = result.all()
         news_items = []
@@ -75,7 +75,7 @@ async def get_news(
             news._weight = weight
             news_items.append(news)
     else:
-        query = select(News).order_by(desc(News.date))
+        query = select(News).order_by(desc(func.coalesce(News.date, News.created_at)))
         count_query = select(func.count(News.id))
 
         if category and category != "all":
@@ -206,9 +206,9 @@ async def get_articles(
     total_pages = max(1, (total + page_size - 1) // page_size)
 
     if sort == "weight":
-        query = base_query.order_by(desc(News.ai_importance), desc(News.date))
+        query = base_query.order_by(desc(News.ai_importance), desc(func.coalesce(News.date, News.created_at)))
     else:
-        query = base_query.order_by(desc(News.date))
+        query = base_query.order_by(desc(func.coalesce(News.date, News.created_at)))
 
     query = query.offset(offset).limit(page_size)
     result = await session.execute(query)
@@ -411,7 +411,7 @@ async def get_articles_by_keyword(
         select(News)
         .join(ArticleKeyword, ArticleKeyword.article_id == News.id)
         .where(ArticleKeyword.keyword_id == keyword_id)
-        .order_by(desc(News.date))
+        .order_by(desc(func.coalesce(News.date, News.created_at)))
         .offset(offset)
         .limit(page_size)
     )
@@ -610,7 +610,7 @@ async def get_news_by_entity(
         select(News)
         .join(ArticleEntity, ArticleEntity.article_id == News.id)
         .where(ArticleEntity.entity_id == entity_id)
-        .order_by(desc(News.date))
+        .order_by(desc(func.coalesce(News.date, News.created_at)))
         .offset(offset)
         .limit(page_size)
     )
@@ -651,9 +651,11 @@ async def search_news(
 
     offset = (page - 1) * page_size
     
-    # 使用 PostgreSQL 全文搜索（利用预计算的 search_vector 列 + GIN 索引）
+    # 使用 PostgreSQL 全文搜索（利用 GIN 表达式索引）
     ts_query = func.plainto_tsquery('simple', search_term)
-    base_filter = News.search_vector.op('@@')(ts_query)
+    ts_vector = func.to_tsvector('simple',
+        News.title + ' ' + func.coalesce(News.translated_title, '') + ' ' + func.coalesce(News.content, ''))
+    base_filter = ts_vector.op('@@')(ts_query)
 
     count_query = select(func.count(News.id)).where(base_filter)
     if category and category != "all":
@@ -663,12 +665,12 @@ async def search_news(
     total = total_result.scalar()
 
     # 使用 ts_rank 进行相关性排序
-    rank = func.ts_rank(News.search_vector, ts_query).label("rank")
+    rank = func.ts_rank(ts_vector, ts_query).label("rank")
     
     query = (
         select(News, rank)
         .where(base_filter)
-        .order_by(desc(rank), desc(News.date))
+        .order_by(desc(rank), desc(func.coalesce(News.date, News.created_at)))
         .offset(offset)
         .limit(page_size)
     )

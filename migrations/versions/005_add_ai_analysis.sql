@@ -61,20 +61,9 @@ CREATE INDEX IF NOT EXISTS idx_trends_count ON trends (count DESC);
 -- 4. 创建事件追踪表
 -- ============================================================
 
-CREATE TABLE IF NOT EXISTS events (
-    id BIGSERIAL PRIMARY KEY,
-    event_id VARCHAR(100) UNIQUE NOT NULL,
-    title VARCHAR(500),
-    description TEXT,
-    category VARCHAR(50),
-    first_seen DATE,
-    last_updated DATE,
-    update_count INT DEFAULT 1,
-    status VARCHAR(20) DEFAULT 'active',
-    related_articles JSONB,
-    data JSONB,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- events 表已在 001_init.sql 中创建，这里补充缺失的列
+ALTER TABLE events ADD COLUMN IF NOT EXISTS related_articles JSONB;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
 
 CREATE INDEX IF NOT EXISTS idx_events_status ON events (status, last_updated DESC);
 CREATE INDEX IF NOT EXISTS idx_events_category ON events (category);
