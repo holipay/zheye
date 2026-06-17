@@ -48,8 +48,9 @@ async def _is_private_ip(hostname: str) -> bool:
             return True
         try:
             loop = asyncio.get_running_loop()
-            _, infos = await loop.getaddrinfo(hostname, None, family=socket.AF_UNSPEC)
-            for _, _, _, _, sockaddr in infos:
+            addrinfos = await loop.getaddrinfo(hostname, None, family=socket.AF_UNSPEC)
+            for info in addrinfos:
+                sockaddr = info[4]
                 resolved_ip = ipaddress.ip_address(sockaddr[0])
                 if resolved_ip.is_private or resolved_ip.is_loopback or resolved_ip.is_link_local or resolved_ip.is_reserved:
                     return True
