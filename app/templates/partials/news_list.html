@@ -33,7 +33,8 @@
            class="page-btn"
            hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page - 1 }}&lang={{ lang }}"
            hx-target="#news-list"
-           hx-swap="innerHTML">{{ t("news.prev_page") }}</a>
+           hx-swap="innerHTML"
+           hx-on::after-request="window.scrollTo(0, 0)">{{ t("news.prev_page") }}</a>
         {% endif %}
         
         <span class="page-info">{{ t("news.page_info", page=page, total_pages=total_pages) }}</span>
@@ -43,7 +44,8 @@
            class="page-btn"
            hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page + 1 }}&lang={{ lang }}"
            hx-target="#news-list"
-           hx-swap="innerHTML">{{ t("news.next_page") }}</a>
+           hx-swap="innerHTML"
+           hx-on::after-request="window.scrollTo(0, 0)">{{ t("news.next_page") }}</a>
         {% endif %}
     </div>
     {% endif %}
