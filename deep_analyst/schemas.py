@@ -52,6 +52,39 @@ class AnalogyType(str, Enum):
 
 
 # ============================================================
+# 因果链 Schema
+# ============================================================
+
+class CausalNodeSchema(BaseModel):
+    """因果节点"""
+    id: str = Field(max_length=50)
+    node_type: NodeType = Field(default=NodeType.cause)
+    title: str = Field(max_length=200)
+    description: Optional[str] = Field(None, max_length=500)
+    probability: Optional[float] = Field(None, ge=0.0, le=1.0)
+    impact_level: Optional[str] = Field(None, max_length=50)
+    time_horizon: Optional[str] = Field(None, max_length=100)
+    entities: List[str] = Field(default_factory=list, max_length=20)
+    confidence: float = Field(default=0.8, ge=0.0, le=1.0)
+
+
+class CausalLinkSchema(BaseModel):
+    """因果关系"""
+    source: str = Field(max_length=50)
+    target: str = Field(max_length=50)
+    link_type: LinkType = Field(default=LinkType.causes)
+    strength: float = Field(default=1.0, ge=0.0, le=1.0)
+    description: Optional[str] = Field(None, max_length=500)
+
+
+class CausalChainSchema(BaseModel):
+    """因果链分析结果"""
+    nodes: List[CausalNodeSchema] = Field(default_factory=list, max_length=50)
+    links: List[CausalLinkSchema] = Field(default_factory=list, max_length=100)
+    summary: Optional[str] = Field(None, max_length=2000)
+
+
+# ============================================================
 # 知识框架 Schema
 # ============================================================
 
@@ -95,37 +128,14 @@ class KnowledgeAnalysisSchema(BaseModel):
     knowledge_atoms: List[KnowledgeAtomSchema] = Field(default_factory=list, max_length=20)
 
 
-# ============================================================
-# 因果链 Schema
-# ============================================================
-
-class CausalNodeSchema(BaseModel):
-    """因果节点"""
-    id: str = Field(max_length=50)
-    node_type: NodeType = Field(default=NodeType.cause)
-    title: str = Field(max_length=200)
-    description: Optional[str] = Field(None, max_length=500)
-    probability: Optional[float] = Field(None, ge=0.0, le=1.0)
-    impact_level: Optional[str] = Field(None, max_length=50)
-    time_horizon: Optional[str] = Field(None, max_length=100)
-    entities: List[str] = Field(default_factory=list, max_length=20)
-    confidence: float = Field(default=0.8, ge=0.0, le=1.0)
-
-
-class CausalLinkSchema(BaseModel):
-    """因果关系"""
-    source: str = Field(max_length=50)
-    target: str = Field(max_length=50)
-    link_type: LinkType = Field(default=LinkType.causes)
-    strength: float = Field(default=1.0, ge=0.0, le=1.0)
-    description: Optional[str] = Field(None, max_length=500)
-
-
-class CausalChainSchema(BaseModel):
-    """因果链分析结果"""
-    nodes: List[CausalNodeSchema] = Field(default_factory=list, max_length=50)
-    links: List[CausalLinkSchema] = Field(default_factory=list, max_length=100)
-    summary: Optional[str] = Field(None, max_length=2000)
+class KnowledgeAndCausalSchema(BaseModel):
+    """知识框架 + 因果链合并 Schema（合并 Step 1+2）"""
+    background_summary: str = Field(default="", max_length=2000)
+    knowledge_gaps: List[KnowledgeGapSchema] = Field(default_factory=list, max_length=10)
+    causal_chain: List[CausalStepSchema] = Field(default_factory=list, max_length=20)
+    key_concepts: List[KeyConceptSchema] = Field(default_factory=list, max_length=15)
+    knowledge_atoms: List[KnowledgeAtomSchema] = Field(default_factory=list, max_length=20)
+    causal_graph: CausalChainSchema = Field(default_factory=CausalChainSchema)
 
 
 # ============================================================

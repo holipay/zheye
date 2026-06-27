@@ -19,7 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models.event import Event
 from deep_analyst.ai_analysis import DeepSeekClient
 from deep_analyst.knowledge import (
-    analyze_event_knowledge, analyze_causal_chain, find_relevant_atoms,
+    analyze_event_knowledge, analyze_causal_chain, analyze_event_knowledge_and_causal,
+    find_relevant_atoms,
     update_reuse_stats, detect_conflicts, apply_quality_decay, get_reuse_statistics
 )
 from deep_analyst.analogy import extract_event_representation, analyze_analogy, compute_structural_similarity
@@ -135,7 +136,7 @@ async def analyze_single_event(
     """
     对单个事件执行完整的深度分析流水线
 
-    流程：知识框架 → 因果链 → 历史类比 → 情景推演
+    流程：知识框架+因果链（合并） → 历史类比 → 情景推演
 
     Args:
         session: 数据库会话
@@ -151,8 +152,8 @@ async def analyze_single_event(
 
     articles = event_data.get("related_articles", [])
 
-    # Step 1: 知识框架（带知识原子复用）
-    logger.info(f"  [{event_id}] Step 1/4: 知识框架分析")
+    # Step 1+2: 知识框架 + 因果链（合并为一次 AI 调用）
+    logger.info(f"  [{event_id}] Step 1/3: 知识框架 + 因果链分析（合并调用）")
     try:
         async with session.begin_nested():
             # 查找已有相关知识原子（增强版：语义相似度 + 跨category）
@@ -161,52 +162,48 @@ async def analyze_single_event(
                 category=event_data.get("category"),
                 entities=event_data.get("entities"),
                 keywords=event_data.get("keywords"),
-                event_description=event_data.get("description"),  # 添加描述用于语义匹配
+                event_description=event_data.get("description"),
             )
             if existing_atoms:
                 logger.info(f"  [{event_id}] 找到 {len(existing_atoms)} 个相关知识原子")
 
-            knowledge = await analyze_event_knowledge(event_data, articles, ai_client, existing_atoms)
-            if knowledge:
-                # 检测冲突
+            combined = await analyze_event_knowledge_and_causal(event_data, articles, ai_client, existing_atoms)
+            if combined:
+                # 存储知识框架
+                knowledge = {k: v for k, v in combined.items() if k != "causal_graph"}
                 new_atoms = knowledge.get("knowledge_atoms", [])
                 if new_atoms and existing_atoms:
                     conflicts = await detect_conflicts(session, new_atoms, existing_atoms)
                     if conflicts:
                         logger.warning(f"  [{event_id}] 检测到 {len(conflicts)} 个潜在冲突")
                         knowledge["_conflicts"] = conflicts
-                
-                # 存储知识框架
+
                 await _save_knowledge(session, event_id, knowledge, event_data.get("category"))
                 result.steps_completed.append("knowledge")
                 reused = len(knowledge.get("_reused_atom_ids", []))
                 new_count = len(knowledge.get("knowledge_atoms", []))
                 logger.info(f"  [{event_id}] 知识框架完成 (新: {new_count}, 复用: {reused})")
+
+                # 存储因果链图
+                causal_graph = combined.get("causal_graph")
+                if causal_graph:
+                    await _save_causal_chain(session, event_id, causal_graph)
+                    result.steps_completed.append("causal_chain")
+                    logger.info(f"  [{event_id}] 因果链完成 ({len(causal_graph.get('nodes', []))} 节点)")
+                else:
+                    result.steps_failed.append("causal_chain")
+                    logger.warning(f"  [{event_id}] 因果链图返回空结果")
             else:
                 result.steps_failed.append("knowledge")
-                logger.warning(f"  [{event_id}] 知识框架返回空结果")
+                result.steps_failed.append("causal_chain")
+                logger.warning(f"  [{event_id}] 合并分析返回空结果")
     except Exception as e:
         result.steps_failed.append("knowledge")
-        logger.error(f"  [{event_id}] 知识框架失败: {e}")
-
-    # Step 2: 因果链（依赖知识框架的背景信息）
-    logger.info(f"  [{event_id}] Step 2/4: 因果链分析")
-    try:
-        async with session.begin_nested():
-            causal = await analyze_causal_chain(event_data, articles, ai_client)
-            if causal:
-                await _save_causal_chain(session, event_id, causal)
-                result.steps_completed.append("causal_chain")
-                logger.info(f"  [{event_id}] 因果链完成 ({len(causal.get('nodes', []))} 节点)")
-            else:
-                result.steps_failed.append("causal_chain")
-                logger.warning(f"  [{event_id}] 因果链返回空结果")
-    except Exception as e:
         result.steps_failed.append("causal_chain")
-        logger.error(f"  [{event_id}] 因果链失败: {e}")
+        logger.error(f"  [{event_id}] 知识框架+因果链失败: {e}")
 
-    # Step 3: 历史类比
-    logger.info(f"  [{event_id}] Step 3/4: 历史类比分析")
+    # Step 2: 历史类比
+    logger.info(f"  [{event_id}] Step 2/3: 历史类比分析")
     try:
         async with session.begin_nested():
             repr_result = await extract_event_representation(event_data, articles, ai_client)
@@ -223,8 +220,8 @@ async def analyze_single_event(
         result.steps_failed.append("analogy")
         logger.error(f"  [{event_id}] 历史类比失败: {e}")
 
-    # Step 4: 情景推演（依赖因果链的 causal_pattern_desc）
-    logger.info(f"  [{event_id}] Step 4/4: 情景推演分析")
+    # Step 3: 情景推演（依赖因果链的 causal_pattern_desc）
+    logger.info(f"  [{event_id}] Step 3/3: 情景推演分析")
     try:
         async with session.begin_nested():
             # 获取 causal_pattern_desc 作为输入

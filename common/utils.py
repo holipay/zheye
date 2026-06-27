@@ -103,7 +103,8 @@ async def ai_analyze(prompt: str, ai_client, *,
                      max_tokens: int = 3000,
                      system_message: str = None,
                      schema: Type[BaseModel] = None,
-                     function_name: str = "ai_analyze") -> Optional[dict]:
+                     function_name: str = "ai_analyze",
+                     model: str = None) -> Optional[dict]:
     """
     通用 AI 分析调用器
     
@@ -115,6 +116,7 @@ async def ai_analyze(prompt: str, ai_client, *,
         system_message: 系统消息（可选）
         schema: Pydantic Schema 类（可选），用于验证返回数据
         function_name: 调用函数名（用于指标统计）
+        model: 模型名称（可选），为空时使用默认 deepseek-chat
     
     Returns:
         解析后的结果字典，或 None
@@ -135,7 +137,8 @@ async def ai_analyze(prompt: str, ai_client, *,
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
-            function_name=function_name
+            function_name=function_name,
+            model=model,
         )
         
         if not response:
@@ -143,7 +146,7 @@ async def ai_analyze(prompt: str, ai_client, *,
         
         result = parse_ai_response(response, schema=schema)
         if result:
-            result['ai_model'] = 'deepseek-chat'
+            result['ai_model'] = model or 'deepseek-chat'
             result['ai_confidence'] = 0.8
         
         return result

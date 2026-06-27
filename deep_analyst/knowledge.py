@@ -30,7 +30,7 @@ from sqlalchemy import select, or_, func, update, and_, Float
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from deep_analyst.utils import parse_ai_response, format_article_summaries, ai_analyze
-from deep_analyst.schemas import KnowledgeAnalysisSchema, CausalChainSchema
+from deep_analyst.schemas import KnowledgeAnalysisSchema, CausalChainSchema, KnowledgeAndCausalSchema
 from deep_analyst.models.knowledge import KnowledgeAtom, EventKnowledgeAtom
 
 logger = logging.getLogger(__name__)
@@ -620,6 +620,361 @@ async def analyze_causal_chain(event: dict, articles: list, ai_client) -> Option
         schema=CausalChainSchema,
         function_name="analyze_causal_chain"
     )
+
+
+# ============================================================
+# 合并 Step 1+2: 知识框架 + 因果链
+# ============================================================
+
+KNOWLEDGE_AND_CAUSAL_PROMPT = """你是一个金融新闻知识分析师。你的任务是分析一个新闻事件，同时完成两项工作：
+1. 生成知识框架（背景、缺口、因果步骤、关键概念、知识原子）
+2. 构建因果链图（节点+链接的结构化图）
+
+## 事件信息
+标题：{title}
+描述：{description}
+分类：{category}
+相关文章摘要：
+{article_summaries}
+
+## 你的任务
+
+请分析这个事件，生成结构化的知识框架和因果链图。输出必须是严格的 JSON 格式：
+
+```json
+{{
+    "background_summary": "用2-3句话概述这个事件的核心背景（为什么发生）",
+    
+    "knowledge_gaps": [
+        {{
+            "topic": "知识缺口主题（如'什么是基点'、'该国通胀历史'）",
+            "why_needed": "为什么理解这个事件需要知道这个",
+            "priority": "high/medium/low"
+        }}
+    ],
+    
+    "causal_chain": [
+        {{
+            "step": 1,
+            "cause": "原因/触发因素",
+            "effect": "导致的结果",
+            "evidence": "支撑证据（来自文章）"
+        }}
+    ],
+    
+    "key_concepts": [
+        {{
+            "concept": "关键概念名称",
+            "definition": "简明定义",
+            "relevance": "与事件的关联"
+        }}
+    ],
+    
+    "knowledge_atoms": [
+        {{
+            "atom_type": "background/history/definition/mechanism/context",
+            "title": "知识标题",
+            "content": "知识内容（100-200字，面向金融知识有限的读者）",
+            "entities": ["涉及的实体"],
+            "keywords": ["相关关键词"]
+        }}
+    ],
+    
+    "causal_graph": {{
+        "nodes": [
+            {{
+                "id": "node_1",
+                "node_type": "root_cause",
+                "title": "根本原因标题",
+                "description": "详细描述",
+                "impact_level": "high",
+                "time_horizon": "long_term",
+                "entities": [],
+                "confidence": 0.8
+            }},
+            {{
+                "id": "node_2",
+                "node_type": "trigger",
+                "title": "触发因素标题",
+                "description": "详细描述",
+                "impact_level": "high",
+                "time_horizon": "immediate",
+                "entities": [],
+                "confidence": 0.9
+            }},
+            {{
+                "id": "node_3",
+                "node_type": "immediate",
+                "title": "即时影响标题",
+                "description": "详细描述",
+                "impact_level": "medium",
+                "time_horizon": "days",
+                "entities": [],
+                "confidence": 0.85
+            }},
+            {{
+                "id": "node_4",
+                "node_type": "short_term",
+                "title": "短期效应标题",
+                "description": "详细描述",
+                "impact_level": "medium",
+                "time_horizon": "weeks",
+                "entities": [],
+                "confidence": 0.75
+            }},
+            {{
+                "id": "node_5",
+                "node_type": "long_term",
+                "title": "长期走向标题",
+                "description": "详细描述",
+                "impact_level": "medium",
+                "time_horizon": "months",
+                "entities": [],
+                "confidence": 0.7
+            }},
+            {{
+                "id": "node_6",
+                "node_type": "scenario",
+                "title": "可能情景A",
+                "description": "情景描述",
+                "probability": 0.4,
+                "impact_level": "high",
+                "time_horizon": "months",
+                "entities": [],
+                "confidence": 0.6
+            }}
+        ],
+        "links": [
+            {{"source": "node_1", "target": "node_2", "link_type": "leads_to", "strength": 0.9}},
+            {{"source": "node_2", "target": "node_3", "link_type": "triggers", "strength": 1.0}},
+            {{"source": "node_3", "target": "node_4", "link_type": "causes", "strength": 0.8}},
+            {{"source": "node_4", "target": "node_5", "link_type": "leads_to", "strength": 0.7}},
+            {{"source": "node_4", "target": "node_6", "link_type": "may_cause", "strength": 0.4}}
+        ],
+        "summary": "用3-5句话总结整个因果链的逻辑"
+    }}
+}}
+```
+
+## 节点类型说明
+- root_cause: 根本原因（深层结构性因素，如经济周期、政策框架）
+- trigger: 触发因素（直接导致事件发生的导火索）
+- immediate: 即时影响（事件发生后的直接后果）
+- short_term: 短期效应（数天到数周内的影响）
+- long_term: 长期走向（数月到数年的影响）
+- scenario: 可能情景（未来可能发生的不同走向，需标注 probability）
+
+## 注意事项
+1. knowledge_gaps 应该识别读者可能不知道但理解事件必需的知识
+2. knowledge_atoms 应该提供简洁、易懂的背景知识
+3. causal_chain 应该清晰展示线性因果步骤
+4. causal_graph 应该展示完整的因果网络（节点+链接）
+5. 语言：中文
+6. 不要编造事实，如果不确定，标注 confidence 较低"""
+
+
+KNOWLEDGE_AND_CAUSAL_WITH_EXISTING_PROMPT = """你是一个金融新闻知识分析师。你的任务是分析一个新闻事件，同时完成两项工作：
+1. 生成知识框架（背景、缺口、因果步骤、关键概念、知识原子）
+2. 构建因果链图（节点+链接的结构化图）
+
+## 事件信息
+标题：{title}
+描述：{description}
+分类：{category}
+相关文章摘要：
+{article_summaries}
+
+## 已有背景知识（不需要重复生成）
+
+以下是与该事件相关的已有知识原子，这些知识已经被其他事件使用过：
+
+{existing_atoms_text}
+
+## 你的任务
+
+请分析这个事件，生成结构化的知识框架和因果链图。
+
+**重要**：上面列出的"已有背景知识"已经覆盖了部分知识点。你的 knowledge_atoms 应该只包含**已有知识未覆盖的新知识**。如果某个知识点已被覆盖，不要重复生成。
+
+输出必须是严格的 JSON 格式：
+
+```json
+{{
+    "background_summary": "用2-3句话概述这个事件的核心背景（为什么发生）",
+    
+    "knowledge_gaps": [
+        {{
+            "topic": "知识缺口主题",
+            "why_needed": "为什么理解这个事件需要知道这个",
+            "priority": "high/medium/low"
+        }}
+    ],
+    
+    "causal_chain": [
+        {{
+            "step": 1,
+            "cause": "原因/触发因素",
+            "effect": "导致的结果",
+            "evidence": "支撑证据（来自文章）"
+        }}
+    ],
+    
+    "key_concepts": [
+        {{
+            "concept": "关键概念名称",
+            "definition": "简明定义",
+            "relevance": "与事件的关联"
+        }}
+    ],
+    
+    "knowledge_atoms": [
+        {{
+            "atom_type": "background/history/definition/mechanism/context",
+            "title": "知识标题（必须是已有知识未覆盖的新知识）",
+            "content": "知识内容（100-200字，面向金融知识有限的读者）",
+            "entities": ["涉及的实体"],
+            "keywords": ["相关关键词"]
+        }}
+    ],
+    
+    "reused_atom_ids": [1, 2, 3],
+    
+    "causal_graph": {{
+        "nodes": [
+            {{
+                "id": "node_1",
+                "node_type": "root_cause",
+                "title": "根本原因标题",
+                "description": "详细描述",
+                "impact_level": "high",
+                "time_horizon": "long_term",
+                "entities": [],
+                "confidence": 0.8
+            }},
+            {{
+                "id": "node_2",
+                "node_type": "trigger",
+                "title": "触发因素标题",
+                "description": "详细描述",
+                "impact_level": "high",
+                "time_horizon": "immediate",
+                "entities": [],
+                "confidence": 0.9
+            }},
+            {{
+                "id": "node_3",
+                "node_type": "immediate",
+                "title": "即时影响标题",
+                "description": "详细描述",
+                "impact_level": "medium",
+                "time_horizon": "days",
+                "entities": [],
+                "confidence": 0.85
+            }},
+            {{
+                "id": "node_4",
+                "node_type": "short_term",
+                "title": "短期效应标题",
+                "description": "详细描述",
+                "impact_level": "medium",
+                "time_horizon": "weeks",
+                "entities": [],
+                "confidence": 0.75
+            }},
+            {{
+                "id": "node_5",
+                "node_type": "long_term",
+                "title": "长期走向标题",
+                "description": "详细描述",
+                "impact_level": "medium",
+                "time_horizon": "months",
+                "entities": [],
+                "confidence": 0.7
+            }},
+            {{
+                "id": "node_6",
+                "node_type": "scenario",
+                "title": "可能情景A",
+                "description": "情景描述",
+                "probability": 0.4,
+                "impact_level": "high",
+                "time_horizon": "months",
+                "entities": [],
+                "confidence": 0.6
+            }}
+        ],
+        "links": [
+            {{"source": "node_1", "target": "node_2", "link_type": "leads_to", "strength": 0.9}},
+            {{"source": "node_2", "target": "node_3", "link_type": "triggers", "strength": 1.0}},
+            {{"source": "node_3", "target": "node_4", "link_type": "causes", "strength": 0.8}},
+            {{"source": "node_4", "target": "node_5", "link_type": "leads_to", "strength": 0.7}},
+            {{"source": "node_4", "target": "node_6", "link_type": "may_cause", "strength": 0.4}}
+        ],
+        "summary": "用3-5句话总结整个因果链的逻辑"
+    }}
+}}
+```
+
+## 注意事项
+1. knowledge_gaps 应该识别读者可能不知道但理解事件必需的知识
+2. knowledge_atoms 只包含新知识，不要重复已有知识
+3. reused_atom_ids 填写你认为与本事件相关的已有知识原子的 ID
+4. causal_chain 应该清晰展示线性因果步骤
+5. causal_graph 应该展示完整的因果网络（节点+链接）
+6. 语言：中文
+7. 不要编造事实，如果不确定，标注 confidence 较低"""
+
+
+async def analyze_event_knowledge_and_causal(
+    event: dict,
+    articles: list,
+    ai_client,
+    existing_atoms: List[dict] = None,
+) -> Optional[dict]:
+    """
+    合并 Step 1+2: 一次调用同时分析知识框架和因果链图
+
+    Args:
+        event: 事件信息 {title, description, category, ...}
+        articles: 相关文章列表 [{title, summary, ...}, ...]
+        ai_client: AI客户端实例
+        existing_atoms: 已有知识原子列表（可选，用于复用）
+
+    Returns:
+        包含 knowledge_framework + causal_graph 的字典，或 None
+    """
+    if existing_atoms:
+        existing_text = _format_existing_atoms(existing_atoms)
+        prompt = KNOWLEDGE_AND_CAUSAL_WITH_EXISTING_PROMPT.format(
+            title=event.get('title', ''),
+            description=event.get('description', ''),
+            category=event.get('category', ''),
+            article_summaries=format_article_summaries(articles),
+            existing_atoms_text=existing_text,
+        )
+    else:
+        prompt = KNOWLEDGE_AND_CAUSAL_PROMPT.format(
+            title=event.get('title', ''),
+            description=event.get('description', ''),
+            category=event.get('category', ''),
+            article_summaries=format_article_summaries(articles),
+        )
+
+    result = await ai_analyze(
+        prompt=prompt,
+        ai_client=ai_client,
+        temperature=0.3,
+        max_tokens=5000,
+        schema=KnowledgeAndCausalSchema,
+        function_name="analyze_knowledge_and_causal"
+    )
+
+    if result and existing_atoms:
+        reused_ids = result.get("reused_atom_ids", [])
+        if reused_ids:
+            result["_reused_atom_ids"] = reused_ids
+
+    return result
 
 
 def get_knowledge_type_label(atom_type: str, lang: str = 'zh') -> str:

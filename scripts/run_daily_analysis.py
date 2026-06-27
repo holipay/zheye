@@ -99,8 +99,6 @@ async def analyze_articles(articles: list[dict], session: AsyncSession) -> int:
                     ai_sentiment=result.sentiment,
                     ai_sentiment_score=result.sentiment_score,
                     ai_summary_zh=result.summary_zh,
-                    ai_key_points=result.key_points,
-                    ai_tags=result.tags,
                     ai_importance=result.importance,
                     ai_analyzed_at=datetime.now()
                 )

@@ -69,16 +69,7 @@ class ArticleAnalysisSchema(BaseModel):
     sentiment: SentimentType = Field(default=SentimentType.neutral)
     sentiment_score: float = Field(default=0.0, ge=-1.0, le=1.0)
     summary_zh: str = Field(default="", max_length=1000)
-    key_points: List[str] = Field(default_factory=list, max_length=10)
-    tags: List[str] = Field(default_factory=list, max_length=20)
     importance: float = Field(default=0.5, ge=0.0, le=1.0)
-
-    @field_validator('key_points', 'tags', mode='before')
-    @classmethod
-    def ensure_list(cls, v):
-        if isinstance(v, str):
-            return [v]
-        return v or []
 
 
 # ============================================================

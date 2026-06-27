@@ -166,6 +166,108 @@ async def _classify_by_llm(title: str, summary: str, scores: dict) -> Tuple[Opti
         return "其他资讯", 0.3, "keywords"
 
 
+async def classify_hybrid_batch(articles: list[dict], use_llm: bool = True) -> list[Tuple[Optional[str], float, str]]:
+    """
+    批量混合分类：先关键词过滤，再批量 LLM 分类
+
+    Args:
+        articles: [{"title": ..., "summary": ...}, ...]
+        use_llm: 是否使用 LLM
+
+    Returns:
+        [(category, confidence, method), ...] 每篇文章的分类结果
+    """
+    categories_to_use = CATEGORIES if CATEGORIES else DEFAULT_KEYWORDS
+    results: list[Tuple[Optional[str], float, str]] = [None] * len(articles)
+    llm_pending: list[tuple[int, str, str]] = []
+
+    for i, article in enumerate(articles):
+        title = article.get("title", "")
+        summary = article.get("summary", "")
+        text = (title + " " + summary).lower()
+
+        # 第一层：关键词快速匹配
+        scores = {}
+        for category, config in categories_to_use.items():
+            keywords = config.get("keywords", config) if isinstance(config, dict) else config
+            if not isinstance(keywords, list):
+                continue
+            score = sum(1 for kw in keywords if _match_keyword(kw, text))
+            if score > 0:
+                scores[category] = score
+
+        if scores:
+            best_category = max(scores, key=scores.get)
+            best_score = scores[best_category]
+
+            if best_category in FILTERED_CATEGORIES:
+                results[i] = (None, 1.0, "keywords")
+                continue
+
+            if best_score >= 2:
+                confidence = min(0.9, 0.6 + best_score * 0.1)
+                results[i] = (best_category, confidence, "keywords")
+                continue
+
+        # 需要 LLM 分类
+        llm_pending.append((i, title, summary))
+
+    # 第二层：批量 LLM 分类
+    if llm_pending and use_llm:
+        from scraper.pipeline.llm_classifier import classify_batch_with_llm
+        llm_results = await classify_batch_with_llm(llm_pending)
+
+        for idx in range(len(llm_pending)):
+            i, title, summary = llm_pending[idx]
+            llm_result = llm_results.get(i)
+
+            if llm_result is None:
+                # LLM 失败，降级到关键词结果
+                text = (title + " " + summary).lower()
+                fallback_scores = {}
+                for category, config in categories_to_use.items():
+                    keywords = config.get("keywords", config) if isinstance(config, dict) else config
+                    if not isinstance(keywords, list):
+                        continue
+                    score = sum(1 for kw in keywords if _match_keyword(kw, text))
+                    if score > 0:
+                        fallback_scores[category] = score
+                if fallback_scores:
+                    best = max(fallback_scores, key=fallback_scores.get)
+                    if best in FILTERED_CATEGORIES:
+                        results[i] = (None, 0.5, "keywords")
+                    else:
+                        results[i] = (best, 0.5, "keywords")
+                else:
+                    results[i] = ("其他资讯", 0.3, "keywords")
+            elif llm_result.category == "体育":
+                results[i] = (None, llm_result.confidence, "llm")
+            else:
+                results[i] = (llm_result.category, llm_result.confidence, "llm")
+
+    elif llm_pending and not use_llm:
+        for i, title, summary in llm_pending:
+            text = (title + " " + summary).lower()
+            scores = {}
+            for category, config in categories_to_use.items():
+                keywords = config.get("keywords", config) if isinstance(config, dict) else config
+                if not isinstance(keywords, list):
+                    continue
+                score = sum(1 for kw in keywords if _match_keyword(kw, text))
+                if score > 0:
+                    scores[category] = score
+            if scores:
+                best = max(scores, key=scores.get)
+                if best in FILTERED_CATEGORIES:
+                    results[i] = (None, 0.5, "keywords")
+                else:
+                    results[i] = (best, 0.5, "keywords")
+            else:
+                results[i] = ("其他资讯", 0.3, "keywords")
+
+    return results
+
+
 async def classify_hybrid(title: str, summary: str = "", use_llm: bool = True) -> Tuple[Optional[str], float, str]:
     """
     混合分类方法：关键词快速过滤 + LLM 语义分类

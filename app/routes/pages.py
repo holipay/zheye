@@ -39,36 +39,14 @@ async def root(request: Request):
 @router.get("/{lang}")
 async def index(request: Request, lang: str):
     lang = validate_lang(lang)
-    ctx = get_template_context(request, title=get_text(lang, "nav.home"))
+    ctx = get_template_context(request, title=get_text(lang, "nav.analysis"), report_date=date.today().isoformat())
     return templates.TemplateResponse(request=request, name="index.html", context=ctx)
-
-
-@router.get("/{lang}/news")
-async def news(request: Request, lang: str, category: str = "all", article_type: str = "all", keyword_id: int = None, sort: str = "date", page: int = 1):
-    lang = validate_lang(lang)
-    ctx = get_template_context(request, title=get_text(lang, "nav.news"), category=category, article_type=article_type, keyword_id=keyword_id, sort=sort, page=page)
-    return templates.TemplateResponse(request=request, name="news.html", context=ctx)
-
 
 @router.get("/{lang}/articles")
 async def articles(request: Request, lang: str, sort: str = "date", page: int = 1):
     lang = validate_lang(lang)
     ctx = get_template_context(request, title=get_text(lang, "articles.title"), sort=sort, page=page)
     return templates.TemplateResponse(request=request, name="articles.html", context=ctx)
-
-
-@router.get("/{lang}/analysis")
-async def analysis(request: Request, lang: str):
-    lang = validate_lang(lang)
-    ctx = get_template_context(request, title=get_text(lang, "nav.analysis"), report_date=date.today().isoformat())
-    return templates.TemplateResponse(request=request, name="analysis.html", context=ctx)
-
-
-@router.get("/{lang}/news/{news_id}")
-async def news_detail(request: Request, lang: str, news_id: int):
-    lang = validate_lang(lang)
-    ctx = get_template_context(request, title=get_text(lang, "nav.news"), news_id=news_id)
-    return templates.TemplateResponse(request=request, name="news_detail.html", context=ctx)
 
 
 @router.get("/{lang}/events")

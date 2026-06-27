@@ -42,9 +42,7 @@
                 </a>
             </div>
             <nav class="main-nav">
-                <a href="/{{ lang }}" class="nav-link {% if title == t('nav.home') %}active{% endif %}">{{ t("nav.home") }}</a>
-                <a href="/{{ lang }}/news" class="nav-link {% if title == t('nav.news') %}active{% endif %}">{{ t("nav.news") }}</a>
-                <a href="/{{ lang }}/analysis" class="nav-link {% if title == t('nav.analysis') %}active{% endif %}">{{ t("nav.analysis") }}</a>
+                <a href="/{{ lang }}" class="nav-link {% if title == t('nav.analysis') %}active{% endif %}">{{ t("nav.home") }}</a>
                 <a href="/{{ lang }}/events" class="nav-link {% if title == t('nav.events') %}active{% endif %}">{{ t("nav.events") }}</a>
             </nav>
             <div class="header-right">
@@ -71,15 +69,6 @@
         </div>
     </header>
 
-    <!-- 分类导航 -->
-    <nav class="category-nav">
-        <div class="container">
-            <div class="category-links" hx-get="/api/categories?lang={{ lang }}" hx-trigger="load" hx-swap="innerHTML">
-                <a href="/{{ lang }}/news?category=all" class="cat-link active">{{ t("category.all") }}</a>
-            </div>
-        </div>
-    </nav>
-
     <!-- 主内容区 -->
     <main class="main">
         <div class="container">
@@ -90,30 +79,6 @@
     <!-- 页脚 -->
     <footer class="footer">
         <div class="container">
-            <div class="footer-grid">
-                <div class="footer-col">
-                    <h4>{{ t("footer.about") }}</h4>
-                    <p>{{ t("footer.about_desc") }}</p>
-                </div>
-                <div class="footer-col">
-                    <h4>{{ t("footer.data_sources") }}</h4>
-                    <ul>
-                        <li>Reuters</li>
-                        <li>Bloomberg</li>
-                        <li>Financial Times</li>
-                        <li>{{ t("footer.central_bank") }}</li>
-                    </ul>
-                </div>
-                <div class="footer-col">
-                    <h4>{{ t("footer.analysis_features") }}</h4>
-                    <ul>
-                        <li>{{ t("footer.weekly_report") }}</li>
-                        <li>{{ t("footer.monthly_report") }}</li>
-                        <li>{{ t("footer.event_tracking") }}</li>
-                        <li>{{ t("footer.trend_analysis") }}</li>
-                    </ul>
-                </div>
-            </div>
             <div class="footer-bottom">
                 <p>{{ t("footer.copyright") }}</p>
             </div>

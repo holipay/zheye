@@ -28,8 +28,6 @@ class ArticleAnalysis:
     sentiment: str  # positive, negative, neutral
     sentiment_score: float  # -1.0 到 1.0
     summary_zh: str  # 中文摘要
-    key_points: list[str]  # 关键要点
-    tags: list[str]  # 标签
     importance: float  # 重要性评分 0-1
 
 
@@ -76,19 +74,15 @@ class DeepSeekClient(BaseDeepSeekClient):
 返回格式：
 {
     "sentiment": "positive/negative/neutral",
-    "sentiment_score": 0.0,  // -1.0 到 1.0，负数表示消极，正数表示积极
+    "sentiment_score": 0.0,
     "summary_zh": "中文摘要，100字以内",
-    "key_points": ["要点1", "要点2", "要点3"],
-    "tags": ["标签1", "标签2"],
-    "importance": 0.8  // 重要性评分 0-1，考虑市场影响、政策影响、历史意义等
+    "importance": 0.8
 }
 
 注意：
-1. sentiment_score 要准确反映市场情绪
-2. summary_zh 要简洁准确
-3. key_points 提取3-5个核心要点
-4. tags 包含相关的人名、机构、国家、政策等
-5. importance 根据对金融市场的影响程度评分"""
+1. sentiment_score 要准确反映市场情绪，-1.0 到 1.0
+2. summary_zh 要简洁准确，100字以内
+3. importance 根据对金融市场的影响程度评分，0-1"""
             },
             {
                 "role": "user",
@@ -110,7 +104,7 @@ class DeepSeekClient(BaseDeepSeekClient):
             confidence = calculate_confidence(
                 data, 
                 response_text=result,
-                required_fields=["sentiment", "sentiment_score", "summary_zh", "key_points", "importance"],
+                required_fields=["sentiment", "sentiment_score", "summary_zh", "importance"],
                 field_validators={
                     "sentiment": lambda x: x in ("positive", "negative", "neutral"),
                     "sentiment_score": lambda x: -1.0 <= float(x) <= 1.0,
@@ -144,8 +138,6 @@ class DeepSeekClient(BaseDeepSeekClient):
                 sentiment=data.get("sentiment", "neutral"),
                 sentiment_score=float(data.get("sentiment_score", 0)),
                 summary_zh=data.get("summary_zh", ""),
-                key_points=data.get("key_points", []),
-                tags=data.get("tags", []),
                 importance=float(data.get("importance", 0.5))
             )
         except (ValueError, TypeError) as e:

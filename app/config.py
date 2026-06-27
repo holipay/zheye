@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     AI_MAX_RETRIES: int = Field(default=3, description="AI 最大重试次数")
     AI_TIMEOUT_SECONDS: int = Field(default=30, description="AI 超时时间（秒）")
     AI_DAILY_BUDGET: float = Field(default=10.0, description="AI 每日预算（美元）")
+    AI_CACHE_ENABLED: bool = Field(default=True, description="启用 AI 结果缓存")
+    AI_CACHE_TTL: int = Field(default=86400, description="AI 缓存 TTL（秒），默认 24 小时")
+    AI_CACHE_MAX_SIZE: int = Field(default=2000, description="AI 缓存最大条目数")
     
     # 国际化配置
     DEFAULT_LANGUAGE: str = Field(default="en", description="默认语言")
@@ -76,6 +79,7 @@ class Settings(BaseSettings):
     
     # 分类配置
     USE_LLM_CLASSIFIER: bool = Field(default=True, description="使用 LLM 分类器")
+    DEEPSEEK_CLASSIFY_MODEL: str = Field(default="deepseek-chat", description="分类专用模型")
     
     # NER 配置
     USE_NER: bool = Field(default=True, description="使用 NER")

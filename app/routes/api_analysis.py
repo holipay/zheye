@@ -280,11 +280,13 @@ async def get_reports_list(
     if cached:
         return cached
 
-    # 使用白名单验证表名，防止 SQL 注入
-    if period not in REPORT_TABLES:
-        raise HTTPException(status_code=400, detail=Err.INVALID_REPORT_TYPE)
+    # 支持 weekly/monthly 和 weekly_reports/monthly_reports 两种格式
+    period_map = {"weekly": "weekly_reports", "monthly": "monthly_reports"}
+    table_name = period_map.get(period, period)
     
-    table_name = period
+    # 使用白名单验证表名，防止 SQL 注入
+    if table_name not in REPORT_TABLES:
+        raise HTTPException(status_code=400, detail=Err.INVALID_REPORT_TYPE)
     
     # 使用 SQLAlchemy table 构造替代 f-string SQL 拼接
     metadata = MetaData()

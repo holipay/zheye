@@ -1,189 +1,190 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- 英雄区域 -->
-<div class="hero-section">
-    <div class="hero-content">
-        <h1 class="hero-title">{{ t("home.hero_title") }}</h1>
-        <p class="hero-subtitle">{{ t("home.hero_subtitle") }}</p>
-        <div class="hero-stats">
-            <div class="hero-stat">
-                <div class="hero-stat-value" id="stat-total">-</div>
-                <div class="hero-stat-label">{{ t("home.stat_total") }}</div>
+<style>
+.news-item { transition: background 0.15s; }
+.news-item:hover { background: var(--bg-secondary); }
+.news-item.active { background: var(--bg-secondary); }
+.report-overview { white-space: pre-wrap; line-height: 1.8; }
+.report-list { max-height: calc(100vh - 200px); overflow-y: auto; }
+.report-section-title { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 16px; border-bottom: 1px solid var(--border-color); }
+</style>
+
+<div style="display: grid; grid-template-columns: 1fr 320px; gap: var(--spacing-lg); align-items: start;">
+    <!-- 左侧：报告内容 -->
+    <div id="report-content">
+        <div id="report-placeholder" style="text-align: center; padding: 80px 40px; color: var(--text-muted);">
+            <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+            <h3 style="font-size: 16px; margin-bottom: 8px;">{{ t("analysis.title") }}</h3>
+            <p style="font-size: 13px;">← {{ t("analysis.select_report") if t("analysis.select_report") else "选择左侧报告查看" }}</p>
+        </div>
+
+        <div id="report-detail" class="hidden">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: var(--spacing-lg);">
+                <h1 style="font-family: var(--font-serif); font-size: 24px; font-weight: 700; margin: 0;" id="report-period">-</h1>
+                <span id="market-sentiment"></span>
             </div>
-            <div class="hero-stat">
-                <div class="hero-stat-value" id="stat-sources">-</div>
-                <div class="hero-stat-label">{{ t("home.stat_sources") }}</div>
+
+            <div style="font-size: 13px; color: var(--text-muted); margin-bottom: var(--spacing-lg);">
+                <span id="news-count">0</span> {{ t("news.articles") }}
             </div>
-            <div class="hero-stat">
-                <div class="hero-stat-value" id="stat-categories">-</div>
-                <div class="hero-stat-label">{{ t("home.stat_categories") }}</div>
+
+            <div class="card" style="margin-bottom: var(--spacing-md);">
+                <div class="card-body">
+                    <div class="report-overview" id="overview"></div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom: var(--spacing-md);">
+                <div class="card-header">
+                    <h2 class="card-title">{{ t("analysis.hot_topics") }}</h2>
+                </div>
+                <div class="card-body">
+                    <div id="hot-topics" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-md);"></div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom: var(--spacing-md);">
+                <div class="card-header">
+                    <h2 class="card-title">{{ t("analysis.key_events") }}</h2>
+                </div>
+                <div id="key-events" class="news-list"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">{{ t("analysis.trend_analysis") }}</h2>
+                </div>
+                <div class="card-body">
+                    <div class="report-overview" id="trend-analysis"></div>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- 图表区域 -->
-<div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
-    <!-- 每日趋势 -->
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">{{ t("home.daily_trend") }}</h2>
-            <span style="font-size: 12px; color: var(--text-muted);">{{ t("home.last_30_days") }}</span>
-        </div>
-        <div class="card-body" style="height: 250px;">
-            <div id="daily-trend-chart" class="loading">{{ t("home.loading") }}</div>
-        </div>
-    </div>
-
-    <!-- 情感分布 -->
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">{{ t("home.sentiment_dist") }}</h2>
-            <span style="font-size: 12px; color: var(--text-muted);">{{ t("home.last_7_days") }}</span>
-        </div>
-        <div class="card-body" style="height: 250px;">
-            <div id="sentiment-chart" class="loading">{{ t("home.loading") }}</div>
-        </div>
-    </div>
-</div>
-
-<!-- 主内容网格 -->
-<div class="home-grid">
-    <!-- 左侧：新闻流 -->
-    <div>
-        <!-- 分类统计 -->
-        <div class="card" style="margin-bottom: var(--spacing-md);">
-            <div class="card-header">
-                <h2 class="card-title">{{ t("home.category_heat") }}</h2>
-            </div>
-            <div class="card-body" style="height: 200px;">
-                <div id="category-chart" class="loading">{{ t("home.loading") }}</div>
-            </div>
-        </div>
-
-        <!-- 头条新闻 -->
+    <!-- 右侧：报告列表 -->
+    <div class="report-list">
         <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">{{ t("home.today_headlines") }}</h2>
-                <a href="/{{ lang }}/news" class="card-link">{{ t("home.view_more") }}</a>
-            </div>
-            <div id="featured-news" 
-                 hx-get="/api/latest?limit=5&lang={{ lang }}" 
-                 hx-trigger="load"
-                 hx-target="#featured-news"
-                 hx-swap="innerHTML">
-                <div class="loading">{{ t("home.loading") }}</div>
+            <div class="report-section-title">{{ t("analysis.weekly_report") }}</div>
+            <div id="weekly-list" class="news-list">
+                <div class="loading">{{ t("common.loading") }}</div>
             </div>
         </div>
 
-        <!-- 最新新闻 -->
         <div class="card" style="margin-top: var(--spacing-md);">
-            <div class="card-header">
-                <h2 class="card-title">{{ t("home.latest_news") }}</h2>
-                <div class="sort-toggle">
-                    <a href="/{{ lang }}" class="sort-btn active" 
-                       hx-get="/api/latest?limit=10&lang={{ lang }}" hx-target="#news-feed" hx-swap="innerHTML">{{ t("home.latest") }}</a>
-                    <a href="/{{ lang }}" class="sort-btn"
-                       hx-get="/api/news?sort=weight&lang={{ lang }}" hx-target="#news-feed" hx-swap="innerHTML">{{ t("home.important") }}</a>
-                </div>
-            </div>
-            <div class="news-list" id="news-feed"
-                 hx-get="/api/latest?limit=10&lang={{ lang }}" 
-                 hx-trigger="load"
-                 hx-target="#news-feed"
-                 hx-swap="innerHTML">
-                <div class="loading">{{ t("home.loading") }}</div>
+            <div class="report-section-title">{{ t("analysis.monthly_report") }}</div>
+            <div id="monthly-list" class="news-list">
+                <div class="loading">{{ t("common.loading") }}</div>
             </div>
         </div>
     </div>
-
-    <!-- 右侧：侧边栏 -->
-    <aside class="sidebar">
-        <!-- 热门关键词 -->
-        <div class="sidebar-widget">
-            <div class="widget-header">{{ t("home.hot_keywords") }}</div>
-            <div class="widget-content">
-                <div class="keyword-list" id="keywords"
-                     hx-get="/api/keywords/popular?limit=15&lang={{ lang }}" hx-trigger="load" hx-target="#keywords" hx-swap="innerHTML">
-                    <div class="loading">{{ t("home.loading") }}</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 热门实体 -->
-        <div class="sidebar-widget">
-            <div class="widget-header">{{ t("home.focus_entities") }}</div>
-            <div class="widget-content">
-                <div class="entity-list" id="entities"
-                     hx-get="/api/entities/popular?limit=8&lang={{ lang }}" hx-trigger="load" hx-target="#entities" hx-swap="innerHTML">
-                    <div class="loading">{{ t("home.loading") }}</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 地域分布 -->
-        <div class="sidebar-widget">
-            <div class="widget-header">{{ t("home.region_dist") }}</div>
-            <div class="widget-content" style="height: 200px;">
-                <div id="region-chart" class="loading">{{ t("home.loading") }}</div>
-            </div>
-        </div>
-    </aside>
 </div>
 
-<script src="/static/js/chart.min.js"></script>
-<script src="/static/js/charts.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // 加载统计数据
-    fetch('/api/meta')
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById('stat-total').textContent = data.total || 0;
-            document.getElementById('stat-sources').textContent = (data.sources ? data.sources.length : 0) + '+';
-            document.getElementById('stat-categories').textContent = data.categories ? data.categories.length : 0;
-        });
+const sentimentMap = {
+    'bullish': '{{ t("sentiment.bullish") }}',
+    'bearish': '{{ t("sentiment.bearish") }}',
+    'neutral': '{{ t("sentiment.neutral") }}',
+    'mixed': '{{ t("sentiment.mixed") }}'
+};
 
-    // 加载图表
-    loadCharts();
+function getSentimentBadge(sentiment) {
+    const cls = sentiment === 'bullish' ? 'badge-positive' :
+                sentiment === 'bearish' ? 'badge-negative' : 'badge-neutral';
+    return `<span class="badge ${cls}">${sentimentMap[sentiment] || sentiment || '-'}</span>`;
+}
+
+function renderReportItem(report) {
+    return `
+        <div class="news-item" onclick="loadReport('${report.period_start}', this, '${report._period || 'weekly'}')" style="cursor:pointer; padding: 10px 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 500; font-size: 13px;">${report.period_start} ~ ${report.period_end}</span>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="color: var(--text-muted); font-size: 12px;">${report.news_count || 0}</span>
+                    ${getSentimentBadge(report.market_sentiment)}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadReports('weekly', 'weekly-list');
+    loadReports('monthly', 'monthly-list');
 });
 
-async function loadCharts() {
-    // 每日趋势
-    ChartUtils.loadAndCreate(
-        '/api/charts/daily-trend?days=30',
-        (ctx, data) => ChartUtils.createLineChart(ctx, data.labels, [{
-            label: '{{ t("news.articles") }}',
-            data: data.values,
-            borderColor: ChartUtils.colors.accent,
-            backgroundColor: ChartUtils.colors.accent + '20',
-            fill: true,
-            tension: 0.3
-        }]),
-        'daily-trend-chart'
-    );
+async function loadReports(period, containerId) {
+    try {
+        const response = await fetch(`/api/analysis/reports?period=${period}_reports&limit=20`);
+        const data = await response.json();
+        
+        const container = document.getElementById(containerId);
+        if (data.reports && data.reports.length > 0) {
+            const items = data.reports.map(r => { r._period = period; return r; });
+            container.innerHTML = items.map(renderReportItem).join('');
+        } else {
+            container.innerHTML = '<div class="empty-state" style="padding: 16px; font-size: 13px;">-</div>';
+        }
+    } catch (error) {
+        console.error('Error loading reports:', error);
+    }
+}
 
-    // 情感分布
-    ChartUtils.loadAndCreate(
-        '/api/charts/sentiment?days=7',
-        (ctx, data) => ChartUtils.createPieChart(ctx, data.labels, data.values, data.colors),
-        'sentiment-chart'
-    );
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 
-    // 分类统计
-    ChartUtils.loadAndCreate(
-        '/api/charts/categories?days=30',
-        (ctx, data) => ChartUtils.createBarChart(ctx, data.labels, data.values),
-        'category-chart'
-    );
-
-    // 地域分布
-    ChartUtils.loadAndCreate(
-        '/api/charts/regions?days=30',
-        (ctx, data) => ChartUtils.createPieChart(ctx, data.labels, data.values, data.colors),
-        'region-chart'
-    );
+async function loadReport(startDate, el, period) {
+    document.querySelectorAll('.news-item').forEach(item => item.classList.remove('active'));
+    if (el) el.classList.add('active');
+    
+    try {
+        const url = `/api/analysis/${period}/${startDate}`;
+        const response = await fetch(url);
+        if (!response.ok) return;
+        
+        const report = await response.json();
+        
+        document.getElementById('report-placeholder').classList.add('hidden');
+        document.getElementById('report-detail').classList.remove('hidden');
+        
+        document.getElementById('report-period').textContent = `${report.period_start} ~ ${report.period_end}`;
+        document.getElementById('news-count').textContent = report.news_count || 0;
+        document.getElementById('market-sentiment').innerHTML = getSentimentBadge(report.market_sentiment);
+        document.getElementById('overview').textContent = report.overview || '';
+        document.getElementById('trend-analysis').textContent = report.trend_analysis || '';
+        
+        const hotTopicsContainer = document.getElementById('hot-topics');
+        if (report.hot_topics && report.hot_topics.length > 0) {
+            hotTopicsContainer.innerHTML = report.hot_topics.map(topic => `
+                <div class="event-card">
+                    <div class="event-card-title">${escapeHtml(topic.topic || topic)}</div>
+                    <div class="event-card-meta">${escapeHtml(topic.description || '')}</div>
+                </div>
+            `).join('');
+        } else {
+            hotTopicsContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 13px;">-</div>';
+        }
+        
+        const keyEventsContainer = document.getElementById('key-events');
+        if (report.key_events && report.key_events.length > 0) {
+            keyEventsContainer.innerHTML = report.key_events.map(event => `
+                <div class="news-item" style="padding: 10px 16px;">
+                    <div style="font-weight: 500;">${escapeHtml(event.event || event)}</div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                        ${escapeHtml(event.category || '')} ${escapeHtml(event.significance || '')}
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            keyEventsContainer.innerHTML = '<div class="empty-state" style="padding: 16px; font-size: 13px;">-</div>';
+        }
+    } catch (error) {
+        console.error('Error loading report:', error);
+    }
 }
 </script>
 {% endblock %}
