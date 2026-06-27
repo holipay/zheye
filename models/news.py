@@ -26,8 +26,6 @@ class News(Base):
     ai_sentiment = Column(String(20))  # positive, negative, neutral
     ai_sentiment_score = Column(Float)  # -1.0 到 1.0
     ai_summary_zh = Column(Text)  # AI 生成的中文摘要
-    ai_key_points = Column(JSONB)  # 关键要点列表
-    ai_tags = Column(JSONB)  # AI 生成的标签
     ai_importance = Column(Float, default=0.0)  # 重要性评分 0-1
     ai_analyzed_at = Column(DateTime(timezone=True))  # 分析时间
 

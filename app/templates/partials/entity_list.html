@@ -1,0 +1,15 @@
+{% if entities %}
+    <div class="entity-list">
+        {% for ent in entities %}
+        <div class="entity-item entity-{{ ent.entity_type }}">
+            <span class="entity-type">{{ ent.entity_type }}</span>
+            <span class="entity-name">{{ ent.name }}</span>
+            <span class="entity-count">{{ ent.article_count }}</span>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state">
+        <p>{{ t("home.no_entities") }}</p>
+    </div>
+{% endif %}

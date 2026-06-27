@@ -96,7 +96,7 @@ def _calculate_format_score(result: dict) -> float:
             except (ValueError, TypeError):
                 score -= 0.2
     
-    list_fields = ["key_points", "tags", "hot_topics", "key_events"]
+    list_fields = ["hot_topics", "key_events"]
     for field in list_fields:
         if field in result and not isinstance(result[field], list):
             score -= 0.1
@@ -116,12 +116,6 @@ def _calculate_content_quality(result: dict, field_validators: dict = None) -> f
                 score -= 0.2
             elif length > 1000:
                 score -= 0.1
-    
-    list_fields = ["key_points", "tags"]
-    for field in list_fields:
-        if field in result and isinstance(result[field], list):
-            if len(result[field]) == 0:
-                score -= 0.2
     
     if field_validators:
         for field, validator in field_validators.items():
@@ -185,8 +179,6 @@ def generate_change_summary(changed_fields: list) -> str:
         "sentiment": "情感",
         "sentiment_score": "情感分数",
         "summary_zh": "中文摘要",
-        "key_points": "关键要点",
-        "tags": "标签",
         "importance": "重要性",
     }
     
@@ -208,7 +200,6 @@ class TestConfidenceCalculation:
             "sentiment": "positive",
             "sentiment_score": 0.8,
             "summary_zh": "这是一个测试摘要",
-            "key_points": ["要点1", "要点2"],
             "importance": 0.7,
         }
         
@@ -249,7 +240,6 @@ class TestConfidenceCalculation:
             "sentiment": "positive",
             "sentiment_score": 0.5,
             "importance": 0.8,
-            "key_points": ["point1"],
         }
         score = _calculate_format_score(valid_result)
         assert score == 1.0
@@ -338,13 +328,13 @@ class TestVersionComparison:
         assert "情感" in summary
         
         # 多个字段
-        summary = generate_change_summary(["sentiment", "summary_zh", "tags"])
+        summary = generate_change_summary(["sentiment", "summary_zh", "importance"])
         assert "情感" in summary
         assert "中文摘要" in summary
-        assert "标签" in summary
+        assert "重要性" in summary
         
         # 超过5个字段
-        fields = ["sentiment", "summary_zh", "tags", "key_points", "importance", "overview"]
+        fields = ["sentiment", "summary_zh", "importance", "overview", "hot_topics", "key_events"]
         summary = generate_change_summary(fields)
         assert "6 个字段" in summary
     
@@ -354,21 +344,18 @@ class TestVersionComparison:
             "sentiment": "positive",
             "sentiment_score": 0.8,
             "summary_zh": "旧摘要",
-            "key_points": ["要点1", "要点2"],
         }
         
         v2_data = {
             "sentiment": "negative",
             "sentiment_score": -0.5,
             "summary_zh": "新摘要",
-            "key_points": ["要点1", "要点2"],
         }
         
         changed = calculate_changed_fields(v1_data, v2_data)
         assert "sentiment" in changed
         assert "sentiment_score" in changed
         assert "summary_zh" in changed
-        assert "key_points" not in changed  # 未变更
 
 
 class TestConfidenceThreshold:
@@ -380,7 +367,6 @@ class TestConfidenceThreshold:
             "sentiment": "positive",
             "sentiment_score": 0.8,
             "summary_zh": "这是一篇关于经济发展的详细分析文章",
-            "key_points": ["要点1", "要点2", "要点3"],
             "importance": 0.9,
         }
         
@@ -394,7 +380,6 @@ class TestConfidenceThreshold:
             "sentiment": "invalid",
             "sentiment_score": 5.0,
             "summary_zh": "",
-            "key_points": [],
         }
         
         confidence = calculate_confidence(result)

@@ -230,8 +230,6 @@ class VersionManager:
             "sentiment": "情感",
             "sentiment_score": "情感分数",
             "summary_zh": "中文摘要",
-            "key_points": "关键要点",
-            "tags": "标签",
             "importance": "重要性",
             "overview": "概述",
             "hot_topics": "热门话题",

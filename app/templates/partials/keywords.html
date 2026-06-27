@@ -1,0 +1,14 @@
+{% if keywords %}
+    <div class="keyword-list">
+        {% for kw in keywords %}
+        <div class="keyword-item">
+            <span class="keyword-term">{{ kw.term }}</span>
+            <span class="keyword-count">{{ kw.article_count }}</span>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state">
+        <p>{{ t("home.no_keywords") }}</p>
+    </div>
+{% endif %}

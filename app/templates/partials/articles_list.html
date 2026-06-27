@@ -1,0 +1,54 @@
+{% if news_items %}
+    {% for item in news_items %}
+    <div class="news-item">
+        <div class="news-item-header">
+            <span class="news-source">{{ item.source }}</span>
+            <span class="news-category-tag">{{ t("category." + item.category) }}</span>
+            <span class="news-time">{{ item.date.strftime('%Y-%m-%d %H:%M') if item.date else '' }}</span>
+        </div>
+        <h3 class="news-title">
+            <a href="{{ item.link }}" target="_blank" rel="noopener">
+                {{ item.translated_title or item.title }}
+            </a>
+        </h3>
+        {% if item.ai_summary_zh %}
+        <p class="news-summary">{{ item.ai_summary_zh[:200] }}{% if item.ai_summary_zh|length > 200 %}...{% endif %}</p>
+        {% endif %}
+        <div class="news-meta">
+            <span class="news-weight">★ {{ "%.1f"|format(item.ai_importance) }}</span>
+            {% if item.ai_sentiment %}
+            <span class="badge {% if item.ai_sentiment == 'positive' %}badge-positive{% elif item.ai_sentiment == 'negative' %}badge-negative{% else %}badge-neutral{% endif %}">{{ item.ai_sentiment }}</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="?sort={{ sort or 'date' }}&page={{ page - 1 }}" 
+           class="page-btn"
+           hx-get="/api/articles?sort={{ sort or 'date' }}&page={{ page - 1 }}&lang={{ lang }}"
+           hx-target="#articles-list"
+           hx-swap="innerHTML"
+           hx-on::after-request="window.scrollTo(0, 0)">{{ t("news.prev_page") }}</a>
+        {% endif %}
+        
+        <span class="page-info">{{ t("news.page_info", page=page, total_pages=total_pages) }}</span>
+        
+        {% if page < total_pages %}
+        <a href="?sort={{ sort or 'date' }}&page={{ page + 1 }}" 
+           class="page-btn"
+           hx-get="/api/articles?sort={{ sort or 'date' }}&page={{ page + 1 }}&lang={{ lang }}"
+           hx-target="#articles-list"
+           hx-swap="innerHTML"
+           hx-on::after-request="window.scrollTo(0, 0)">{{ t("news.next_page") }}</a>
+        {% endif %}
+    </div>
+    {% endif %}
+{% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">📄</div>
+        <p>{{ t("news.no_news") }}</p>
+    </div>
+{% endif %}

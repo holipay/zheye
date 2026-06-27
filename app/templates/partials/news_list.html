@@ -1,0 +1,56 @@
+{% if news_items %}
+    {% for item in news_items %}
+    <div class="news-item" onclick="window.location='/{{ lang }}/news/{{ item.id }}'">
+        <div class="news-item-header">
+            <span class="news-source">{{ item.source }}</span>
+            <span class="news-category-tag">{{ t("category." + item.category) }}</span>
+            {% if item.article_type and item.article_type != 'news' %}
+            <span class="badge {% if item.article_type == 'opinion' %}badge-neutral{% elif item.article_type == 'analysis' %}badge-positive{% else %}badge-neutral{% endif %}">{{ item.article_type }}</span>
+            {% endif %}
+            <span class="news-time">{{ item.date.strftime('%m-%d %H:%M') if item.date else '' }}</span>
+        </div>
+        <h3 class="news-title">
+            <a href="{{ item.link }}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+                {{ item.title }}
+            </a>
+        </h3>
+        {% if item.summary %}
+        <p class="news-summary">{{ item.summary[:200] }}{% if item.summary|length > 200 %}...{% endif %}</p>
+        {% endif %}
+        <div class="news-meta">
+            {% if item._weight is defined and item._weight %}
+            <span class="news-weight">★ {{ "%.1f"|format(item._weight) }}</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page - 1 }}" 
+           class="page-btn"
+           hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page - 1 }}&lang={{ lang }}"
+           hx-target="#news-list"
+           hx-swap="innerHTML"
+           hx-on::after-request="window.scrollTo(0, 0)">{{ t("news.prev_page") }}</a>
+        {% endif %}
+        
+        <span class="page-info">{{ t("news.page_info", page=page, total_pages=total_pages) }}</span>
+        
+        {% if page < total_pages %}
+        <a href="?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page + 1 }}" 
+           class="page-btn"
+           hx-get="/api/news?category={{ category or 'all' }}&article_type={{ article_type or 'all' }}&sort={{ sort or 'date' }}&page={{ page + 1 }}&lang={{ lang }}"
+           hx-target="#news-list"
+           hx-swap="innerHTML"
+           hx-on::after-request="window.scrollTo(0, 0)">{{ t("news.next_page") }}</a>
+        {% endif %}
+    </div>
+    {% endif %}
+{% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">📰</div>
+        <p>{{ t("news.no_news") }}</p>
+    </div>
+{% endif %}

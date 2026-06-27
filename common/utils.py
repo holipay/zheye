@@ -299,7 +299,7 @@ def _calculate_format_score(result: dict) -> float:
                 score -= 0.2
     
     # 检查列表字段
-    list_fields = ["key_points", "tags", "hot_topics", "key_events"]
+    list_fields = ["hot_topics", "key_events"]
     for field in list_fields:
         if field in result and not isinstance(result[field], list):
             score -= 0.1
@@ -321,14 +321,6 @@ def _calculate_content_quality(result: dict, field_validators: dict = None) -> f
                 score -= 0.2
             elif length > 1000:
                 score -= 0.1
-    
-    # 检查列表内容
-    list_fields = ["key_points", "tags"]
-    for field in list_fields:
-        if field in result and isinstance(result[field], list):
-            # 空列表扣分
-            if len(result[field]) == 0:
-                score -= 0.2
     
     # 自定义验证器
     if field_validators:
