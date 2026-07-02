@@ -31,3 +31,6 @@ Thumbs.db
 *.db
 *.sqlite3
 configs/ssl/
+
+# MiMoCode
+.mimocode/
