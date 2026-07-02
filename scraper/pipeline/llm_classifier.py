@@ -139,8 +139,8 @@ async def classify_batch_with_llm(items: list[tuple[int, str, str]]) -> dict[int
 
     results: dict[int, Optional[ClassificationResult]] = {}
 
-    # 每批最多 5 篇文章
-    batch_size = 5
+    # 每批最多 10 篇文章
+    batch_size = 10
     for batch_start in range(0, len(items), batch_size):
         batch = items[batch_start:batch_start + batch_size]
 

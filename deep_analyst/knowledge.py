@@ -100,142 +100,60 @@ def _get_tfidf_similarity(text: str, atom_contents: List[str]) -> List[float]:
 # AI 提示词模板
 # ============================================================
 
-KNOWLEDGE_ANALYSIS_PROMPT = """你是一个金融新闻知识分析师。你的任务是分析一个新闻事件，识别出"要真正理解这件事，读者需要知道的关键背景知识"。
+KNOWLEDGE_ANALYSIS_PROMPT = """你是一个金融新闻知识分析师。分析新闻事件，识别读者理解事件必需的背景知识。
 
-## 事件信息
+## 事件
 标题：{title}
 描述：{description}
 分类：{category}
-相关文章摘要：
-{article_summaries}
+文章摘要：{article_summaries}
 
-## 你的任务
-
-请分析这个事件，生成结构化的知识框架。输出必须是严格的 JSON 格式：
-
+## 输出 JSON
 ```json
 {{
-    "background_summary": "用2-3句话概述这个事件的核心背景（为什么发生）",
-    
-    "knowledge_gaps": [
-        {{
-            "topic": "知识缺口主题（如'什么是基点'、'该国通胀历史'）",
-            "why_needed": "为什么理解这个事件需要知道这个",
-            "priority": "high/medium/low"
-        }}
-    ],
-    
-    "causal_chain": [
-        {{
-            "step": 1,
-            "cause": "原因/触发因素",
-            "effect": "导致的结果",
-            "evidence": "支撑证据（来自文章）"
-        }}
-    ],
-    
-    "key_concepts": [
-        {{
-            "concept": "关键概念名称",
-            "definition": "简明定义",
-            "relevance": "与事件的关联"
-        }}
-    ],
-    
-    "knowledge_atoms": [
-        {{
-            "atom_type": "background/history/definition/mechanism/context",
-            "title": "知识标题",
-            "content": "知识内容（100-200字，面向金融知识有限的读者）",
-            "entities": ["涉及的实体"],
-            "keywords": ["相关关键词"]
-        }}
-    ]
+    "background_summary": "2-3句核心背景",
+    "knowledge_gaps": [{{"topic": "...", "why_needed": "...", "priority": "high/medium/low"}}],
+    "causal_chain": [{{"step": 1, "cause": "...", "effect": "...", "evidence": "..."}}],
+    "key_concepts": [{{"concept": "...", "definition": "...", "relevance": "..."}}],
+    "knowledge_atoms": [{{"atom_type": "background/history/definition/mechanism/context", "title": "...", "content": "100-200字", "entities": [], "keywords": []}}]
 }}
 ```
 
-## 注意事项
-1. knowledge_gaps 应该识别读者可能不知道但理解事件必需的知识
-2. knowledge_atoms 应该提供简洁、易懂的背景知识
-3. causal_chain 应该清晰展示因果逻辑
-4. 语言：中文
-5. 不要编造事实，如果不确定，标注 confidence 较低"""
+## 要求
+- knowledge_gaps: 识别读者必需但可能不知道的知识
+- knowledge_atoms: 面向金融知识有限的读者，简洁易懂
+- 语言：中文，不要编造事实"""
 
 
 # 带已有知识原子的提示词（复用模式）
-KNOWLEDGE_ANALYSIS_WITH_EXISTING_PROMPT = """你是一个金融新闻知识分析师。你的任务是分析一个新闻事件，识别出"要真正理解这件事，读者需要知道的关键背景知识"。
+KNOWLEDGE_ANALYSIS_WITH_EXISTING_PROMPT = """你是一个金融新闻知识分析师。分析新闻事件，识别读者理解事件必需的背景知识。
 
-## 事件信息
+## 事件
 标题：{title}
 描述：{description}
 分类：{category}
-相关文章摘要：
-{article_summaries}
+文章摘要：{article_summaries}
 
-## 已有背景知识（不需要重复生成）
-
-以下是与该事件相关的已有知识原子，这些知识已经被其他事件使用过：
-
+## 已有知识原子（不需要重复）
 {existing_atoms_text}
 
-## 你的任务
+**重要**：knowledge_atoms 只包含已有知识未覆盖的新知识。
 
-请分析这个事件，生成结构化的知识框架。
-
-**重要**：上面列出的"已有背景知识"已经覆盖了部分知识点。你的 knowledge_atoms 应该只包含**已有知识未覆盖的新知识**。如果某个知识点已被覆盖，不要重复生成。
-
-输出必须是严格的 JSON 格式：
-
+## 输出 JSON
 ```json
 {{
-    "background_summary": "用2-3句话概述这个事件的核心背景（为什么发生）",
-    
-    "knowledge_gaps": [
-        {{
-            "topic": "知识缺口主题",
-            "why_needed": "为什么理解这个事件需要知道这个",
-            "priority": "high/medium/low"
-        }}
-    ],
-    
-    "causal_chain": [
-        {{
-            "step": 1,
-            "cause": "原因/触发因素",
-            "effect": "导致的结果",
-            "evidence": "支撑证据（来自文章）"
-        }}
-    ],
-    
-    "key_concepts": [
-        {{
-            "concept": "关键概念名称",
-            "definition": "简明定义",
-            "relevance": "与事件的关联"
-        }}
-    ],
-    
-    "knowledge_atoms": [
-        {{
-            "atom_type": "background/history/definition/mechanism/context",
-            "title": "知识标题（必须是已有知识未覆盖的新知识）",
-            "content": "知识内容（100-200字，面向金融知识有限的读者）",
-            "entities": ["涉及的实体"],
-            "keywords": ["相关关键词"]
-        }}
-    ],
-    
+    "background_summary": "2-3句核心背景",
+    "knowledge_gaps": [{{"topic": "...", "why_needed": "...", "priority": "high/medium/low"}}],
+    "causal_chain": [{{"step": 1, "cause": "...", "effect": "...", "evidence": "..."}}],
+    "key_concepts": [{{"concept": "...", "definition": "...", "relevance": "..."}}],
+    "knowledge_atoms": [{{"atom_type": "background/history/definition/mechanism/context", "title": "新知识", "content": "100-200字", "entities": [], "keywords": []}}],
     "reused_atom_ids": [1, 2, 3]
 }}
 ```
 
-## 注意事项
-1. knowledge_gaps 应该识别读者可能不知道但理解事件必需的知识
-2. knowledge_atoms 只包含新知识，不要重复已有知识
-3. reused_atom_ids 填写你认为与本事件相关的已有知识原子的 ID
-4. causal_chain 应该清晰展示因果逻辑
-5. 语言：中文
-6. 不要编造事实，如果不确定，标注 confidence 较低"""
+## 要求
+- knowledge_atoms: 只包含新知识，reused_atom_ids 填写复用的已有原子 ID
+- 语言：中文，不要编造事实"""
 
 
 async def find_relevant_atoms(
@@ -390,116 +308,31 @@ def _get_related_categories(category: str) -> Dict[str, float]:
 
 
 # P1: 深度因果链分析提示词
-CAUSAL_CHAIN_PROMPT = """你是一个金融事件因果分析专家。你的任务是深入分析一个新闻事件的因果结构，构建多层次的因果链。
+CAUSAL_CHAIN_PROMPT = """你是一个金融事件因果分析专家。分析新闻事件的因果结构，构建多层次因果链。
 
-## 事件信息
+## 事件
 标题：{title}
 描述：{description}
 分类：{category}
-相关文章摘要：
-{article_summaries}
+文章摘要：{article_summaries}
 
-## 因果链结构
-
-请分析这个事件的完整因果结构，从根源到未来走向。输出必须是严格的 JSON 格式：
-
+## 输出 JSON
 ```json
 {{
-    "nodes": [
-        {{
-            "id": "node_1",
-            "node_type": "root_cause",
-            "title": "根本原因标题",
-            "description": "详细描述（50-100字）",
-            "impact_level": "high/medium/low",
-            "time_horizon": "years",
-            "entities": ["涉及实体"],
-            "confidence": 0.9
-        }},
-        {{
-            "id": "node_2",
-            "node_type": "trigger",
-            "title": "触发因素标题",
-            "description": "详细描述",
-            "impact_level": "high",
-            "time_horizon": "immediate",
-            "entities": [],
-            "confidence": 0.95
-        }},
-        {{
-            "id": "node_3",
-            "node_type": "immediate",
-            "title": "即时影响标题",
-            "description": "详细描述",
-            "impact_level": "high",
-            "time_horizon": "immediate",
-            "entities": [],
-            "confidence": 0.9
-        }},
-        {{
-            "id": "node_4",
-            "node_type": "short_term",
-            "title": "短期效应标题",
-            "description": "详细描述",
-            "impact_level": "medium",
-            "time_horizon": "weeks",
-            "entities": [],
-            "confidence": 0.8
-        }},
-        {{
-            "id": "node_5",
-            "node_type": "long_term",
-            "title": "长期走向标题",
-            "description": "详细描述",
-            "impact_level": "medium",
-            "time_horizon": "months",
-            "entities": [],
-            "confidence": 0.7
-        }},
-        {{
-            "id": "node_6",
-            "node_type": "scenario",
-            "title": "可能情景A",
-            "description": "情景描述",
-            "probability": 0.4,
-            "impact_level": "high",
-            "time_horizon": "months",
-            "entities": [],
-            "confidence": 0.6
-        }}
-    ],
-    "links": [
-        {{"source": "node_1", "target": "node_2", "link_type": "leads_to", "strength": 0.9}},
-        {{"source": "node_2", "target": "node_3", "link_type": "triggers", "strength": 1.0}},
-        {{"source": "node_3", "target": "node_4", "link_type": "causes", "strength": 0.8}},
-        {{"source": "node_4", "target": "node_5", "link_type": "leads_to", "strength": 0.7}},
-        {{"source": "node_4", "target": "node_6", "link_type": "may_cause", "strength": 0.4}}
-    ],
-    "summary": "用3-5句话总结整个因果链的逻辑"
+    "nodes": [{{"id": "node_1", "node_type": "root_cause/trigger/immediate/short_term/long_term/scenario", "title": "...", "description": "50-100字", "impact_level": "high/medium/low", "time_horizon": "immediate/days/weeks/months/years", "entities": [], "confidence": 0.8, "probability": 0.4}}],
+    "links": [{{"source": "node_1", "target": "node_2", "link_type": "leads_to/triggers/causes/may_cause", "strength": 0.9}}],
+    "summary": "3-5句因果逻辑总结"
 }}
 ```
 
-## 节点类型说明
-- root_cause: 根本原因（深层结构性因素，如经济周期、政策框架）
-- trigger: 触发因素（直接导致事件发生的导火索）
-- immediate: 即时影响（事件发生后的直接后果）
-- short_term: 短期效应（数天到数周内的影响）
-- long_term: 长期走向（数月到数年的影响）
-- scenario: 可能情景（未来可能发生的不同走向，需标注 probability）
+## 节点类型
+- root_cause: 深层结构性因素（经济周期、政策框架）
+- trigger: 直接导火索
+- immediate/short_term/long_term: 按时间维度的效应
+- scenario: 未来可能走向（需标注 probability）
 
-## 时间维度
-- immediate: 立即
-- days: 数天
-- weeks: 数周
-- months: 数月
-- years: 数年
-
-## 注意事项
-1. 根本原因应该是深层的结构性因素，不是表面现象
-2. 每个节点都需要有明确的因果逻辑
-3. 情景节点需要估算概率
-4. 语言：中文
-5. 不要编造事实，如果不确定，标注 confidence 较低"""
+## 要求
+- 语言：中文，不要编造事实"""
 
 
 def build_analysis_prompt(title: str, description: str, category: str, articles: list) -> str:
@@ -626,303 +459,76 @@ async def analyze_causal_chain(event: dict, articles: list, ai_client) -> Option
 # 合并 Step 1+2: 知识框架 + 因果链
 # ============================================================
 
-KNOWLEDGE_AND_CAUSAL_PROMPT = """你是一个金融新闻知识分析师。你的任务是分析一个新闻事件，同时完成两项工作：
-1. 生成知识框架（背景、缺口、因果步骤、关键概念、知识原子）
-2. 构建因果链图（节点+链接的结构化图）
+KNOWLEDGE_AND_CAUSAL_PROMPT = """你是一个金融新闻知识分析师。分析以下新闻事件，同时完成：1)知识框架 2)因果链图。
 
-## 事件信息
+## 事件
 标题：{title}
 描述：{description}
 分类：{category}
-相关文章摘要：
-{article_summaries}
+文章摘要：{article_summaries}
 
-## 你的任务
-
-请分析这个事件，生成结构化的知识框架和因果链图。输出必须是严格的 JSON 格式：
-
+## 输出 JSON
 ```json
 {{
-    "background_summary": "用2-3句话概述这个事件的核心背景（为什么发生）",
-    
-    "knowledge_gaps": [
-        {{
-            "topic": "知识缺口主题（如'什么是基点'、'该国通胀历史'）",
-            "why_needed": "为什么理解这个事件需要知道这个",
-            "priority": "high/medium/low"
-        }}
-    ],
-    
-    "causal_chain": [
-        {{
-            "step": 1,
-            "cause": "原因/触发因素",
-            "effect": "导致的结果",
-            "evidence": "支撑证据（来自文章）"
-        }}
-    ],
-    
-    "key_concepts": [
-        {{
-            "concept": "关键概念名称",
-            "definition": "简明定义",
-            "relevance": "与事件的关联"
-        }}
-    ],
-    
-    "knowledge_atoms": [
-        {{
-            "atom_type": "background/history/definition/mechanism/context",
-            "title": "知识标题",
-            "content": "知识内容（100-200字，面向金融知识有限的读者）",
-            "entities": ["涉及的实体"],
-            "keywords": ["相关关键词"]
-        }}
-    ],
-    
+    "background_summary": "2-3句核心背景",
+    "knowledge_gaps": [{{"topic": "...", "why_needed": "...", "priority": "high/medium/low"}}],
+    "causal_chain": [{{"step": 1, "cause": "...", "effect": "...", "evidence": "..."}}],
+    "key_concepts": [{{"concept": "...", "definition": "...", "relevance": "..."}}],
+    "knowledge_atoms": [{{"atom_type": "background/history/definition/mechanism/context", "title": "...", "content": "100-200字", "entities": [], "keywords": []}}],
     "causal_graph": {{
-        "nodes": [
-            {{
-                "id": "node_1",
-                "node_type": "root_cause",
-                "title": "根本原因标题",
-                "description": "详细描述",
-                "impact_level": "high",
-                "time_horizon": "long_term",
-                "entities": [],
-                "confidence": 0.8
-            }},
-            {{
-                "id": "node_2",
-                "node_type": "trigger",
-                "title": "触发因素标题",
-                "description": "详细描述",
-                "impact_level": "high",
-                "time_horizon": "immediate",
-                "entities": [],
-                "confidence": 0.9
-            }},
-            {{
-                "id": "node_3",
-                "node_type": "immediate",
-                "title": "即时影响标题",
-                "description": "详细描述",
-                "impact_level": "medium",
-                "time_horizon": "days",
-                "entities": [],
-                "confidence": 0.85
-            }},
-            {{
-                "id": "node_4",
-                "node_type": "short_term",
-                "title": "短期效应标题",
-                "description": "详细描述",
-                "impact_level": "medium",
-                "time_horizon": "weeks",
-                "entities": [],
-                "confidence": 0.75
-            }},
-            {{
-                "id": "node_5",
-                "node_type": "long_term",
-                "title": "长期走向标题",
-                "description": "详细描述",
-                "impact_level": "medium",
-                "time_horizon": "months",
-                "entities": [],
-                "confidence": 0.7
-            }},
-            {{
-                "id": "node_6",
-                "node_type": "scenario",
-                "title": "可能情景A",
-                "description": "情景描述",
-                "probability": 0.4,
-                "impact_level": "high",
-                "time_horizon": "months",
-                "entities": [],
-                "confidence": 0.6
-            }}
-        ],
-        "links": [
-            {{"source": "node_1", "target": "node_2", "link_type": "leads_to", "strength": 0.9}},
-            {{"source": "node_2", "target": "node_3", "link_type": "triggers", "strength": 1.0}},
-            {{"source": "node_3", "target": "node_4", "link_type": "causes", "strength": 0.8}},
-            {{"source": "node_4", "target": "node_5", "link_type": "leads_to", "strength": 0.7}},
-            {{"source": "node_4", "target": "node_6", "link_type": "may_cause", "strength": 0.4}}
-        ],
-        "summary": "用3-5句话总结整个因果链的逻辑"
+        "nodes": [{{"id": "node_1", "node_type": "root_cause/trigger/immediate/short_term/long_term/scenario", "title": "...", "description": "...", "impact_level": "high/medium/low", "time_horizon": "immediate/days/weeks/months/years", "entities": [], "confidence": 0.8}}],
+        "links": [{{"source": "node_1", "target": "node_2", "link_type": "leads_to/triggers/causes/may_cause", "strength": 0.9}}],
+        "summary": "3-5句因果逻辑总结"
     }}
 }}
 ```
 
-## 节点类型说明
-- root_cause: 根本原因（深层结构性因素，如经济周期、政策框架）
-- trigger: 触发因素（直接导致事件发生的导火索）
-- immediate: 即时影响（事件发生后的直接后果）
-- short_term: 短期效应（数天到数周内的影响）
-- long_term: 长期走向（数月到数年的影响）
-- scenario: 可能情景（未来可能发生的不同走向，需标注 probability）
+## 节点类型
+- root_cause: 深层结构性因素（经济周期、政策框架）
+- trigger: 直接导火索
+- immediate/short_term/long_term: 按时间维度的效应
+- scenario: 未来可能走向（需标注 probability）
 
-## 注意事项
-1. knowledge_gaps 应该识别读者可能不知道但理解事件必需的知识
-2. knowledge_atoms 应该提供简洁、易懂的背景知识
-3. causal_chain 应该清晰展示线性因果步骤
-4. causal_graph 应该展示完整的因果网络（节点+链接）
-5. 语言：中文
-6. 不要编造事实，如果不确定，标注 confidence 较低"""
+## 要求
+- knowledge_gaps: 识别读者必需但可能不知道的知识
+- knowledge_atoms: 面向金融知识有限的读者，简洁易懂
+- causal_chain: 线性因果步骤；causal_graph: 完整因果网络
+- 语言：中文，不要编造事实"""
 
 
-KNOWLEDGE_AND_CAUSAL_WITH_EXISTING_PROMPT = """你是一个金融新闻知识分析师。你的任务是分析一个新闻事件，同时完成两项工作：
-1. 生成知识框架（背景、缺口、因果步骤、关键概念、知识原子）
-2. 构建因果链图（节点+链接的结构化图）
+KNOWLEDGE_AND_CAUSAL_WITH_EXISTING_PROMPT = """你是一个金融新闻知识分析师。分析以下事件，生成知识框架和因果链图。
 
-## 事件信息
+## 事件
 标题：{title}
 描述：{description}
 分类：{category}
-相关文章摘要：
-{article_summaries}
+文章摘要：{article_summaries}
 
-## 已有背景知识（不需要重复生成）
-
-以下是与该事件相关的已有知识原子，这些知识已经被其他事件使用过：
-
+## 已有知识原子（不需要重复）
 {existing_atoms_text}
 
-## 你的任务
+**重要**：knowledge_atoms 只包含已有知识未覆盖的新知识。
 
-请分析这个事件，生成结构化的知识框架和因果链图。
-
-**重要**：上面列出的"已有背景知识"已经覆盖了部分知识点。你的 knowledge_atoms 应该只包含**已有知识未覆盖的新知识**。如果某个知识点已被覆盖，不要重复生成。
-
-输出必须是严格的 JSON 格式：
-
+## 输出 JSON
 ```json
 {{
-    "background_summary": "用2-3句话概述这个事件的核心背景（为什么发生）",
-    
-    "knowledge_gaps": [
-        {{
-            "topic": "知识缺口主题",
-            "why_needed": "为什么理解这个事件需要知道这个",
-            "priority": "high/medium/low"
-        }}
-    ],
-    
-    "causal_chain": [
-        {{
-            "step": 1,
-            "cause": "原因/触发因素",
-            "effect": "导致的结果",
-            "evidence": "支撑证据（来自文章）"
-        }}
-    ],
-    
-    "key_concepts": [
-        {{
-            "concept": "关键概念名称",
-            "definition": "简明定义",
-            "relevance": "与事件的关联"
-        }}
-    ],
-    
-    "knowledge_atoms": [
-        {{
-            "atom_type": "background/history/definition/mechanism/context",
-            "title": "知识标题（必须是已有知识未覆盖的新知识）",
-            "content": "知识内容（100-200字，面向金融知识有限的读者）",
-            "entities": ["涉及的实体"],
-            "keywords": ["相关关键词"]
-        }}
-    ],
-    
+    "background_summary": "2-3句核心背景",
+    "knowledge_gaps": [{{"topic": "...", "why_needed": "...", "priority": "high/medium/low"}}],
+    "causal_chain": [{{"step": 1, "cause": "...", "effect": "...", "evidence": "..."}}],
+    "key_concepts": [{{"concept": "...", "definition": "...", "relevance": "..."}}],
+    "knowledge_atoms": [{{"atom_type": "background/history/definition/mechanism/context", "title": "新知识", "content": "100-200字", "entities": [], "keywords": []}}],
     "reused_atom_ids": [1, 2, 3],
-    
     "causal_graph": {{
-        "nodes": [
-            {{
-                "id": "node_1",
-                "node_type": "root_cause",
-                "title": "根本原因标题",
-                "description": "详细描述",
-                "impact_level": "high",
-                "time_horizon": "long_term",
-                "entities": [],
-                "confidence": 0.8
-            }},
-            {{
-                "id": "node_2",
-                "node_type": "trigger",
-                "title": "触发因素标题",
-                "description": "详细描述",
-                "impact_level": "high",
-                "time_horizon": "immediate",
-                "entities": [],
-                "confidence": 0.9
-            }},
-            {{
-                "id": "node_3",
-                "node_type": "immediate",
-                "title": "即时影响标题",
-                "description": "详细描述",
-                "impact_level": "medium",
-                "time_horizon": "days",
-                "entities": [],
-                "confidence": 0.85
-            }},
-            {{
-                "id": "node_4",
-                "node_type": "short_term",
-                "title": "短期效应标题",
-                "description": "详细描述",
-                "impact_level": "medium",
-                "time_horizon": "weeks",
-                "entities": [],
-                "confidence": 0.75
-            }},
-            {{
-                "id": "node_5",
-                "node_type": "long_term",
-                "title": "长期走向标题",
-                "description": "详细描述",
-                "impact_level": "medium",
-                "time_horizon": "months",
-                "entities": [],
-                "confidence": 0.7
-            }},
-            {{
-                "id": "node_6",
-                "node_type": "scenario",
-                "title": "可能情景A",
-                "description": "情景描述",
-                "probability": 0.4,
-                "impact_level": "high",
-                "time_horizon": "months",
-                "entities": [],
-                "confidence": 0.6
-            }}
-        ],
-        "links": [
-            {{"source": "node_1", "target": "node_2", "link_type": "leads_to", "strength": 0.9}},
-            {{"source": "node_2", "target": "node_3", "link_type": "triggers", "strength": 1.0}},
-            {{"source": "node_3", "target": "node_4", "link_type": "causes", "strength": 0.8}},
-            {{"source": "node_4", "target": "node_5", "link_type": "leads_to", "strength": 0.7}},
-            {{"source": "node_4", "target": "node_6", "link_type": "may_cause", "strength": 0.4}}
-        ],
-        "summary": "用3-5句话总结整个因果链的逻辑"
+        "nodes": [{{"id": "node_1", "node_type": "root_cause/trigger/immediate/short_term/long_term/scenario", "title": "...", "description": "...", "impact_level": "high/medium/low", "time_horizon": "immediate/days/weeks/months/years", "entities": [], "confidence": 0.8}}],
+        "links": [{{"source": "node_1", "target": "node_2", "link_type": "leads_to/triggers/causes/may_cause", "strength": 0.9}}],
+        "summary": "3-5句因果逻辑总结"
     }}
 }}
 ```
 
-## 注意事项
-1. knowledge_gaps 应该识别读者可能不知道但理解事件必需的知识
-2. knowledge_atoms 只包含新知识，不要重复已有知识
-3. reused_atom_ids 填写你认为与本事件相关的已有知识原子的 ID
-4. causal_chain 应该清晰展示线性因果步骤
-5. causal_graph 应该展示完整的因果网络（节点+链接）
-6. 语言：中文
-7. 不要编造事实，如果不确定，标注 confidence 较低"""
+## 要求
+- knowledge_atoms: 只包含新知识，reused_atom_ids 填写复用的已有原子 ID
+- 语言：中文，不要编造事实"""
 
 
 async def analyze_event_knowledge_and_causal(

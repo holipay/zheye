@@ -21,83 +21,38 @@ logger = logging.getLogger(__name__)
 # AI 提示词：情景推演框架
 # ============================================================
 
-SCENARIO_ANALYSIS_PROMPT = """你是一个金融事件分析框架设计师。你的任务不是预测未来会怎样，而是为用户提供一个"该关注什么"的思考框架。
+SCENARIO_ANALYSIS_PROMPT = """你是一个金融事件分析框架设计师。为用户提供"该关注什么"的思考框架，而不是预测未来。
 
-## 事件信息
+## 事件
 标题：{title}
 描述：{description}
 分类：{category}
 因果模式：{causal_pattern}
-相关文章摘要：
-{article_summaries}
+文章摘要：{article_summaries}
 
-## 设计原则
-
-你的目标是帮助用户**自己思考**，而不是告诉他们答案。好的框架应该：
-1. 识别真正决定走向的关键变量（不是所有因素都同等重要）
-2. 提供可观察的早期信号（用户可以自己跟踪）
-3. 展示不同情景的触发条件（什么条件下会走向哪个方向）
-4. 引导用户从不同角度审视事件
-
-## 输出要求
-
-请输出严格的 JSON 格式：
-
+## 输出 JSON
 ```json
 {{
-    "key_variables": [
-        {{
-            "name": "变量名称（如：通胀走势）",
-            "why_important": "为什么这个变量是关键（它如何决定走向）",
-            "current_status": "当前状态（基于文章信息）",
-            "data_source": "如何获取这个数据（数据来源、发布频率）"
-        }}
-    ],
-    
-    "observation_signals": [
-        {{
-            "signal": "可观察的信号（如：CPI环比变化）",
-            "what_to_watch": "具体观察什么",
-            "frequency": "观察频率（日/周/月）",
-            "source": "数据来源"
-        }}
-    ],
-    
-    "scenarios": [
-        {{
-            "name": "情景名称（如：软着陆）",
-            "description": "情景描述（50-100字）",
-            "trigger_conditions": [
-                "触发条件1：具体、可判断的条件",
-                "触发条件2：..."
-            ],
-            "observation_cues": [
-                "观察线索1：什么信号表明正在走向这个情景",
-                "观察线索2：..."
-            ],
-            "implications": "如果这个情景发生，意味着什么"
-        }}
-    ],
-    
-    "thinking_questions": [
-        {{
-            "question": "引导性问题",
-            "purpose": "这个问题的目的（引导用户从什么角度思考）",
-            "perspective": "思考视角（投资者/政策制定者/普通民众/企业主）"
-        }}
-    ],
-    
-    "framework_summary": "用2-3句话总结这个思考框架的核心逻辑"
+    "key_variables": [{{"name": "...", "why_important": "...", "current_status": "...", "data_source": "..."}}],
+    "observation_signals": [{{"signal": "...", "what_to_watch": "...", "frequency": "日/周/月", "source": "..."}}],
+    "scenarios": [{{
+        "name": "情景名称",
+        "description": "50-100字描述",
+        "trigger_conditions": ["具体可判断的条件"],
+        "observation_cues": ["什么信号表明走向此情景"],
+        "implications": "如果发生意味着什么"
+    }}],
+    "thinking_questions": [{{"question": "...", "purpose": "...", "perspective": "投资者/政策制定者/普通民众/企业主"}}],
+    "framework_summary": "2-3句核心逻辑"
 }}
 ```
 
-## 注意事项
-1. 关键变量不超过5个，要聚焦真正重要的
-2. 观察信号要具体、可操作，不是模糊的描述
-3. 情景框架重在"条件"，不是"概率"——不要给概率
-4. 思考问题要能引发真正的思考，不是yes/no问题
-5. 不要预测，要赋能
-6. 语言：中文"""
+## 要求
+- 关键变量≤5个，聚焦真正重要的
+- 观察信号具体可操作
+- 情景重在触发条件，不给概率
+- 思考问题引发深度思考（非yes/no）
+- 语言：中文"""
 
 
 def build_scenario_prompt(title: str, description: str, category: str, causal_pattern: str, articles: list) -> str:
