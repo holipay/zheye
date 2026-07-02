@@ -23,7 +23,7 @@ from deep_analyst.knowledge import (
     find_relevant_atoms,
     update_reuse_stats, detect_conflicts, apply_quality_decay, get_reuse_statistics
 )
-from deep_analyst.analogy import extract_event_representation, analyze_analogy, compute_structural_similarity
+from deep_analyst.analogy import extract_event_representation, analyze_analogy, analyze_analogies_batch, compute_structural_similarity
 from deep_analyst.scenario import analyze_scenarios
 from deep_analyst.models.knowledge import EventKnowledge, EventKnowledgeAtom, KnowledgeAtom
 from deep_analyst.models.causal_chain import CausalNode, CausalLink
@@ -580,12 +580,21 @@ async def _find_and_save_analogies(
     )
     existing_targets = {row[0] for row in existing_result.fetchall()}
 
-    analogy_count = 0
+    source_data = {
+        "title": event_data["title"],
+        "causal_pattern_desc": structural.get("causal_pattern_desc"),
+        "decision_logic": structural.get("decision_logic"),
+        "transmission_mechanism": structural.get("transmission_mechanism"),
+        "economic_principle_desc": abstract.get("economic_principle_desc"),
+    }
+
+    # 收集通过规则预筛选的候选
+    candidates_to_analyze = []
+    candidate_ids_to_analyze = []
     for candidate in candidates:
         if candidate.event_id in existing_targets:
             continue
 
-        # 规则预筛选
         rule_scores = compute_structural_similarity(
             repr_result,
             {
@@ -601,43 +610,44 @@ async def _find_and_save_analogies(
         if rule_scores["overall"] < 0.3:
             continue
 
-        # AI 深度类比
-        source_data = {
-            "title": event_data["title"],
-            "causal_pattern_desc": structural.get("causal_pattern_desc"),
-            "decision_logic": structural.get("decision_logic"),
-            "transmission_mechanism": structural.get("transmission_mechanism"),
-            "economic_principle_desc": abstract.get("economic_principle_desc"),
-        }
-        target_data = {
+        candidates_to_analyze.append({
             "title": candidate.surface_summary,
             "causal_pattern_desc": candidate.causal_pattern_desc,
             "decision_logic": candidate.decision_logic,
             "transmission_mechanism": candidate.transmission_mechanism,
             "economic_principle_desc": candidate.economic_principle_desc,
-        }
+        })
+        candidate_ids_to_analyze.append(candidate.event_id)
 
-        analogy_result = await analyze_analogy(source_data, target_data, ai_client)
-        if not analogy_result:
+    if not candidates_to_analyze:
+        return 0
+
+    # 批量 AI 类比分析
+    batch_results = await analyze_analogies_batch(source_data, candidates_to_analyze, ai_client)
+
+    analogy_count = 0
+    for i, (cand_event_id, cand_data) in enumerate(zip(candidate_ids_to_analyze, candidates_to_analyze)):
+        result = batch_results.get(i)
+        if not result:
             continue
 
         analogy = HistoricalAnalogy(
             source_event_id=event_id,
-            target_event_id=candidate.event_id,
-            causal_similarity=analogy_result.get("causal_similarity"),
-            decision_similarity=analogy_result.get("decision_similarity"),
-            constraint_similarity=analogy_result.get("constraint_similarity"),
-            mechanism_similarity=analogy_result.get("mechanism_similarity"),
-            game_similarity=analogy_result.get("game_similarity"),
-            overall_similarity=analogy_result.get("overall_similarity"),
-            analogy_type=analogy_result.get("analogy_type"),
-            analogy_summary=analogy_result.get("analogy_summary"),
-            key_insight=analogy_result.get("key_insight"),
-            lessons_learned=analogy_result.get("lessons_learned"),
-            surface_differences=analogy_result.get("surface_differences"),
-            structural_differences=analogy_result.get("structural_differences"),
-            confidence=analogy_result.get("confidence"),
-            ai_model=analogy_result.get("ai_model"),
+            target_event_id=cand_event_id,
+            causal_similarity=result.get("causal_similarity"),
+            decision_similarity=result.get("decision_similarity"),
+            constraint_similarity=result.get("constraint_similarity"),
+            mechanism_similarity=result.get("mechanism_similarity"),
+            game_similarity=result.get("game_similarity"),
+            overall_similarity=result.get("overall_similarity"),
+            analogy_type=result.get("analogy_type"),
+            analogy_summary=result.get("analogy_summary"),
+            key_insight=result.get("key_insight"),
+            lessons_learned=result.get("lessons_learned"),
+            surface_differences=result.get("surface_differences"),
+            structural_differences=result.get("structural_differences"),
+            confidence=result.get("confidence"),
+            ai_model=result.get("ai_model"),
         )
         session.add(analogy)
         analogy_count += 1

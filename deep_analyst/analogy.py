@@ -224,17 +224,17 @@ async def extract_event_representation(event: dict, articles: list, ai_client) -
 async def analyze_analogy(source_repr: dict, target_repr: dict, ai_client) -> Optional[dict]:
     """
     分析两个事件之间的类比关系
-    
+
     Args:
         source_repr: 当前事件的表征
         target_repr: 历史事件的表征
         ai_client: AI客户端
-    
+
     Returns:
         类比分析结果
     """
     prompt = build_analogy_prompt(source_repr, target_repr)
-    
+
     return await ai_analyze(
         prompt=prompt,
         ai_client=ai_client,
@@ -243,6 +243,139 @@ async def analyze_analogy(source_repr: dict, target_repr: dict, ai_client) -> Op
         schema=AnalogyResultSchema,
         function_name="analyze_analogy"
     )
+
+
+BATCH_ANALOGY_SYSTEM_PROMPT = """你是一个金融历史分析专家。请批量分析当前事件与多个历史事件之间的类比关系。
+
+## 当前事件
+标题：{source_title}
+因果模式：{source_causal_pattern}
+决策逻辑：{source_decision_logic}
+传导机制：{source_transmission}
+经济学原理：{source_principle}
+
+## 历史事件列表
+
+{targets_text}
+
+## 输出要求
+
+返回 JSON 数组，每个元素对应一个历史事件的类比分析结果：
+```json
+[
+    {{
+        "index": 0,
+        "causal_similarity": 0.85,
+        "decision_similarity": 0.80,
+        "constraint_similarity": 0.70,
+        "mechanism_similarity": 0.75,
+        "game_similarity": 0.65,
+        "overall_similarity": 0.78,
+        "analogy_type": "structural",
+        "analogy_summary": "核心类比点（50字以内）",
+        "key_insight": "关键洞察",
+        "lessons_learned": "历史教训",
+        "surface_differences": ["差异1", "差异2"],
+        "structural_differences": ["差异1"]
+    }},
+    ...
+]
+```
+
+## 评分标准
+- 1.0: 完全相同，0.8: 高度相似，0.6: 明显相似，0.4: 部分相似，0.2: 弱相关，0.0: 完全不同
+
+## analogy_type: structural / pattern / principle
+
+## 注意事项
+1. index 必须与输入的历史事件编号一致
+2. 评分客观，关注结构层和抽象层的相似性
+3. 语言：中文"""
+
+
+async def analyze_analogies_batch(
+    source_repr: dict,
+    targets: list[dict],
+    ai_client,
+) -> dict[int, Optional[dict]]:
+    """
+    批量分析当前事件与多个历史事件的类比关系（单次 API 调用）
+
+    Args:
+        source_repr: 当前事件的表征 {title, causal_pattern_desc, ...}
+        targets: [{"title": str, "causal_pattern_desc": str, ...}, ...]
+        ai_client: AI客户端
+
+    Returns:
+        {index: AnalogyResult dict 或 None}
+    """
+    if not targets:
+        return {}
+
+    targets_text = ""
+    for i, t in enumerate(targets):
+        targets_text += f"\n### 历史事件 {i}\n"
+        targets_text += f"标题: {t.get('title', '')}\n"
+        targets_text += f"因果模式: {t.get('causal_pattern_desc', '')}\n"
+        targets_text += f"决策逻辑: {t.get('decision_logic', '')}\n"
+        targets_text += f"传导机制: {t.get('transmission_mechanism', '')}\n"
+        targets_text += f"经济学原理: {t.get('economic_principle_desc', '')}\n"
+
+    system_msg = BATCH_ANALOGY_SYSTEM_PROMPT.format(
+        source_title=source_repr.get('title', ''),
+        source_causal_pattern=source_repr.get('causal_pattern_desc', ''),
+        source_decision_logic=source_repr.get('decision_logic', ''),
+        source_transmission=source_repr.get('transmission_mechanism', ''),
+        source_principle=source_repr.get('economic_principle_desc', ''),
+        targets_text=targets_text,
+    )
+
+    messages = [
+        {"role": "system", "content": system_msg},
+        {"role": "user", "content": "请开始分析。"},
+    ]
+
+    response = await ai_client.chat(
+        messages=messages,
+        temperature=0.3,
+        max_tokens=min(1500 * len(targets), 5000),
+        function_name="analyze_analogies_batch",
+    )
+    if not response:
+        return {i: None for i in range(len(targets))}
+
+    # 解析 JSON 数组
+    try:
+        import json as _json
+        cleaned = response.strip()
+        if cleaned.startswith("```"):
+            lines = cleaned.split("\n")
+            cleaned = "\n".join(lines[1:-1])
+        raw = _json.loads(cleaned)
+        if not isinstance(raw, list):
+            raw = [raw]
+    except (ValueError, _json.JSONDecodeError) as e:
+        logger.warning(f"批量类比 JSON 解析失败: {e}")
+        return {i: None for i in range(len(targets))}
+
+    results: dict[int, Optional[dict]] = {}
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        idx = item.get("index")
+        if idx is None or idx not in range(len(targets)):
+            continue
+        try:
+            validated = AnalogyResultSchema(**item)
+            results[idx] = validated.model_dump()
+        except Exception:
+            results[idx] = None
+
+    for i in range(len(targets)):
+        if i not in results:
+            results[i] = None
+
+    return results
 
 
 def compute_structural_similarity(source_repr: dict, target_repr: dict) -> Dict[str, float]:
