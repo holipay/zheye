@@ -144,6 +144,100 @@ class DeepSeekClient(BaseDeepSeekClient):
             logger.error(f"解析 AI 返回结果失败: {e}")
             return None
     
+    BATCH_ARTICLE_SYSTEM_PROMPT = """你是一个专业的财经新闻分析师。请批量分析以下多篇新闻文章，为每篇返回分析结果。
+
+返回 JSON 数组格式，每个元素对应一篇文章：
+[
+    {
+        "index": 0,
+        "sentiment": "positive/negative/neutral",
+        "sentiment_score": 0.0,
+        "summary_zh": "中文摘要，100字以内",
+        "importance": 0.8
+    },
+    ...
+]
+
+注意：
+1. sentiment_score 要准确反映市场情绪，-1.0 到 1.0
+2. summary_zh 要简洁准确，100字以内
+3. importance 根据对金融市场的影响程度评分，0-1
+4. index 必须与输入的文章编号一致"""
+
+    async def analyze_articles_batch(self, articles: list[dict]) -> dict[int, Optional[ArticleAnalysis]]:
+        """
+        批量分析多篇文章（单次 API 调用）
+
+        Args:
+            articles: [{"title": str, "content": str|None, "summary": str|None,
+                        "category": str|None, "lang": str}, ...]
+
+        Returns:
+            {index: ArticleAnalysis 或 None}
+        """
+        if not articles:
+            return {}
+
+        articles_text = ""
+        for i, art in enumerate(articles):
+            articles_text += f"\n### 文章 {i}\n"
+            articles_text += f"标题: {art['title']}\n"
+            if art.get("summary"):
+                articles_text += f"摘要: {art['summary'][:200]}\n"
+            if art.get("content"):
+                articles_text += f"正文: {smart_truncate(art['content'], 1500)}\n"
+            if art.get("category"):
+                articles_text += f"分类: {art['category']}\n"
+
+        messages = [
+            {"role": "system", "content": self.BATCH_ARTICLE_SYSTEM_PROMPT},
+            {"role": "user", "content": articles_text},
+        ]
+
+        result = await self._call_api(
+            messages, temperature=0.3, max_tokens=min(1000 * len(articles), 4000),
+            function_name="analyze_articles_batch",
+        )
+        if not result:
+            return {i: None for i in range(len(articles))}
+
+        # 解析 JSON 数组
+        try:
+            cleaned = result.strip()
+            if cleaned.startswith("```"):
+                lines = cleaned.split("\n")
+                cleaned = "\n".join(lines[1:-1])
+            data = json.loads(cleaned)
+            if not isinstance(data, list):
+                data = [data]
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.warning(f"批量分析 JSON 解析失败: {e}")
+            return {i: None for i in range(len(articles))}
+
+        results: dict[int, Optional[ArticleAnalysis]] = {}
+        for item in data:
+            idx = item.get("index")
+            if idx is None or idx not in range(len(articles)):
+                continue
+            try:
+                validated = ArticleAnalysisSchema(**item)
+                results[idx] = ArticleAnalysis(
+                    sentiment=validated.sentiment.value,
+                    sentiment_score=validated.sentiment_score,
+                    summary_zh=validated.summary_zh,
+                    importance=validated.importance,
+                )
+            except Exception as e:
+                logger.debug(f"文章 {idx} 验证失败: {e}")
+                results[idx] = None
+
+        # 填补缺失的 index
+        for i in range(len(articles)):
+            if i not in results:
+                results[i] = None
+
+        return results
+
     async def _record_failed_task(self, task_type: str, target_id: str, input_data: dict,
                            failure_reason: str, error_message: str = None, 
                            error_details: dict = None):
