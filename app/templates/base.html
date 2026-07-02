@@ -59,6 +59,7 @@
                     <div id="search-results" class="search-results-dropdown"></div>
                 </div>
                 <div class="language-switcher">
+                    <a href="/api/rss" target="_blank" class="lang-btn" title="RSS Feed">RSS</a>
                     {% if lang == "zh" %}
                     <a href="/en{{ request.url.path[3:] if request.url.path|length > 3 else '' }}" class="lang-btn">EN</a>
                     {% else %}
