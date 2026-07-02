@@ -405,3 +405,66 @@ async def search_news(
     ))
     set_cached(cache_key, response.body.decode(), ttl=120)
     return response
+
+
+# ============================================================
+# RSS Feed 输出
+# ============================================================
+
+@router.get("/rss")
+@limiter.limit(settings.RATE_LIMIT_API)
+async def get_rss_feed(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    category: str = "all",
+    limit: int = Query(default=50, ge=1, le=200, description="返回条数"),
+):
+    """RSS 格式输出新闻"""
+    from fastapi.responses import Response
+    from xml.etree.ElementTree import Element, SubElement, tostring
+    from xml.dom.minidom import parseString
+    from datetime import datetime
+
+    cache_key = f"api:rss:{category}:{limit}"
+    cached = get_cached(cache_key)
+    if cached:
+        return Response(content=cached, media_type="application/rss+xml")
+
+    # 查询新闻
+    query = select(News).order_by(desc(News.date)).limit(limit)
+    if category and category != "all":
+        query = query.where(News.category == category)
+
+    result = await session.execute(query)
+    news_items = result.scalars().all()
+
+    # 构建 RSS XML
+    rss = Element("rss", version="2.0")
+    channel = SubElement(rss, "channel")
+    SubElement(channel, "title").text = "蛰 - 全球新闻聚合"
+    SubElement(channel, "link").text = str(request.base_url).rstrip("/")
+    SubElement(channel, "description").text = "全球金融/科技/社科新闻聚合与AI分析"
+    SubElement(channel, "language").text = "zh-cn"
+    SubElement(channel, "lastBuildDate").text = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+    for item in news_items:
+        entry = SubElement(channel, "item")
+        SubElement(entry, "title").text = item.translated_title or item.title or ""
+        SubElement(entry, "link").text = item.link or ""
+        SubElement(entry, "description").text = item.ai_summary_zh or item.summary or ""
+        SubElement(entry, "category").text = item.category or ""
+        SubElement(entry, "source").text = item.source or ""
+        if item.date:
+            SubElement(entry, "pubDate").text = item.date.strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+    # 格式化输出
+    xml_str = tostring(rss, encoding="unicode")
+    pretty_xml = parseString(xml_str).toprettyxml(indent="  ", encoding=None)
+    # 移除 xml 声明（RSS 标准不需要）
+    lines = pretty_xml.split("\n")
+    if lines[0].startswith("<?xml"):
+        lines = lines[1:]
+    xml_output = "\n".join(lines)
+
+    set_cached(cache_key, xml_output, ttl=300)
+    return Response(content=xml_output, media_type="application/rss+xml")
