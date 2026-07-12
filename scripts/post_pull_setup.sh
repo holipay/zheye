@@ -33,10 +33,18 @@ echo "[4/6] Checking for new migrations..."
 NEW_MIGRATIONS=$(git diff HEAD~1 --name-only | grep "migrations/" || true)
 if [ -n "$NEW_MIGRATIONS" ]; then
     echo "New migrations found: $NEW_MIGRATIONS"
+    # 从 DATABASE_URL 提取密码和连接信息
+    source .env 2>/dev/null || true
+    DB_USER=$(echo "$DATABASE_URL" | sed -n 's|.*://\([^:]*\):.*|\1|p')
+    DB_PASS=$(echo "$DATABASE_URL" | sed -n 's|.*://[^:]*:\([^@]*\)@.*|\1|p')
+    DB_HOST=$(echo "$DATABASE_URL" | sed -n 's|.*@\([^:]*\):.*|\1|p')
+    DB_PORT=$(echo "$DATABASE_URL" | sed -n 's|.*@[^:]*:\([0-9]*\)/.*|\1|p')
+    DB_NAME=$(echo "$DATABASE_URL" | sed -n 's|.*/[0-9]*/\(.*\)|\1|p')
+    [ -z "$DB_NAME" ] && DB_NAME=$(echo "$DATABASE_URL" | sed -n 's|.*/\([^?]*\)|\1|p')
     for mig in $NEW_MIGRATIONS; do
         if [[ "$mig" == *.sql ]]; then
             echo "Applying migration: $mig"
-            PGPASSWORD=XHVndrfT07TC4y psql -h localhost -U zheye -d zheye -f "$mig" 2>&1 || echo "Warning: Migration $mig may have already been applied"
+            PGPASSWORD="$DB_PASS" psql -h "${DB_HOST:-localhost}" -U "${DB_USER:-zheye}" -d "${DB_NAME:-zheye}" -f "$mig" 2>&1 || echo "Warning: Migration $mig may have already been applied"
         fi
     done
 fi
