@@ -83,3 +83,12 @@ if settings.ENABLE_DEEP_ANALYST:
         logger.info("Deep Analyst module enabled")
     except Exception as e:
         logger.warning(f"Failed to load Deep Analyst module: {e}")
+
+# 企业经营状况跟踪模块（可选）
+if settings.ENABLE_BUSINESS_TRACKER:
+    try:
+        from business_tracker.router import router as business_tracker_router
+        app.include_router(business_tracker_router)
+        logger.info("Business Tracker module enabled")
+    except Exception as e:
+        logger.warning(f"Failed to load Business Tracker module: {e}")

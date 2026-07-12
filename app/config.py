@@ -90,9 +90,15 @@ class Settings(BaseSettings):
     # 深度分析模块开关
     ENABLE_DEEP_ANALYST: bool = Field(default=False, description="启用深度分析模块")
 
+    # 企业经营状况跟踪模块
+    ENABLE_BUSINESS_TRACKER: bool = Field(default=False, description="启用企业经营状况跟踪模块")
+
     # 深度分析流水线配置
     DEEP_ANALYSIS_MAX_EVENTS: int = Field(default=10, description="深度分析最大事件数")
     DEEP_ANALYSIS_COOLDOWN_HOURS: int = Field(default=24, description="深度分析冷却时间（小时）")
+    
+    # 企业经营状况跟踪模块配置
+    TRACKED_COMPANIES_PATH: str = Field(default="configs/tracked_companies.yaml", description="跟踪企业配置文件路径")
     
     # 数据质量配置
     AI_CONFIDENCE_THRESHOLD: float = Field(default=0.7, description="AI 置信度阈值")

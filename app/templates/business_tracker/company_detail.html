@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% block title %}{{ company_name }} - {{ _('经营状况') if lang == 'zh' else 'Business Status' }}{% endblock %}
+
+{% block head %}
+<style>
+.detail-header {
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 20px 0;
+    margin-bottom: 24px;
+}
+.breadcrumb { font-size: 0.875rem; color: #6b7280; margin-bottom: 8px; }
+.breadcrumb a { color: #3b82f6; text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+.company-title { font-size: 1.5rem; font-weight: 700; color: #111827; }
+.chart-container {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+.chart-title { font-size: 1rem; font-weight: 600; margin-bottom: 12px; color: #374151; }
+.evidence-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+.evidence-table th {
+    text-align: left;
+    padding: 8px 12px;
+    background: #f9fafb;
+    border-bottom: 2px solid #e5e7eb;
+    color: #6b7280;
+    font-weight: 500;
+}
+.evidence-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+}
+.evidence-table tr:hover { background: #f9fafb; }
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+.badge-positive { background: #d1fae5; color: #065f46; }
+.badge-negative { background: #fee2e2; color: #991b1b; }
+.badge-neutral  { background: #f3f4f6; color: #374151; }
+.btn-update {
+    background: #3b82f6;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+.btn-update:hover { background: #2563eb; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="detail-header">
+    <div class="container mx-auto px-4">
+        <div class="breadcrumb">
+            <a href="/api/business-tracker/companies">{{ _('经营状况跟踪') if lang == 'zh' else 'Business Tracker' }}</a>
+            / {{ company_name }}
+        </div>
+        <div class="flex justify-between items-center">
+            <div class="company-title">{{ company_name }}</div>
+            <button class="btn-update"
+                    hx-post="/api/business-tracker/api/companies/{{ company_id }}/update"
+                    hx-target="body">
+                {{ _('手动更新') if lang == 'zh' else 'Update Now' }}
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="container mx-auto px-4">
+    <!-- 维度图表 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {% for dim in dimensions %}
+        <div class="chart-container">
+            <div class="chart-title">
+                {{ dim.label }}
+                <span class="text-sm font-normal text-gray-500 ml-2">
+                    {{ dim.mean_pct }}%
+                    <span class="text-xs">(CI: {{ dim.ci_lower_pct }}% - {{ dim.ci_upper_pct }}%)</span>
+                </span>
+            </div>
+            <canvas id="chart-{{ dim.dimension }}" width="400" height="200"
+                    data-dimension="{{ dim.dimension }}"
+                    data-label="{{ dim.label }}"
+                    data-mean="{{ dim.mean_pct }}"
+                    data-ci-lower="{{ dim.ci_lower_pct }}"
+                    data-ci-upper="{{ dim.ci_upper_pct }}"
+                    data-alpha="{{ dim.alpha }}"
+                    data-beta="{{ dim.beta }}"
+                    data-std="{{ dim.std }}"></canvas>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- 最近证据 -->
+    <div class="chart-container">
+        <div class="chart-title">
+            {{ _('最近证据') if lang == 'zh' else 'Recent Evidence' }}
+            <span class="text-sm font-normal text-gray-500 ml-2">({{ recent_evidence|length }})</span>
+        </div>
+
+        {% if recent_evidence %}
+        <div style="overflow-x:auto">
+            <table class="evidence-table">
+                <thead>
+                    <tr>
+                        <th>{{ _('时间') if lang == 'zh' else 'Time' }}</th>
+                        <th>{{ _('新闻') if lang == 'zh' else 'Article' }}</th>
+                        <th>{{ _('维度') if lang == 'zh' else 'Dimension' }}</th>
+                        <th>{{ _('方向') if lang == 'zh' else 'Direction' }}</th>
+                        <th>{{ _('强度') if lang == 'zh' else 'Strength' }}</th>
+                        <th>{{ _('来源') if lang == 'zh' else 'Source' }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ev in recent_evidence %}
+                    <tr>
+                        <td class="text-xs">{{ ev.created_at.strftime('%m-%d %H:%M') if ev.created_at else '' }}</td>
+                        <td>
+                            <a href="/{{ lang }}/articles?search={{ ev.news_id }}"
+                               class="text-blue-600 hover:underline" target="_blank">
+                                {{ ev.news_title[:60] }}{% if ev.news_title|length > 60 %}...{% endif %}
+                            </a>
+                        </td>
+                        <td>{{ ev.dimension_label }}</td>
+                        <td>
+                            <span class="badge badge-{{ ev.direction }}">
+                                {{ ev.direction }}
+                            </span>
+                        </td>
+                        <td>{{ ev.strength }}</td>
+                        <td class="text-xs text-gray-500">{{ ev.source }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-8 text-gray-500">
+            {{ _('暂无证据数据') if lang == 'zh' else 'No evidence records yet' }}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    function getHistoryData(dimension) {
+        var data = {{ history|tojson|safe }};
+        return data[dimension] || [];
+    }
+
+    document.querySelectorAll('[id^="chart-"]').forEach(function(canvas) {
+        var dim = canvas.dataset.dimension;
+        var label = canvas.dataset.label;
+        var hist = getHistoryData(dim);
+
+        var labels = [];
+        var meanData = [];
+        var ciUpper = [];
+        var ciLower = [];
+
+        if (hist.length === 0) {
+            labels = ['', ''];
+            meanData = [null, parseFloat(canvas.dataset.mean)];
+            ciUpper = [null, parseFloat(canvas.dataset.ciUpper)];
+            ciLower = [null, parseFloat(canvas.dataset.ciLower)];
+        } else {
+            for (var i = 0; i < hist.length; i++) {
+                var h = hist[i];
+                labels.push(h.recorded_at ? h.recorded_at.slice(5, 16) : '');
+                meanData.push(h.mean * 100);
+                ciUpper.push(h.ci_upper * 100);
+                ciLower.push(h.ci_lower * 100);
+            }
+        }
+
+        new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: label + ' (%)',
+                    data: meanData,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: false,
+                    tension: 0.3,
+                    pointRadius: 2,
+                }, {
+                    label: '95% CI',
+                    data: ciUpper,
+                    borderColor: 'rgba(59, 130, 246, 0.2)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                    fill: '+1',
+                    pointRadius: 0,
+                    borderWidth: 1,
+                }, {
+                    label: '',
+                    data: ciLower,
+                    borderColor: 'rgba(59, 130, 246, 0.2)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                    fill: false,
+                    pointRadius: 0,
+                    borderWidth: 1,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { min: 0, max: 100, ticks: { callback: function(v) { return v + '%'; } } }
+                }
+            }
+        });
+    });
+})();
+</script>
+{% endblock %}

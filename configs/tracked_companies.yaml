@@ -1,0 +1,18 @@
+# 要跟踪的企业列表
+# entity_name: 对应 entities.yaml 中的企业名称（必须已存在于数据库）
+# stock_symbol: 股票代码（可选，用于市场数据推导先验）
+# use_llm: 是否启用 LLM 精细分析（高 importance 文章）
+# dimensions: 自定义维度列表（不指定则使用默认四维）
+
+companies:
+  - entity_name: "Apple"
+    stock_symbol: "AAPL"
+    use_llm: true
+
+  - entity_name: "Microsoft"
+    stock_symbol: "MSFT"
+    use_llm: true
+
+  - entity_name: "Tesla"
+    stock_symbol: "TSLA"
+    use_llm: true

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Business Tracker') if lang == 'zh' else 'Business Tracker' }}{% endblock %}
+
+{% block head %}
+<style>
+.company-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 16px;
+    transition: box-shadow 0.2s;
+}
+.company-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.company-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #111827;
+}
+.dim-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+.dim-item {
+    padding: 8px 12px;
+    background: #f9fafb;
+    border-radius: 6px;
+    border-left: 3px solid #3b82f6;
+}
+.dim-item .dim-label {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-bottom: 2px;
+}
+.dim-item .dim-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #111827;
+}
+.dim-item .dim-ci {
+    font-size: 0.75rem;
+    color: #9ca3af;
+}
+.dim-healthy { border-left-color: #10b981; }
+.dim-warning { border-left-color: #f59e0b; }
+.dim-danger  { border-left-color: #ef4444; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">
+            {{ _('企业经营状况跟踪') if lang == 'zh' else 'Business Tracker' }}
+        </h1>
+        <div class="text-sm text-gray-500">
+            {{ companies|length }} {{ _('家企业') if lang == 'zh' else 'companies' }}
+        </div>
+    </div>
+
+    {% if not companies %}
+    <div class="text-center py-12 text-gray-500">
+        {{ _('暂未配置跟踪企业') if lang == 'zh' else 'No tracked companies configured' }}
+    </div>
+    {% endif %}
+
+    {% for company in companies %}
+    <div class="company-card" hx-get="/api/business-tracker/companies/{{ company.id }}"
+         hx-trigger="click" hx-target="body" hx-push-url="true" style="cursor:pointer">
+        <div class="company-name">{{ company.company_name }}</div>
+        <div class="dim-grid">
+            {% for dim in company.dimensions %}
+            {% set cls = 'dim-healthy' if dim.mean_pct >= 60 else ('dim-warning' if dim.mean_pct >= 40 else 'dim-danger') %}
+            <div class="dim-item {{ cls }}">
+                <div class="dim-label">{{ dim.label }}</div>
+                <div class="dim-value">{{ dim.mean_pct }}%</div>
+                <div class="dim-ci">CI: {{ dim.ci_lower_pct }}% - {{ dim.ci_upper_pct }}%</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

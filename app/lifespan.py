@@ -104,7 +104,7 @@ async def lifespan(app):
         scheduler.add_job(scheduled_quality_decay, CronTrigger(hour=3, minute=30), id="quality_decay")
 
         scheduler.start()
-        logger.info("Scheduler started with 5 jobs")
+        logger.info(f"Scheduler started with {len(scheduler.get_jobs())} jobs")
     except Exception as e:
         logger.warning(f"Failed to start scheduler: {e}")
 
